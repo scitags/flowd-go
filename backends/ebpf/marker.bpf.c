@@ -9,7 +9,8 @@
  */
 
 // You'll need to install libbpf-devel (or the equivalent one) to get these headers!
-#include <linux/bpf.h>
+#include "vmlinux.h"
+#include <bpf/bpf_helpers.h>
 
 // Oh wow, the kernel refuses to load unlicensed stuff!
 char LICENSE[] SEC("license") = "GPL";

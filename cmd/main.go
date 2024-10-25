@@ -28,8 +28,8 @@ var (
 	}
 
 	ebpfTest = &cobra.Command{
-		Use:   "version",
-		Short: "Get the built version.",
+		Use:   "ebpf-test",
+		Short: "Try to load the eBPF program.",
 		Run: func(cmd *cobra.Command, args []string) {
 			ebpf.Launch()
 		},
@@ -45,6 +45,7 @@ func init() {
 
 	// Add the different sub-commands
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(ebpfTest)
 }
 
 func main() {

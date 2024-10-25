@@ -9,3 +9,8 @@ bin/
 # but not the 'cmd/' directory.
 cmd
 !cmd/
+
+# Ignore libbpf other eBPF deps and compiled objects
+libbpf/
+vmlinux.h
+*.o
