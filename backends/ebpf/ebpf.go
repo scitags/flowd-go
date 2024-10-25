@@ -4,11 +4,10 @@ package ebpf
 
 import (
 	_ "embed"
-	"encoding/binary"
 	"fmt"
 	"os"
-	"os/exec"
 	"syscall"
+	"unsafe"
 
 	bpf "github.com/aquasecurity/libbpfgo"
 )
@@ -91,37 +90,16 @@ func Launch() {
 		}
 	}()
 
-	eventsChannel := make(chan []byte)
-	rb, err := bpfModule.InitRingBuf("events", eventsChannel)
+	bpfMap, err := bpfModule.GetMap("flowLabels")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(-1)
 	}
-
-	rb.Start()
-	numberOfEventsReceived := 0
-	go func() {
-		_, err := exec.Command("ping", "localhost", "-c 10").Output()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(-1)
-		}
-	}()
-
-recvLoop:
-
-	for {
-		b := <-eventsChannel
-		if binary.LittleEndian.Uint32(b) != 2021 {
-			fmt.Fprintf(os.Stderr, "invalid data retrieved\n")
-			os.Exit(-1)
-		}
-		numberOfEventsReceived++
-		if numberOfEventsReceived > 5 {
-			break recvLoop
-		}
+	keyA := struct{x uint64; y uint64; z uint16; w uint16}{0, 1, 2, 3}
+	keyAUnsafe := unsafe.Pointer(&keyA)
+	val, err := bpfMap.GetValue(keyAUnsafe)
+	if err != nil {
+		fmt.Printf("error getting the map value: %v\n", err)
 	}
-
-	rb.Stop()
-	rb.Close()
+	fmt.Printf("value: %+v\n", val)
 }
