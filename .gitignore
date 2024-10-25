@@ -1,0 +1,11 @@
+# Ignore hidden files except the .gitignore
+.*
+!.gitignore
+
+# Ignore binaries
+bin/
+
+# Ignore files named 'cmd' (i.e. the default output binary)
+# but not the 'cmd/' directory.
+cmd
+!cmd/
