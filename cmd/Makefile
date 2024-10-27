@@ -19,6 +19,9 @@ TRASH   = $(BIN_DIR)/* cmd
 # The `-ldflags` option lets us define global variables at compile time!
 # Check https://stackoverflow.com/questions/11354518/application-auto-build-versioning
 
+darwin:
+	$(GOC) build -tags ebpf -ldflags "-X main.builtCommit=$(COMMIT)"
+
 # TODOs:
 #     Maybe we need the -L? Check it!
 #     CGO_LDFLAGS="-L/usr/lib64/libbpf.a"
@@ -38,13 +41,19 @@ build: $(SOURCES)
 mark.bpf.o: mark.bpf.c
 	clang -g -O2 -target bpf -D__TARGET_ARCH_x86_64 -I . -c $^ -o $@
 
-.PHONY: clean tc-show tc-clean
+.PHONY: clean tc-show tc-clean start-np-flow end-np-flow
 
 tc-show:
 	@sudo tc qdisc show dev lo
 
 tc-clean:
 	@sudo tc qdisc del dev lo clsact
+
+start-np-flow:
+	@echo "start tcp 192.168.0.1 2345 192.168.0.2 5777 1 2" > np
+
+end-np-flow:
+	@echo "end tcp 192.168.0.1 2345 192.168.0.2 5777 1 2" > np
 
 clean:
 	@rm -rf $(TRASH)
