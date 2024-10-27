@@ -5,41 +5,51 @@ package ebpf
 import (
 	_ "embed"
 	"fmt"
+	"log/slog"
 	"os"
 	"syscall"
 	"unsafe"
 
 	bpf "github.com/aquasecurity/libbpfgo"
+	"github.com/pcolladosoto/glowd"
 )
 
-//go:embed marker.bpf.c
-var ebfpSrc []byte
+const TARGET_IFACE string = "lo"
 
-func Launch() {
+var (
+	//go:embed marker.bpf.o
+	bpfObj []byte
+
+	bpfModule *bpf.Module
+	hook      *bpf.TcHook
+)
+
+func Cleanup() error {
+	if err := hook.Destroy(); err != nil {
+		slog.Warn("error destroying the hook", "err", err)
+	}
+	bpfModule.Close()
+
+	return nil
+}
+
+func Init() error {
+	// bpfModule, err := bpf.NewModuleFromBuffer(bpfObj, "marker")
+
 	bpfModule, err := bpf.NewModuleFromFile("main.bpf.o")
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(-1)
+		return fmt.Errorf("error creating the BPF module: %w", err)
 	}
-	defer bpfModule.Close()
 
 	err = bpfModule.BPFLoadObject()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(-1)
+		return fmt.Errorf("error loading the BPF object: %w", err)
 	}
 
 	hook := bpfModule.TcHookInit()
-	defer func() {
-		if err := hook.Destroy(); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-		}
-	}()
-
-	err = hook.SetInterfaceByName("lo")
+	err = hook.SetInterfaceByName(TARGET_IFACE)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "failed to set tc hook on interface lo: %v", err)
-		os.Exit(-1)
+		return fmt.Errorf("failed to set TC hook on interface %s: %w", TARGET_IFACE, err)
 	}
 
 	hook.SetAttachPoint(bpf.BPFTcEgress)
@@ -90,16 +100,24 @@ func Launch() {
 		}
 	}()
 
+}
+
+func Run(<-chan glowd.FlowID) {
 	bpfMap, err := bpfModule.GetMap("flowLabels")
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(-1)
+		return fmt.Errorf("error getting the BPF map: %w", err)
 	}
-	keyA := struct{x uint64; y uint64; z uint16; w uint16}{0, 1, 2, 3}
+
+	keyA := struct {
+		x uint64
+		y uint64
+		z uint16
+		w uint16
+	}{0, 1, 2, 3}
 	keyAUnsafe := unsafe.Pointer(&keyA)
 	val, err := bpfMap.GetValue(keyAUnsafe)
 	if err != nil {
-		fmt.Printf("error getting the map value: %v\n", err)
+		slog.Warn("error getting the map value", "err", err)
 	}
-	fmt.Printf("value: %+v\n", val)
+	slog.Debug("retrieved value from map", "key", keyA, "val", val)
 }
