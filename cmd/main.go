@@ -5,9 +5,11 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"path/filepath"
 
 	"github.com/pcolladosoto/glowd"
 	"github.com/pcolladosoto/glowd/backends/ebpf"
+	"github.com/pcolladosoto/glowd/backends/firefly"
 	"github.com/pcolladosoto/glowd/plugins/np"
 
 	"github.com/spf13/cobra"
@@ -44,12 +46,13 @@ var (
 		Use:   "np-test",
 		Short: "Try to create and read from a named pipe.",
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := np.Init(); err != nil {
+			namedPipe := np.New()
+			if err := namedPipe.Init(); err != nil {
 				fmt.Printf("error setting up the named pipe: %v\n", err)
 				os.Exit(-1)
 			}
 			defer func() {
-				if err := np.Cleanup(); err != nil {
+				if err := namedPipe.Cleanup(); err != nil {
 					fmt.Printf("error cleaning up the named pipe: %v\n", err)
 				}
 			}()
@@ -59,22 +62,15 @@ var (
 
 			flowChan := make(chan glowd.FlowID)
 			doneChan := make(chan struct{})
-			go np.Run(doneChan, flowChan)
+			go namedPipe.Run(doneChan, flowChan)
 
-			for {
-				select {
-				case flowID, ok := <-flowChan:
-					if !ok {
-						fmt.Printf("flowChannel closed by producer...\n")
-						return
-					}
-					fmt.Printf("got a flow: %+v\n", flowID)
-				case <-sigChan:
-					close(doneChan)
-					return
-				}
-			}
+			fireflyBackend := firefly.New()
+			go fireflyBackend.Run(doneChan, flowChan)
 
+			// Block until we are told to quit
+			<-sigChan
+			close(doneChan)
+			return
 		},
 	}
 
@@ -93,7 +89,24 @@ func init() {
 }
 
 func main() {
-	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	replace := func(groups []string, a slog.Attr) slog.Attr {
+		// Remove time.
+		if a.Key == slog.TimeKey && len(groups) == 0 {
+			return slog.Attr{}
+		}
+		// Remove the directory from the source's filename.
+		if a.Key == slog.SourceKey {
+			source := a.Value.Any().(*slog.Source)
+			source.File = filepath.Base(source.File)
+		}
+		return a
+	}
+
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		AddSource:   true,
+		Level:       slog.LevelDebug,
+		ReplaceAttr: replace,
+	}))
 	slog.SetDefault(logger)
 
 	if err := rootCmd.Execute(); err != nil {
