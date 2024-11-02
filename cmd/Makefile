@@ -50,10 +50,10 @@ tc-clean:
 	@sudo tc qdisc del dev lo clsact
 
 start-np-flow:
-	@echo "start tcp 192.168.0.1 2345 192.168.0.2 5777 1 2" > np
+	@echo "start tcp 192.168.0.1 2345 127.0.0.1 5777 1 2" > np
 
 end-np-flow:
-	@echo "end tcp 192.168.0.1 2345 192.168.0.2 5777 1 2" > np
+	@echo "end tcp 192.168.0.1 2345 127.0.0.1 5777 1 2" > np
 
 clean:
 	@rm -rf $(TRASH)

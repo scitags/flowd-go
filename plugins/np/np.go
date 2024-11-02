@@ -22,7 +22,15 @@ const (
 	PIPE_PATH string = "np"
 )
 
-func Init() error {
+type NamedPipePlugin struct{}
+
+func New() *NamedPipePlugin {
+	return &NamedPipePlugin{}
+}
+
+func (np *NamedPipePlugin) Init() error {
+	slog.Debug("initialising the named pipe plugin")
+
 	if _, err := os.Stat(PIPE_PATH); !errors.Is(err, os.ErrNotExist) {
 		slog.Debug("it looks like the named pipe exists!")
 		return nil
@@ -36,7 +44,9 @@ func Init() error {
 	return nil
 }
 
-func Run(done <-chan struct{}, outChan chan<- glowd.FlowID) {
+func (np *NamedPipePlugin) Run(done <-chan struct{}, outChan chan<- glowd.FlowID) {
+	slog.Debug("running the named pipe plugin")
+
 	pipe, err := os.OpenFile(PIPE_PATH, os.O_RDONLY, os.ModeNamedPipe)
 	if err != nil {
 		slog.Error("couldn't open the named pipe", "err", err)
@@ -65,7 +75,8 @@ func Run(done <-chan struct{}, outChan chan<- glowd.FlowID) {
 				}
 				slog.Debug("read pipe", "n", n, "buff", buff[:n])
 				parsedEvents := parseEvents(string(buff[:n]))
-				for _, parsedEvent := range parsedEvents {
+				for i, parsedEvent := range parsedEvents {
+					slog.Debug("pushing event onto channel", "i", i)
 					outChan <- parsedEvent
 				}
 			case notify.Remove:
@@ -79,7 +90,8 @@ func Run(done <-chan struct{}, outChan chan<- glowd.FlowID) {
 	}
 }
 
-func Cleanup() error {
+func (np *NamedPipePlugin) Cleanup() error {
+	slog.Debug("cleaning up the named pipe plugin")
 	if err := os.Remove(PIPE_PATH); err != nil {
 		return fmt.Errorf("error removing named pipe: %w", err)
 	}
