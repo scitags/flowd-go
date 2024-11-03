@@ -17,3 +17,6 @@ vmlinux.h
 
 # Ignore backup files
 *.bak
+
+# Ignore logs generated with the likes of {l,s}trace
+*.log
