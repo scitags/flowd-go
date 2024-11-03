@@ -36,6 +36,9 @@ struct {
 // Let's hook the program on the TC! XDP will only look at the ingress traffic :(
 SEC("tc")
 int target(struct __sk_buff *skb) {
+	// Check https://docs.ebpf.io/linux/helper-function/bpf_trace_printk/
+	static const char fmt[] = "hello there!";
+	bpf_trace_printk(fmt, sizeof(fmt));
 	// __u32 *pkt_count = bpf_map_lookup_elem(&flowLabels, &ip);
 	// if (!pkt_count) {
 	// 	// No entry in the map for this IP address yet, so set the initial value to 1.
