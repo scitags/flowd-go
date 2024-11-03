@@ -147,6 +147,7 @@ func (b *EbpfBackend) Cleanup() error {
 		}
 
 		if !b.keepQdisc {
+			slog.Debug("removing the backing qdisc")
 			// Explicitly ask for the backing QDisc to be destroyed.
 			// See https://patchwork.kernel.org/project/netdevbpf/patch/20210428162553.719588-3-memxor@gmail.com/
 			b.hook.SetAttachPoint(bpf.BPFTcEgress | bpf.BPFTcIngress)

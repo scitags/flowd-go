@@ -56,6 +56,9 @@ tc-show:
 tc-clean:
 	@sudo tc qdisc del dev lo clsact
 
+ebpf-trace:
+	@sudo cat /sys/kernel/debug/tracing/trace_pipe
+
 start-np-flow:
 	@echo "start tcp 192.168.0.1 2345 127.0.0.1 5777 1 2" > np
 
