@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"time"
 
 	"github.com/pcolladosoto/glowd"
 	"github.com/pcolladosoto/glowd/backends/ebpf"
@@ -38,7 +39,23 @@ var (
 		Use:   "ebpf-test",
 		Short: "Try to load the eBPF program.",
 		Run: func(cmd *cobra.Command, args []string) {
-			ebpf.Init()
+			ebpfBackend := ebpf.New()
+			if err := ebpfBackend.Init(); err != nil {
+				fmt.Printf("error on Init(): %v\n", err)
+				return
+			}
+
+			ebpfBackend.Run(nil, nil)
+
+			// sigChan := make(chan os.Signal, 1)
+			// signal.Notify(sigChan, os.Interrupt)
+			// <-sigChan
+			time.Sleep(5 * time.Second)
+
+			if err := ebpfBackend.Cleanup(); err != nil {
+				fmt.Printf("error on Cleanup(): %v\n", err)
+				return
+			}
 		},
 	}
 
