@@ -93,7 +93,7 @@ func sendFirefly(flowID glowd.FlowID, prependSyslog bool) error {
 		}
 	}()
 
-	localFirefly := firefly{}
+	var localFirefly firefly
 	localFirefly.Version = FIREFLY_VERSION
 	localFirefly.FlowLifecycle.State = flowID.State.String()
 	localFirefly.FlowLifecycle.CurrentTime = time.Now().UTC().Format(TIME_FORMAT)
