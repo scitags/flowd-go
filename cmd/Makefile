@@ -43,8 +43,15 @@ mark.bpf.o: mark.bpf.c
 
 .PHONY: clean tc-show tc-clean start-np-flow end-np-flow
 
+# Check https://qmonnet.github.io/whirl-offload/2020/04/11/tc-bpf-direct-action/
+# for a great discusson on tc introspection!
 tc-show:
+	@echo QDisc:
 	@sudo tc qdisc show dev lo
+	@echo Ingress filters:
+	@sudo tc filter show dev lo ingress
+	@echo Egress filters:
+	@sudo tc filter show dev lo egress
 
 tc-clean:
 	@sudo tc qdisc del dev lo clsact
