@@ -2,15 +2,37 @@
 
 /*
  * The authoritative reference is the Kernel documentation over at [0].
- * Be sure to check bpf-helpers(7) [1] too!
+ * Be sure to check bpf-helpers(7) [1] too! This implementation is also
+ * largely based on the example from libbpf-bootstrap [3]. Some great
+ * documentation is also available over at [4]. Bear in mind this program
+ * is of type BPF_PROG_TYPE_SCHED_CLS and we'll be running in the so called
+ * direct action mode. What this implies togetehr with much more information
+ * can be found on [5].
  * References:
  *   0: https://www.kernel.org/doc/html/latest/bpf/index.html
  *   1: https://www.man7.org/linux/man-pages/man7/bpf-helpers.7.html
+ *   3: https://github.com/libbpf/libbpf-bootstrap/blob/4a567f229efe8fc79ee1a2249569eb6b9c02ad1b/examples/c/tc.bpf.c
+ *   4: https://docs.ebpf.io/linux/helper-function/
+ *   5: https://docs.ebpf.io/linux/program-type/BPF_PROG_TYPE_SCHED_CLS/
  */
 
 // You'll need to install libbpf-devel (or the equivalent one) to get these headers!
 #include "vmlinux.h"
 #include <bpf/bpf_helpers.h>
+#include <bpf/bpf_endian.h>
+#include <bpf/bpf_tracing.h>
+
+// Enforceable actions. These are defined on include/uapi/linux/if_ether.h
+// (i.e. /usr/include/linux/pkt_cls.h). The problem is including linux/pkt_cls.h
+// conflicts with the inclusion of vmlinux.h!
+#define TC_ACT_UNSPEC (-1)
+#define TC_ACT_OK 0
+
+// The ETH_P_* constants are defined in include/uapi/linux/if_ether.h
+// (i.e. /usr/include/linux/if_ether.h). Again, their inclusion conflicts
+// with vmlinux.h...
+#define ETH_P_IP   0x0800 /* Internet Protocol packet */
+#define ETH_P_IPV6 0x86DD /* IPv6 over bluebook */
 
 // Oh wow, the kernel refuses to load unlicensed stuff!
 char LICENSE[] SEC("license") = "GPL";
@@ -35,32 +57,48 @@ struct {
 
 // Let's hook the program on the TC! XDP will only look at the ingress traffic :(
 SEC("tc")
-int target(struct __sk_buff *skb) {
+
+/*
+ * The program will receive an __sk_buff which is a 'mirror' of the kernel's own
+ * sk_buff [0]. This struct is very well documented over at [1].
+ * References:
+ *   0: https://docs.kernel.org/networking/skbuff.html
+ *   1: https://docs.ebpf.io/linux/program-context/__sk_buff
+*/
+int target(struct __sk_buff *ctx) {
+	void *data_end = (void *)(__u64)ctx->data_end;
+	void *data = (void *)(__u64)ctx->data;
+
+	// Check vmlinux.h for the definitions of these structs!
+	struct ethhdr *l2;
+	struct ipv6hdr *l3;
+
+	// Let's check whether the contents of the Ethernet frame are an IPv6 datagram.
+	// We'll also need to be careful with the network's endianness, hence the call
+	// to bpf_htons. This helper function is defined on libbpf's bpf_endian.h.
+	if (ctx->protocol != bpf_htons(ETH_P_IPV6))
+		return TC_ACT_OK;
+
 	// Check https://docs.ebpf.io/linux/helper-function/bpf_trace_printk/
-	static const char fmt[] = "hello there!";
-	bpf_trace_printk(fmt, sizeof(fmt));
-	// __u32 *pkt_count = bpf_map_lookup_elem(&flowLabels, &ip);
-	// if (!pkt_count) {
-	// 	// No entry in the map for this IP address yet, so set the initial value to 1.
-	// 	__u32 init_pkt_count = 1;
-	// 	bpf_map_update_elem(&flowLabels, &ip, &init_pkt_count, BPF_ANY);
-	// } else {
-	// 	// Entry already exists for this IP address,
-	// 	// so increment it atomically using an LLVM built-in.
-	// 	// Check https://llvm.org/docs/Atomics.html
-	// 	__sync_fetch_and_add(pkt_count, 1);
-	// }
+	bpf_printk("hello from glowd's eBPF backend: we got an IPv6 datagram!");
 
-	// Reserve space on the ringBuffer for the sample
-	// process = bpf_ringbuf_reserve(&events, sizeof(int), ringBufferFlags);
-	// if (!process) {
-	// 	return 0;
-	// }
+	// Get a hold of the Ethernet frame header. We'll check we do indeed have more
+	// information to read before going on.
+	l2 = data;
+	if ((void *)(l2 + 1) > data_end)
+		return TC_ACT_OK;
 
-	// *process = 2021;
+	// Get a hold of the IPv6 header and check we do have some payload!
+	l3 = (struct ipv6hdr *)(l2 + 1);
+	if ((void *)(l3 + 1) > data_end)
+		return TC_ACT_OK;
 
-	// bpf_ringbuf_submit(process, ringBufferFlags);
-	return 0;
+	// At this point we have access to the full IPv{4,6} header and payload. Time
+	// to mark the packet!
+	bpf_printk("Got IP packet: payload_len: %d, tot_limit: %d", bpf_ntohs(l3->payload_len), l3->hop_limit);
+
+	// Simply signal that the packet should proceed!
+	return TC_ACT_OK;
 }
 
 // BPF_HASH(flowlabel_table, struct fourtuple, u64, 100000);

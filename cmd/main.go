@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"time"
 
 	"github.com/pcolladosoto/glowd"
 	"github.com/pcolladosoto/glowd/backends/ebpf"
@@ -47,10 +46,10 @@ var (
 
 			ebpfBackend.Run(nil, nil)
 
-			// sigChan := make(chan os.Signal, 1)
-			// signal.Notify(sigChan, os.Interrupt)
-			// <-sigChan
-			time.Sleep(5 * time.Second)
+			sigChan := make(chan os.Signal, 1)
+			signal.Notify(sigChan, os.Interrupt)
+			<-sigChan
+			// time.Sleep(5 * time.Second)
 
 			if err := ebpfBackend.Cleanup(); err != nil {
 				fmt.Printf("error on Cleanup(): %v\n", err)
