@@ -44,7 +44,7 @@ func (b *EbpfBackend) Init() error {
 	slog.Debug("initialising the ebpf backend")
 
 	// Create the BPF module
-	bpfModule, err := bpf.NewModuleFromBuffer(bpfObj, "target")
+	bpfModule, err := bpf.NewModuleFromBuffer(bpfObj, "glowd")
 	// bpfModule, err := bpf.NewModuleFromFile("main.bpf.o")
 	if err != nil {
 		return fmt.Errorf("error creating the BPF module: %w", err)
