@@ -52,19 +52,6 @@ struct fourTuple {
 	__u16 sport;
 };
 
-struct ip6_t {
-  unsigned int        ver:4;
-  unsigned int        priority:8;
-  unsigned int        flow_label:20;
-  unsigned short      payload_len;
-  unsigned char       next_header;
-  unsigned char       hop_limit;
-  unsigned long long  src_hi;
-  unsigned long long  src_lo;
-  unsigned long long  dst_hi;
-  unsigned long long  dst_lo;
-};
-
 // Let's define our map!
 struct {
 	__uint(type, BPF_MAP_TYPE_LRU_HASH);
@@ -93,22 +80,7 @@ int target(struct __sk_buff *ctx) {
 	// Also, the struct for 802.1Q seems to be vlan_ethhdr!
 	struct ethhdr *l2;
 	struct ipv6hdr *l3;
-	struct iphdr *l3v4;
-
-	// if (ctx->protocol == bpf_htons(ETH_P_IP)) {
-	// 	struct ethhdr *eth = data;
-	// 	if ((void *)(eth + 1) > data_end) {
-	// 		return TC_ACT_OK;
-	// 	}
-
-	// 	struct iphdr *ip = (void *)(eth + 1);
-	// 	if ((void *)(ip + 1) > data_end) {
-	// 		return TC_ACT_OK;
-	// 	}
-
-	// 	bpf_printk("ipv4: saddr[0]: %x", (__u32)ip->saddr);
-	// 	return TC_ACT_OK;
-	// }
+	struct tcphdr *l4;
 
 	// Let's check whether the contents of the Ethernet frame are an IPv6 datagram.
 	// We'll also need to be careful with the network's endianness, hence the call
@@ -117,59 +89,46 @@ int target(struct __sk_buff *ctx) {
 		return TC_ACT_OK;
 
 	// Check https://docs.ebpf.io/linux/helper-function/bpf_trace_printk/
-	bpf_printk("hello from glowd's eBPF backend: we got an IPv6 datagram!");
-
-	// for (int i = 0; (data + i) < data_end - 1; i++) {
-	// 	bpf_printk("for: %d --- %x", i, *(__u8*)(data+i));
-	// }
+	// bpf_printk("hello from glowd's eBPF backend: we got an IPv6 datagram!");
 
 	// Get a hold of the Ethernet frame header. We'll check we do indeed have more
 	// information to read before going on.
 	l2 = data;
 	if ((void *)(l2 + 1) > data_end)
 		return TC_ACT_OK;
-	bpf_printk("eth: h_dest[0]: %x", l2->h_dest[0]);
-	bpf_printk("eth: h_proto: %x", l2->h_proto);
 
 	// Get a hold of the IPv6 header and check we do have some payload!
 	l3 = (void *)(l2 + 1);
 	if ((void *)(l3 + 1) > data_end)
 		return TC_ACT_OK;
 
-	// struct ip6_t *l3Bcc = (struct ip6_t *)l3;
-	// bpf_printk("l3Bcc: next_header: %x", l3Bcc->next_header);
-	// bpf_printk("l3Bcc: src_hi: %x", bpf_htons(l3Bcc->src_hi));
-	// bpf_printk("l3Bcc: src_lo: %x", l3Bcc->src_lo);
-	// bpf_printk("l3Bcc: dst_hi: %x", l3Bcc->dst_hi);
-	// bpf_printk("l3Bcc: dst_lo: %x", l3Bcc->dst_lo);
+	__u64 ipv6SaddrLo = bpf_htonl(l3->saddr.in6_u.u6_addr32[2])|bpf_htonl(l3->saddr.in6_u.u6_addr32[3]);
+	__u64 ipv6SaddrHi = bpf_htonl(l3->saddr.in6_u.u6_addr32[0])|bpf_htonl(l3->saddr.in6_u.u6_addr32[1]);
+
+	__u64 ipv6DaddrLo = bpf_htonl(l3->daddr.in6_u.u6_addr32[2])|bpf_htonl(l3->daddr.in6_u.u6_addr32[3]);
+	__u64 ipv6DaddrHi = bpf_htonl(l3->daddr.in6_u.u6_addr32[0])|bpf_htonl(l3->daddr.in6_u.u6_addr32[1]);
+
+	__u8 flowLblLo = l3->flow_lbl[2];
+	__u8 flowLblMi = l3->flow_lbl[1];
+	__u8 flowLblHi = l3->flow_lbl[0];
 
 	if (l3->nexthdr == PROTO_IPV6_ICMP) {
-		bpf_printk("Got IPv6 ICMP: priority: %d", l3->priority);
-		bpf_printk("Got IPv6 ICMP: version: %d", l3->version);
-		bpf_printk("Got IPv6 ICMP: payload_len: %d", bpf_htons(l3->payload_len));
-		bpf_printk("Got IPv6 ICMP: nexthdr: %x", l3->nexthdr);
-		bpf_printk("Got IPv6 ICMP: hop_limit: %d", l3->hop_limit);
-
-		struct in6_addr ipv6Addr = l3->daddr;
-		__u32* addrPtr = (__u32*)ipv6Addr.in6_u.u6_addr32;
-		bpf_printk("Got IPv6 ICMP: ptr: %p", ipv6Addr.in6_u.u6_addr32);
-		bpf_printk("Got IPv6 ICMP: ptr: %p", ipv6Addr.in6_u.u6_addr16);
-		bpf_printk("Got IPv6 ICMP: ptr: %p", ipv6Addr.in6_u.u6_addr8);
-		bpf_printk("Got IPv6 ICMP: ptr: %x", *addrPtr);
-		bpf_printk("Got IPv6 ICMP: ptr: %x", *(addrPtr+1));
-		bpf_printk("Got IPv6 ICMP: ptr: %x", *(addrPtr+2));
-		bpf_printk("Got IPv6 ICMP: ptr: %x", *(addrPtr+3));
-
-		bpf_printk("Got IPv6 ICMP: bpf_htons(ipv6Addr.in6_u.u6_addr32[0]): %x", bpf_htons((__u32)ipv6Addr.in6_u.u6_addr32[3]));
-		bpf_printk("Got IPv6 ICMP: bpf_htons(ipv6Addr.in6_u.u6_addr16[0]): %x", bpf_htons((__u16)ipv6Addr.in6_u.u6_addr16[3]));
-		bpf_printk(" Got IPv6 ICMP: bpf_htons(ipv6Addr.in6_u.u6_addr8[0]): %x", bpf_htons((__u8)ipv6Addr.in6_u.u6_addr8[3]));
-
-		// bpf_printk("Got IPv6 ICMP: daddr: %pI6", l3->daddr);
-		// bpf_printk("Got IPv6 ICMP: saddr: %pI6", l3->saddr);
-		bpf_printk("Got IPv6 ICMP: bpf_htons(l3->daddr.in6_u.u6_addr32[0]): %x", bpf_htonl((__u32)((__u32*)l3->daddr.in6_u.u6_addr32)[3]));
-		bpf_printk("Got IPv6 ICMP: bpf_htons(l3->daddr.in6_u.u6_addr16[0]): %x", bpf_htons((__u16)l3->daddr.in6_u.u6_addr16[3]));
-		bpf_printk(" Got IPv6 ICMP: bpf_htons(l3->daddr.in6_u.u6_addr8[0]): %x", bpf_htons((__u8)l3->daddr.in6_u.u6_addr8[3]));
+		bpf_printk("   IPv6 saddr: %x --- %x", ipv6SaddrHi, ipv6SaddrLo);
+		bpf_printk("   IPv6 daddr: %x --- %x", ipv6DaddrHi, ipv6DaddrLo);
+		bpf_printk("IPv6 flow_lbl: %x --- %x --- %x", flowLblHi, flowLblMi, flowLblLo);
+		l3->flow_lbl[2] = 0xEF;
+		l3->flow_lbl[1] = 0xCD;
+		l3->flow_lbl[0] = 0xAB;
 		return TC_ACT_OK;
+	}
+
+	if (l3->nexthdr == PROTO_TCP) {
+		l4 = (void *)(l3 + 1);
+		if ((void *)(l4 + 1) > data_end)
+			return TC_ACT_OK;
+
+		bpf_printk("TCP source: %x", bpf_htons(l4->source));
+		bpf_printk("  TCP dest: %x", bpf_htons(l4->dest));
 	}
 
 	// At this point we have access to the full IPv6 header and payload. Time to mark the packet!
