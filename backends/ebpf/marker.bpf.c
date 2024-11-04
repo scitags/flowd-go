@@ -41,9 +41,6 @@
 #define PROTO_UDP       0x11
 #define PROTO_IPV6_ICMP 0x3A
 
-// Oh wow, the kernel refuses to load unlicensed stuff!
-char LICENSE[] SEC("license") = "GPL";
-
 // The keys for our hash maps. Should we maybe combine the ports into a __u32?
 struct fourTuple {
 	__u64 ip6Hi;
@@ -63,6 +60,9 @@ struct {
 // long ringBufferFlags = 0;
 
 // Let's hook the program on the TC! XDP will only look at the ingress traffic :(
+// This macro simply configures the section where the following will be inserted.
+// When loading BPF programs, libbpf will look in sections tc and classifier for
+// programs. to actually load.
 SEC("tc")
 
 /*
@@ -72,12 +72,13 @@ SEC("tc")
  *   0: https://docs.kernel.org/networking/skbuff.html
  *   1: https://docs.ebpf.io/linux/program-context/__sk_buff
 */
-int target(struct __sk_buff *ctx) {
+int marker(struct __sk_buff *ctx) {
 	void *data_end = (void *)(__u64)ctx->data_end;
 	void *data = (void *)(__u64)ctx->data;
 
 	// Check vmlinux.h for the definitions of these structs!
 	// Also, the struct for 802.1Q seems to be vlan_ethhdr!
+	// We just need to consider it on top of ETH_P_IPV6 basically.
 	struct ethhdr *l2;
 	struct ipv6hdr *l3;
 	struct tcphdr *l4;
@@ -178,89 +179,5 @@ int target(struct __sk_buff *ctx) {
 	return TC_ACT_OK;
 }
 
-// BPF_HASH(flowlabel_table, struct fourtuple, u64, 100000);
-// BPF_HASH(tobedeleted, struct fourtuple, u64, 100000);
-
-// int set_flow_label(struct __sk_buff *skb) {
-// 	u8 *cursor = 0;
-// 	struct ethernet_t *ethernet = cursor_advance(cursor, sizeof(*ethernet));
-
-// 	// IPv6
-// 	if (ethernet->type == 0x86DD) {
-// 		struct ip6_t *ip6 = cursor_advance(cursor, sizeof(*ip6));
-
-// 		struct fourtuple addrport;
-
-// 		// This is necessary for some reason to do with compiler padding
-// 		__builtin_memset(&addrport, 0, sizeof(addrport));
-
-// 		addrport.ip6_hi = ip6->dst_hi;
-// 		addrport.ip6_lo = ip6->dst_lo;
-
-// 		// TCP
-// 		if (ip6->next_header == 6) {
-// 			struct tcp_t *tcp = cursor_advance(cursor, sizeof(*tcp));
-
-// 			addrport.dport = tcp->dst_port;
-// 			addrport.sport = tcp->src_port;
-
-// 			u64 *delete = tobedeleted.lookup(&addrport);
-
-// 			u64 *flowlabel = flowlabel_table.lookup(&addrport);
-
-// 			if (delete) {
-// 				flowlabel_table.delete(&addrport);
-// 				tobedeleted.delete(&addrport);
-// 			}
-// 			else if (flowlabel) {
-// 				ip6->flow_label = *flowlabel;
-// 			}
-// 		}
-
-// 		return -1;
-// 	}
-// 	// Handle vlan tag
-// 	else if (ethernet->type == 0x8100)
-// 	{
-// 		struct dot1q_t *dot1q = cursor_advance(cursor, sizeof(*dot1q));
-
-// 		if (dot1q->type == 0x86DD) {
-// 			struct ip6_t *ip6 = cursor_advance(cursor, sizeof(*ip6));
-
-// 			struct fourtuple addrport;
-
-// 			// This is necessary for some reason to do with compiler padding
-// 			__builtin_memset(&addrport, 0, sizeof(addrport));
-
-// 			addrport.ip6_hi = ip6->dst_hi;
-// 			addrport.ip6_lo = ip6->dst_lo;
-
-// 			// TCP
-// 			if (ip6->next_header == 6) {
-// 				struct tcp_t *tcp = cursor_advance(cursor, sizeof(*tcp));
-
-// 				addrport.dport = tcp->dst_port;
-// 				addrport.sport = tcp->src_port;
-
-// 				u64 *delete = tobedeleted.lookup(&addrport);
-
-// 				u64 *flowlabel = flowlabel_table.lookup(&addrport);
-
-// 				if (delete) {
-// 					flowlabel_table.delete(&addrport);
-// 					tobedeleted.delete(&addrport);
-// 				}
-// 				else if (flowlabel) {
-// 					ip6->flow_label = *flowlabel;
-// 				}
-// 			}
-// 			return -1;
-// 		}
-// 		else {
-// 			return -1;
-// 		}
-// 	}
-// 	else {
-// 		return -1;
-// 	}
-// }
+// Oh wow, the kernel refuses to load unlicensed stuff!
+char LICENSE[] SEC("license") = "GPL";

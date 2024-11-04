@@ -23,7 +23,7 @@ import (
 
 const (
 	TARGET_IFACE string = "lo"
-	PROG_NAME    string = "target"
+	PROG_NAME    string = "marker"
 	MAP_NAME     string = "flowLabels"
 )
 
@@ -158,19 +158,20 @@ func (b *EbpfBackend) Run(done <-chan struct{}, inChan <-chan glowd.FlowID) {
 				return
 			}
 			slog.Debug("got a flowID", "flowID", flowID)
+
+			rawDstIPHi, rawDstIPLo := extractHalves(flowID.Dst.IP)
+			flowHash := flowFourTuple{
+				IPv6Hi:  rawDstIPHi,
+				IPv6Lo:  rawDstIPLo,
+				DstPort: flowID.Dst.Port,
+				SrcPort: flowID.Src.Port,
+			}
+
+			slog.Debug("flowID.Dst.IP", "rawDstIP", fmt.Sprintf("%+v", []byte(flowID.Dst.IP)),
+				"rawDstIPHi", rawDstIPHi, "rawDstIPLo", rawDstIPLo)
+
 			switch flowID.State {
 			case glowd.START:
-				rawDstIPHi, rawDstIPLo := extractHalves(flowID.Dst.IP)
-				flowHash := flowFourTuple{
-					IPv6Hi:  rawDstIPHi,
-					IPv6Lo:  rawDstIPLo,
-					DstPort: flowID.Dst.Port,
-					SrcPort: flowID.Src.Port,
-				}
-
-				slog.Debug("flowID.Dst.IP", "rawDstIP", fmt.Sprintf("%+v", []byte(flowID.Dst.IP)),
-					"rawDstIPHi", rawDstIPHi, "rawDstIPLo", rawDstIPLo)
-
 				flowTag := b.genFlowTag(flowID.Experiment, flowID.Activity)
 
 				flowHashPtr := unsafe.Pointer(&flowHash)
@@ -181,19 +182,12 @@ func (b *EbpfBackend) Run(done <-chan struct{}, inChan <-chan glowd.FlowID) {
 				}
 				slog.Debug("inserted map value", "flowHash", flowHash, "flowTag", flowTag)
 			case glowd.END:
-				continue
-				// keyA := struct {
-				// 	x uint64
-				// 	y uint64
-				// 	z uint16º
-				// 	w uint16
-				// }{0, 1, 2, 3}
-				// keyAUnsafe := unsafe.Pointer(&keyA)
-				// val, err := b.flowMap.GetValue(keyAUnsafe)
-				// if err != nil {
-				// 	slog.Warn("error getting the map value", "err", err)
-				// }
-				// slog.Debug("retrieved value from map", "key", keyA, "val", val)
+				flowHashPtr := unsafe.Pointer(&flowHash)
+				if err := b.flowMap.DeleteKey(flowHashPtr); err != nil {
+					slog.Error("error deleting map key", "err", err, "flowHash", flowHash)
+					continue
+				}
+				slog.Debug("deleted map value", "flowHash", flowHash)
 			default:
 				slog.Error("wrong flow state made it here", "flowID.State", flowID.State)
 			}
