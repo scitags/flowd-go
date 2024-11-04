@@ -7,7 +7,10 @@ import (
 	"fmt"
 	"log/slog"
 	"syscall"
+	"time"
 	"unsafe"
+
+	"math/rand"
 
 	bpf "github.com/aquasecurity/libbpfgo"
 	"github.com/pcolladosoto/glowd"
@@ -32,6 +35,8 @@ type EbpfBackend struct {
 	flowMap *bpf.BPFMap
 
 	tcOpts bpf.TcOpts
+
+	rGen *rand.Rand
 
 	keepQdisc bool
 }
@@ -108,6 +113,9 @@ func (b *EbpfBackend) Init() error {
 	// we're passing it by reference!
 	b.tcOpts = tcOpts
 
+	// Initialise the random number generator
+	b.rGen = rand.New(rand.NewSource(time.Now().UnixNano()))
+
 	return nil
 }
 
@@ -165,4 +173,26 @@ func (b *EbpfBackend) Cleanup() error {
 	}
 
 	return nil
+}
+
+// Implementation of Section 1.2 of https://docs.google.com/document/d/1x9JsZ7iTj44Ta06IHdkwpv5Q2u4U2QGLWnUeN2Zf5ts/edit?usp=sharing
+func (b *EbpfBackend) genFlowTag(experimentId, activityId uint32) uint32 {
+	// We'll slice this number up to get our needed 5 random bits
+	rNum := b.rGen.Uint32()
+
+	// The experimentId is supposed to be 9 bits long and reversed. That's why we have a hardcoded 9 here!
+	var experimentIdRev uint32 = 0
+	for i := 0; i < 9; i++ {
+		experimentIdRev |= (experimentId & (0x1 << i) >> i) << ((9 - 1) - i)
+	}
+
+	var flowTag uint32 = (rNum & (0x3 << 18)) | ((experimentIdRev & 0x1FF) << 9) | (rNum & (0x1 << 8)) | ((activityId & 0x3F) << 2) | (rNum & 0x3)
+
+	slog.Debug("genFlowTag", "rNum", fmt.Sprintf("%b", rNum), "experimentId", fmt.Sprintf("%b", experimentId), "experimentIdRev",
+		fmt.Sprintf("%b", experimentIdRev), "activityId", fmt.Sprintf("%b", activityId), "flowTag", fmt.Sprintf("%b", flowTag))
+
+	fmt.Printf("genFlowTag:\n\trNum: %b\n\trNum1: %b\n\trNum2: %b\n\trNum3: %b\n\texperimentId: %b\n\texperimentIdRev: %b\n\tactivityId: %b\n\tflowTag: %b\n",
+		rNum, (rNum&(0x3<<18))>>18, (rNum&(0x1<<8))>>8, rNum&0x3, experimentId, experimentIdRev, activityId, flowTag)
+
+	return flowTag
 }
