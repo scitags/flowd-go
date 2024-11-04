@@ -102,23 +102,35 @@ int target(struct __sk_buff *ctx) {
 	if ((void *)(l3 + 1) > data_end)
 		return TC_ACT_OK;
 
-	__u64 ipv6SaddrLo = bpf_htonl(l3->saddr.in6_u.u6_addr32[2])|bpf_htonl(l3->saddr.in6_u.u6_addr32[3]);
-	__u64 ipv6SaddrHi = bpf_htonl(l3->saddr.in6_u.u6_addr32[0])|bpf_htonl(l3->saddr.in6_u.u6_addr32[1]);
+	__u64 ipv6SaddrLo = bpf_htonl(l3->saddr.in6_u.u6_addr32[2]);
+	ipv6SaddrLo = ipv6SaddrLo << 32 | bpf_htonl(l3->saddr.in6_u.u6_addr32[3]);
 
-	__u64 ipv6DaddrLo = bpf_htonl(l3->daddr.in6_u.u6_addr32[2])|bpf_htonl(l3->daddr.in6_u.u6_addr32[3]);
-	__u64 ipv6DaddrHi = bpf_htonl(l3->daddr.in6_u.u6_addr32[0])|bpf_htonl(l3->daddr.in6_u.u6_addr32[1]);
+	__u64 ipv6SaddrHi = bpf_htonl(l3->saddr.in6_u.u6_addr32[0]);
+	ipv6SaddrHi = ipv6SaddrHi << 32 | bpf_htonl(l3->saddr.in6_u.u6_addr32[1]);
+
+	__u64 ipv6DaddrLo = bpf_htonl(l3->daddr.in6_u.u6_addr32[2]);
+	ipv6DaddrLo = ipv6DaddrLo << 32 | bpf_htonl(l3->daddr.in6_u.u6_addr32[3]);
+
+	__u64 ipv6DaddrHi = bpf_htonl(l3->daddr.in6_u.u6_addr32[0]);
+	ipv6DaddrHi = ipv6DaddrHi << 32 | bpf_htonl(l3->daddr.in6_u.u6_addr32[1]);
 
 	__u8 flowLblLo = l3->flow_lbl[2];
 	__u8 flowLblMi = l3->flow_lbl[1];
 	__u8 flowLblHi = l3->flow_lbl[0];
 
 	if (l3->nexthdr == PROTO_IPV6_ICMP) {
-		bpf_printk("   IPv6 saddr: %x --- %x", ipv6SaddrHi, ipv6SaddrLo);
-		bpf_printk("   IPv6 daddr: %x --- %x", ipv6DaddrHi, ipv6DaddrLo);
+		bpf_printk("   IPv6 saddr: %pI6", &l3->saddr);
+		bpf_printk("   IPv6 daddr: %pI6", &l3->daddr);
+
+		bpf_printk("   IPv6 saddr (hi --- lo): %x --- %x", ipv6SaddrHi, ipv6SaddrLo);
+		bpf_printk("   IPv6 daddr (hi --- lo): %x --- %x", ipv6DaddrHi, ipv6DaddrLo);
+
 		bpf_printk("IPv6 flow_lbl: %x --- %x --- %x", flowLblHi, flowLblMi, flowLblLo);
+
 		l3->flow_lbl[2] = 0xEF;
 		l3->flow_lbl[1] = 0xCD;
 		l3->flow_lbl[0] = 0xAB;
+
 		return TC_ACT_OK;
 	}
 

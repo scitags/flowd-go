@@ -10,7 +10,7 @@ marker.bpf.o: marker.bpf.c vmlinux.h
 
 # Generate the kernel headers
 vmlinux.h:
-	 bpftool btf dump file /sys/kernel/btf/vmlinux format c > vmlinux.h
+	bpftool btf dump file /sys/kernel/btf/vmlinux format c > vmlinux.h
 
 .PHONY: clean
 
