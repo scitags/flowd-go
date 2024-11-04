@@ -61,7 +61,7 @@ var (
 		Use:   "np-test",
 		Short: "Try to create and read from a named pipe.",
 		Run: func(cmd *cobra.Command, args []string) {
-			namedPipe := np.New()
+			namedPipe := np.New(np.NamedPipePluginConf{})
 			if err := namedPipe.Init(); err != nil {
 				fmt.Printf("error setting up the named pipe: %v\n", err)
 				return

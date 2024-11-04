@@ -15,29 +15,42 @@ import (
 	"github.com/rjeczalik/notify"
 )
 
-const (
-	MAX_READERS int = 5
-	BUFF_SIZE   int = 1000
-
-	PIPE_PATH string = "np"
+var (
+	DefaultConf = NamedPipePluginConf{
+		MaxReaders: 5,
+		BuffSize:   1000,
+		PipePath:   "np",
+	}
 )
 
-type NamedPipePlugin struct{}
+type NamedPipePluginConf struct {
+	MaxReaders int
+	BuffSize   int
+	PipePath   string
+}
 
-func New() *NamedPipePlugin {
-	return &NamedPipePlugin{}
+type NamedPipePlugin struct {
+	conf NamedPipePluginConf
+}
+
+func New(conf NamedPipePluginConf) *NamedPipePlugin {
+	// Parenthesis required due to a parsing ambiguity!
+	if conf == (NamedPipePluginConf{}) {
+		return &NamedPipePlugin{conf: DefaultConf}
+	}
+	return &NamedPipePlugin{conf: DefaultConf}
 }
 
 func (np *NamedPipePlugin) Init() error {
 	slog.Debug("initialising the named pipe plugin")
 
-	if _, err := os.Stat(PIPE_PATH); !errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(np.conf.PipePath); !errors.Is(err, os.ErrNotExist) {
 		slog.Debug("it looks like the named pipe exists!")
 		return nil
 	}
 
 	// Consider using the unix package...
-	if err := syscall.Mkfifo(PIPE_PATH, 0666); err != nil {
+	if err := syscall.Mkfifo(np.conf.PipePath, 0666); err != nil {
 		return fmt.Errorf("couldn't create the named pipe: %w", err)
 	}
 
@@ -47,7 +60,7 @@ func (np *NamedPipePlugin) Init() error {
 func (np *NamedPipePlugin) Run(done <-chan struct{}, outChan chan<- glowd.FlowID) {
 	slog.Debug("running the named pipe plugin")
 
-	pipe, err := os.OpenFile(PIPE_PATH, os.O_RDONLY, os.ModeNamedPipe)
+	pipe, err := os.OpenFile(np.conf.PipePath, os.O_RDONLY, os.ModeNamedPipe)
 	if err != nil {
 		slog.Error("couldn't open the named pipe", "err", err)
 		close(outChan)
@@ -57,13 +70,13 @@ func (np *NamedPipePlugin) Run(done <-chan struct{}, outChan chan<- glowd.FlowID
 
 	// A buffered channel guarantees that we don't loose events even
 	// if writes take place at the exact same time
-	c := make(chan notify.EventInfo, MAX_READERS)
+	c := make(chan notify.EventInfo, np.conf.MaxReaders)
 
 	// Hook the notifications
-	notify.Watch(PIPE_PATH, c, notify.Write|notify.Remove)
+	notify.Watch(np.conf.PipePath, c, notify.Write|notify.Remove)
 
 	// Listen for events
-	buff := make([]byte, BUFF_SIZE)
+	buff := make([]byte, np.conf.BuffSize)
 	for {
 		select {
 		case e := <-c:
@@ -92,7 +105,7 @@ func (np *NamedPipePlugin) Run(done <-chan struct{}, outChan chan<- glowd.FlowID
 
 func (np *NamedPipePlugin) Cleanup() error {
 	slog.Debug("cleaning up the named pipe plugin")
-	if err := os.Remove(PIPE_PATH); err != nil {
+	if err := os.Remove(np.conf.PipePath); err != nil {
 		return fmt.Errorf("error removing named pipe: %w", err)
 	}
 	return nil
