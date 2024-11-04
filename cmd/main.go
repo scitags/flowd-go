@@ -9,7 +9,6 @@ import (
 
 	"github.com/pcolladosoto/glowd"
 	"github.com/pcolladosoto/glowd/backends/ebpf"
-	"github.com/pcolladosoto/glowd/backends/firefly"
 	"github.com/pcolladosoto/glowd/plugins/np"
 
 	"github.com/spf13/cobra"
@@ -65,7 +64,7 @@ var (
 			namedPipe := np.New()
 			if err := namedPipe.Init(); err != nil {
 				fmt.Printf("error setting up the named pipe: %v\n", err)
-				os.Exit(-1)
+				return
 			}
 			defer func() {
 				if err := namedPipe.Cleanup(); err != nil {
@@ -80,13 +79,27 @@ var (
 			doneChan := make(chan struct{})
 			go namedPipe.Run(doneChan, flowChan)
 
-			fireflyBackend := firefly.New()
-			go fireflyBackend.Run(doneChan, flowChan)
+			ebpfBackend := ebpf.New()
+			if err := ebpfBackend.Init(); err != nil {
+				fmt.Printf("error on Init(): %v\n", err)
+				return
+			}
+
+			defer func() {
+				if err := ebpfBackend.Cleanup(); err != nil {
+					fmt.Printf("error cleaning up the ebpf backend: %v\n", err)
+					return
+				}
+			}()
+
+			go ebpfBackend.Run(doneChan, flowChan)
+
+			// fireflyBackend := firefly.New()
+			// go fireflyBackend.Run(doneChan, flowChan)
 
 			// Block until we are told to quit
 			<-sigChan
 			close(doneChan)
-			return
 		},
 	}
 

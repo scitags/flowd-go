@@ -41,7 +41,7 @@ build: $(SOURCES)
 mark.bpf.o: mark.bpf.c
 	clang -g -O2 -target bpf -D__TARGET_ARCH_x86_64 -I . -c $^ -o $@
 
-.PHONY: clean tc-show tc-clean start-np-flow end-np-flow
+.PHONY: clean tc-show tc-clean start-ipv4-flow end-ipv4-flow start-ipv6-flow end-ipv6-flow
 
 # Check https://qmonnet.github.io/whirl-offload/2020/04/11/tc-bpf-direct-action/
 # for a great discusson on tc introspection!
@@ -59,11 +59,17 @@ tc-clean:
 ebpf-trace:
 	@sudo cat /sys/kernel/debug/tracing/trace_pipe
 
-start-np-flow:
-	@echo "start tcp 192.168.0.1 2345 127.0.0.1 5777 1 2" > np
+start-ipv4-flow:
+	@sudo bash -c 'echo "start tcp 192.168.0.1 2345 127.0.0.1 5777 1 2" > np'
 
-end-np-flow:
-	@echo "end tcp 192.168.0.1 2345 127.0.0.1 5777 1 2" > np
+end-ipv4-flow:
+	@sudo bash -c 'echo "end tcp   192.168.0.1 2345 127.0.0.1 5777 1 2" > np'
+
+start-ipv6-flow:
+	@sudo bash -c 'echo "start tcp         ::1 2345       ::1 5777 1 2" > np'
+
+end-ipv6-flow:
+	@sudo bash -c 'echo "end tcp           ::1 2345       ::1 5777 1 2" > np'
 
 clean:
 	@rm -rf $(TRASH)

@@ -46,10 +46,10 @@ char LICENSE[] SEC("license") = "GPL";
 
 // The keys for our hash maps. Should we maybe combine the ports into a __u32?
 struct fourTuple {
-	__u64 ip6_hi;
-	__u64 ip6_lo;
-	__u16 dport;
-	__u16 sport;
+	__u64 ip6Hi;
+	__u64 ip6Lo;
+	__u16 dPort;
+	__u16 sPort;
 };
 
 // Let's define our map!
@@ -57,13 +57,13 @@ struct {
 	__uint(type, BPF_MAP_TYPE_LRU_HASH);
 	__uint(max_entries, 100000);
 	__type(key, struct fourTuple);
-	__type(value, __u64);
+	__type(value, __u32);
 } flowLabels SEC(".maps");
 
 // long ringBufferFlags = 0;
 
 // Let's hook the program on the TC! XDP will only look at the ingress traffic :(
-SEC("classifier")
+SEC("tc")
 
 /*
  * The program will receive an __sk_buff which is a 'mirror' of the kernel's own
@@ -127,9 +127,38 @@ int target(struct __sk_buff *ctx) {
 
 		bpf_printk("IPv6 flow_lbl: %x --- %x --- %x", flowLblHi, flowLblMi, flowLblLo);
 
-		l3->flow_lbl[2] = 0xEF;
-		l3->flow_lbl[1] = 0xCD;
-		l3->flow_lbl[0] = 0xAB;
+		// Declare the struct we'll use to index the map
+		struct fourTuple flowHash;
+
+		// Initialise the struct with 0s. This is necessary for some reason to do
+		// with compiler padding. Check that's the case...
+		__builtin_memset(&flowHash, 0, sizeof(flowHash));
+
+		// Fake the port numbers: there are none on ICPM!
+		flowHash.ip6Hi = ipv6DaddrHi;
+		flowHash.ip6Lo = ipv6DaddrLo;
+		flowHash.dPort = 5777;
+		flowHash.sPort = 2345;
+	
+		__u32 *flowTag = bpf_map_lookup_elem(&flowLabels, &flowHash);
+
+		if (!flowTag) {
+			bpf_printk("found no entry in the map...");
+		} else {
+			bpf_printk("retrieved flowTag: %u", *flowTag);
+
+			// Embed the configured flowTag into the IPv6 header.
+			l3->flow_lbl[0] = (*flowTag & ( 0xF << 16)) >> 16;
+			l3->flow_lbl[1] = (*flowTag & (0xFF <<  8)) >> 8;
+			l3->flow_lbl[2] = *flowTag & 0xFF;
+
+			return TC_ACT_OK;
+		}
+
+		// If there was no match, simply force the whole flow label to 1.
+		l3->flow_lbl[2] = 0xFF;
+		l3->flow_lbl[1] = 0xFF;
+		l3->flow_lbl[0] = 0xF;
 
 		return TC_ACT_OK;
 	}
