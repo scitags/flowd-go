@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"fmt"
 	"log/slog"
+	"net"
 	"syscall"
 	"time"
 	"unsafe"
@@ -39,6 +40,13 @@ type EbpfBackend struct {
 	rGen *rand.Rand
 
 	keepQdisc bool
+}
+
+type flowFourTuple struct {
+	IPv6Hi  uint64
+	IPv6Lo  uint64
+	DstPort uint16
+	SrcPort uint16
 }
 
 func New() *EbpfBackend {
@@ -119,23 +127,81 @@ func (b *EbpfBackend) Init() error {
 	return nil
 }
 
+func extractHalves(ip net.IP) (uint64, uint64) {
+	var addrHi uint64
+	var addrLo uint64
+
+	rawIP := []byte(ip)
+
+	// net.IPs are internally represented as a 16-element []byte with
+	// the last element being the LSByte and the first the MSByte.
+	if len(rawIP) != 16 {
+		return 0, 0
+	}
+
+	for i := 0; i < 8; i++ {
+		addrHi |= uint64(rawIP[i]) << (8 * (8 - (1 + i)))
+		addrLo |= uint64(rawIP[i+8]) << (8 * (8 - (1 + i)))
+	}
+
+	return addrHi, addrLo
+}
+
 func (b *EbpfBackend) Run(done <-chan struct{}, inChan <-chan glowd.FlowID) {
 	slog.Debug("running the ebpf backend")
 
-	slog.Debug("ebpf backend", "b", fmt.Sprintf("%+v", b))
+	for {
+		select {
+		case flowID, ok := <-inChan:
+			if !ok {
+				slog.Warn("somebody closed the input channel!")
+				return
+			}
+			slog.Debug("got a flowID", "flowID", flowID)
+			switch flowID.State {
+			case glowd.START:
+				rawDstIPHi, rawDstIPLo := extractHalves(flowID.Dst.IP)
+				flowHash := flowFourTuple{
+					IPv6Hi:  rawDstIPHi,
+					IPv6Lo:  rawDstIPLo,
+					DstPort: flowID.Dst.Port,
+					SrcPort: flowID.Src.Port,
+				}
 
-	keyA := struct {
-		x uint64
-		y uint64
-		z uint16
-		w uint16
-	}{0, 1, 2, 3}
-	keyAUnsafe := unsafe.Pointer(&keyA)
-	val, err := b.flowMap.GetValue(keyAUnsafe)
-	if err != nil {
-		slog.Warn("error getting the map value", "err", err)
+				slog.Debug("flowID.Dst.IP", "rawDstIP", fmt.Sprintf("%+v", []byte(flowID.Dst.IP)),
+					"rawDstIPHi", rawDstIPHi, "rawDstIPLo", rawDstIPLo)
+
+				flowTag := b.genFlowTag(flowID.Experiment, flowID.Activity)
+
+				flowHashPtr := unsafe.Pointer(&flowHash)
+				flowTagPtr := unsafe.Pointer(&flowTag)
+				if err := b.flowMap.Update(flowHashPtr, flowTagPtr); err != nil {
+					slog.Error("error inserting map value", "err", err, "flowHash", flowHash, "flowTag", flowTag)
+					continue
+				}
+				slog.Debug("inserted map value", "flowHash", flowHash, "flowTag", flowTag)
+			case glowd.END:
+				continue
+				// keyA := struct {
+				// 	x uint64
+				// 	y uint64
+				// 	z uint16º
+				// 	w uint16
+				// }{0, 1, 2, 3}
+				// keyAUnsafe := unsafe.Pointer(&keyA)
+				// val, err := b.flowMap.GetValue(keyAUnsafe)
+				// if err != nil {
+				// 	slog.Warn("error getting the map value", "err", err)
+				// }
+				// slog.Debug("retrieved value from map", "key", keyA, "val", val)
+			default:
+				slog.Error("wrong flow state made it here", "flowID.State", flowID.State)
+			}
+		case <-done:
+			slog.Debug("cleanly exiting the ebpf backend")
+			return
+		}
 	}
-	slog.Debug("retrieved value from map", "key", keyA, "val", val)
 }
 
 func (b *EbpfBackend) Cleanup() error {
@@ -188,11 +254,8 @@ func (b *EbpfBackend) genFlowTag(experimentId, activityId uint32) uint32 {
 
 	var flowTag uint32 = (rNum & (0x3 << 18)) | ((experimentIdRev & 0x1FF) << 9) | (rNum & (0x1 << 8)) | ((activityId & 0x3F) << 2) | (rNum & 0x3)
 
-	slog.Debug("genFlowTag", "rNum", fmt.Sprintf("%b", rNum), "experimentId", fmt.Sprintf("%b", experimentId), "experimentIdRev",
-		fmt.Sprintf("%b", experimentIdRev), "activityId", fmt.Sprintf("%b", activityId), "flowTag", fmt.Sprintf("%b", flowTag))
-
-	fmt.Printf("genFlowTag:\n\trNum: %b\n\trNum1: %b\n\trNum2: %b\n\trNum3: %b\n\texperimentId: %b\n\texperimentIdRev: %b\n\tactivityId: %b\n\tflowTag: %b\n",
-		rNum, (rNum&(0x3<<18))>>18, (rNum&(0x1<<8))>>8, rNum&0x3, experimentId, experimentIdRev, activityId, flowTag)
+	slog.Debug("genFlowTag", "experimentId", fmt.Sprintf("%b", experimentId), "experimentIdRev", fmt.Sprintf("%b", experimentIdRev),
+		"activityId", fmt.Sprintf("%b", activityId), "flowTag", fmt.Sprintf("%b", flowTag))
 
 	return flowTag
 }
