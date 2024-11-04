@@ -11,8 +11,8 @@ type FlowID struct {
 	Protocol   Protocol
 	Src        IPPort
 	Dst        IPPort
-	Experiment string
-	Activity   string
+	Experiment uint32
+	Activity   uint32
 	StartTs    time.Time
 	EndTs      time.Time
 	NetLink    string

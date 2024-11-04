@@ -146,13 +146,25 @@ func parseEvents(rawEvents string) []glowd.FlowID {
 			continue
 		}
 
+		experimentId, err := strconv.ParseUint(fields[6], 10, 32)
+		if err != nil {
+			slog.Warn("wrong experiment ID", "experimentId", fields[6])
+			continue
+		}
+
+		activityId, err := strconv.ParseUint(fields[7], 10, 32)
+		if err != nil {
+			slog.Warn("wrong activity ID", "activityId", fields[7])
+			continue
+		}
+
 		flowID := glowd.FlowID{
 			State:      flowState,
 			Protocol:   proto,
 			Src:        glowd.IPPort{IP: srcIP, Port: uint16(srcPort)},
 			Dst:        glowd.IPPort{IP: dstIP, Port: uint16(dstPort)},
-			Experiment: fields[6],
-			Activity:   fields[7],
+			Experiment: uint32(experimentId),
+			Activity:   uint32(activityId),
 		}
 
 		if flowState == glowd.START {

@@ -64,8 +64,8 @@ type firefly struct {
 		DstPort  uint16 `json:"dst-port"`
 	} `json:"flow-id"`
 	Context struct {
-		ExperimentID string `json:"experiment-id"`
-		ActivityID   string `json:"activity-id"`
+		ExperimentID uint32 `json:"experiment-id"`
+		ActivityID   uint32 `json:"activity-id"`
 		Application  string `json:"application"`
 	} `json:"context"`
 }
