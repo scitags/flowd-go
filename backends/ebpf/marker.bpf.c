@@ -120,13 +120,15 @@ int marker(struct __sk_buff *ctx) {
 	__u8 flowLblHi = l3->flow_lbl[0];
 
 	if (l3->nexthdr == PROTO_IPV6_ICMP) {
-		bpf_printk("   IPv6 saddr: %pI6", &l3->saddr);
-		bpf_printk("   IPv6 daddr: %pI6", &l3->daddr);
+		#ifdef GLOWD_DEBUG
+			bpf_printk("   IPv6 saddr: %pI6", &l3->saddr);
+			bpf_printk("   IPv6 daddr: %pI6", &l3->daddr);
 
-		bpf_printk("   IPv6 saddr (hi --- lo): %x --- %x", ipv6SaddrHi, ipv6SaddrLo);
-		bpf_printk("   IPv6 daddr (hi --- lo): %x --- %x", ipv6DaddrHi, ipv6DaddrLo);
+			bpf_printk("   IPv6 saddr (hi --- lo): %x --- %x", ipv6SaddrHi, ipv6SaddrLo);
+			bpf_printk("   IPv6 daddr (hi --- lo): %x --- %x", ipv6DaddrHi, ipv6DaddrLo);
 
-		bpf_printk("IPv6 flow_lbl: %x --- %x --- %x", flowLblHi, flowLblMi, flowLblLo);
+			bpf_printk("IPv6 flow_lbl: %x --- %x --- %x", flowLblHi, flowLblMi, flowLblLo);
+		#endif
 
 		// Declare the struct we'll use to index the map
 		struct fourTuple flowHash;
@@ -169,8 +171,10 @@ int marker(struct __sk_buff *ctx) {
 		if ((void *)(l4 + 1) > data_end)
 			return TC_ACT_OK;
 
-		bpf_printk("TCP source: %x", bpf_htons(l4->source));
-		bpf_printk("  TCP dest: %x", bpf_htons(l4->dest));
+		#ifdef GLOWD_DEBUG
+			bpf_printk("TCP source: %x", bpf_htons(l4->source));
+			bpf_printk("  TCP dest: %x", bpf_htons(l4->dest));
+		#endif
 	}
 
 	// At this point we have access to the full IPv6 header and payload. Time to mark the packet!
