@@ -37,7 +37,7 @@ var (
 		Use:   "ebpf-test",
 		Short: "Try to load the eBPF program.",
 		Run: func(cmd *cobra.Command, args []string) {
-			ebpfBackend := ebpf.New()
+			ebpfBackend := ebpf.New(nil)
 			if err := ebpfBackend.Init(); err != nil {
 				fmt.Printf("error on Init(): %v\n", err)
 				return
@@ -61,7 +61,7 @@ var (
 		Use:   "np-test",
 		Short: "Try to create and read from a named pipe.",
 		Run: func(cmd *cobra.Command, args []string) {
-			namedPipe := np.New(np.NamedPipePluginConf{})
+			namedPipe := np.New(nil)
 			if err := namedPipe.Init(); err != nil {
 				fmt.Printf("error setting up the named pipe: %v\n", err)
 				return
@@ -79,7 +79,7 @@ var (
 			doneChan := make(chan struct{})
 			go namedPipe.Run(doneChan, flowChan)
 
-			ebpfBackend := ebpf.New()
+			ebpfBackend := ebpf.New(nil)
 			if err := ebpfBackend.Init(); err != nil {
 				fmt.Printf("error on Init(): %v\n", err)
 				return

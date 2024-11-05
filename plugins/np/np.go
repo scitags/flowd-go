@@ -33,12 +33,12 @@ type NamedPipePlugin struct {
 	conf NamedPipePluginConf
 }
 
-func New(conf NamedPipePluginConf) *NamedPipePlugin {
+func New(conf *NamedPipePluginConf) *NamedPipePlugin {
 	// Parenthesis required due to a parsing ambiguity!
-	if conf == (NamedPipePluginConf{}) {
+	if conf == nil {
 		return &NamedPipePlugin{conf: DefaultConf}
 	}
-	return &NamedPipePlugin{conf: DefaultConf}
+	return &NamedPipePlugin{conf: *conf}
 }
 
 func (np *NamedPipePlugin) Init() error {

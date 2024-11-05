@@ -22,13 +22,24 @@ import (
 //   https://github.com/aquasecurity/libbpfgo/blob/282d44353ac28b015afb469d378e9d178afd3304/selftest/tc/main.go
 
 const (
-	TARGET_IFACE string = "lo"
-	PROG_NAME    string = "marker"
-	MAP_NAME     string = "flowLabels"
+	PROG_NAME string = "marker"
+	MAP_NAME  string = "flowLabels"
 )
 
-//go:embed marker.bpf.o
-var bpfObj []byte
+var (
+	//go:embed marker.bpf.o
+	bpfObj []byte
+
+	DefaultConf = EbpfBackendConf{
+		TargetInterface: "lo",
+		RemoveQdisc:     true,
+	}
+)
+
+type EbpfBackendConf struct {
+	TargetInterface string
+	RemoveQdisc     bool
+}
 
 type EbpfBackend struct {
 	module  *bpf.Module
@@ -39,7 +50,7 @@ type EbpfBackend struct {
 
 	rGen *rand.Rand
 
-	keepQdisc bool
+	conf EbpfBackendConf
 }
 
 type flowFourTuple struct {
@@ -49,8 +60,11 @@ type flowFourTuple struct {
 	SrcPort uint16
 }
 
-func New() *EbpfBackend {
-	return &EbpfBackend{}
+func New(conf *EbpfBackendConf) *EbpfBackend {
+	if conf == nil {
+		return &EbpfBackend{conf: DefaultConf}
+	}
+	return &EbpfBackend{conf: *conf}
 }
 
 func (b *EbpfBackend) Init() error {
@@ -71,8 +85,8 @@ func (b *EbpfBackend) Init() error {
 
 	// Create the TC Hook on which to place the eBPF program
 	b.hook = b.module.TcHookInit()
-	if err := b.hook.SetInterfaceByName(TARGET_IFACE); err != nil {
-		return fmt.Errorf("failed to set TC hook on interface %s: %w", TARGET_IFACE, err)
+	if err := b.hook.SetInterfaceByName(b.conf.TargetInterface); err != nil {
+		return fmt.Errorf("failed to set TC hook on interface %s: %w", b.conf.TargetInterface, err)
 	}
 
 	// Placce the hook in the packet egress chain
@@ -214,7 +228,7 @@ func (b *EbpfBackend) Cleanup() error {
 			slog.Error("error detaching the ebpf hook", "err", err)
 		}
 
-		if !b.keepQdisc {
+		if b.conf.RemoveQdisc {
 			slog.Debug("removing the backing qdisc")
 			// Explicitly ask for the backing QDisc to be destroyed.
 			// See https://patchwork.kernel.org/project/netdevbpf/patch/20210428162553.719588-3-memxor@gmail.com/

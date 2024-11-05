@@ -13,7 +13,6 @@ import (
 )
 
 const (
-	FIREFLY_PORT    uint16 = 10514
 	FIREFLY_VERSION int    = 1
 	APPLICATION     string = "glowd v1.0.0"
 
@@ -70,20 +69,35 @@ type firefly struct {
 	} `json:"context"`
 }
 
+var (
+	DefaultConf = FireflyBackendConf{
+		FireFlyDestinationPort: 10514,
+		PrependSyslog:          false,
+	}
+)
+
+type FireflyBackendConf struct {
+	FireFlyDestinationPort uint16
+	PrependSyslog          bool
+}
+
 type FireflyBackend struct {
-	PrependSyslog bool
+	conf FireflyBackendConf
 }
 
-func New() *FireflyBackend {
-	return &FireflyBackend{}
+func New(conf *FireflyBackendConf) *FireflyBackend {
+	if conf == nil {
+		return &FireflyBackend{conf: DefaultConf}
+	}
+	return &FireflyBackend{conf: *conf}
 }
 
-func sendFirefly(flowID glowd.FlowID, prependSyslog bool) error {
+func (b *FireflyBackend) sendFirefly(flowID glowd.FlowID) error {
 	dialNet := "udp6"
 	if !strings.Contains(flowID.Dst.IP.String(), ":") {
 		dialNet = "udp4"
 	}
-	conn, err := net.Dial(dialNet, fmt.Sprintf("%s:%d", flowID.Dst.IP, FIREFLY_PORT))
+	conn, err := net.Dial(dialNet, fmt.Sprintf("%s:%d", flowID.Dst.IP, b.conf.FireFlyDestinationPort))
 	if err != nil {
 		return fmt.Errorf("couldn't initialize UDP socket: %w", err)
 	}
@@ -121,7 +135,7 @@ func sendFirefly(flowID glowd.FlowID, prependSyslog bool) error {
 		return fmt.Errorf("error marshalling firefly: %w", err)
 	}
 
-	if prependSyslog {
+	if b.conf.PrependSyslog {
 		syslogHeader := []byte(fmt.Sprintf(SYSLOG_HEADER, localFirefly.FlowLifecycle.CurrentTime))
 		payload = append(syslogHeader, payload...)
 	}
@@ -151,7 +165,7 @@ func (b *FireflyBackend) Run(done <-chan struct{}, inChan <-chan glowd.FlowID) {
 				return
 			}
 			slog.Debug("got a flowID")
-			if err := sendFirefly(flowID, b.PrependSyslog); err != nil {
+			if err := b.sendFirefly(flowID); err != nil {
 				slog.Error("error sending the firefly", "err", err)
 			}
 		case <-done:
