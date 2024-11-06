@@ -96,7 +96,7 @@ func (c *EbpfBackendConf) UnmarshalJSON(data []byte) error {
 			tmpConf.TargetInterface = DefaultConf.TargetInterface
 		case "removeqdisc":
 			tmpConf.RemoveQdisc = DefaultConf.RemoveQdisc
-		case "programPath":
+		case "programpath":
 			tmpConf.ProgramPath = DefaultConf.ProgramPath
 		default:
 			return fmt.Errorf("unknown configuration key %q", k)
