@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 
 	"github.com/pcolladosoto/glowd"
-	"github.com/pcolladosoto/glowd/backends/ebpf"
-	"github.com/pcolladosoto/glowd/plugins/np"
 	"github.com/pcolladosoto/glowd/settings"
 
 	"github.com/spf13/cobra"
@@ -35,79 +33,9 @@ var (
 		},
 	}
 
-	ebpfTest = &cobra.Command{
-		Use:   "ebpf-test",
-		Short: "Try to load the eBPF program.",
-		Run: func(cmd *cobra.Command, args []string) {
-			ebpfBackend := ebpf.New(nil)
-			if err := ebpfBackend.Init(); err != nil {
-				fmt.Printf("error on Init(): %v\n", err)
-				return
-			}
-
-			ebpfBackend.Run(nil, nil)
-
-			sigChan := make(chan os.Signal, 1)
-			signal.Notify(sigChan, os.Interrupt)
-			<-sigChan
-			// time.Sleep(5 * time.Second)
-
-			if err := ebpfBackend.Cleanup(); err != nil {
-				fmt.Printf("error on Cleanup(): %v\n", err)
-				return
-			}
-		},
-	}
-
-	npTest = &cobra.Command{
-		Use:   "np-test",
-		Short: "Try to create and read from a named pipe.",
-		Run: func(cmd *cobra.Command, args []string) {
-			namedPipe := np.New(nil)
-			if err := namedPipe.Init(); err != nil {
-				fmt.Printf("error setting up the named pipe: %v\n", err)
-				return
-			}
-			defer func() {
-				if err := namedPipe.Cleanup(); err != nil {
-					fmt.Printf("error cleaning up the named pipe: %v\n", err)
-				}
-			}()
-
-			sigChan := make(chan os.Signal, 1)
-			signal.Notify(sigChan, os.Interrupt)
-
-			flowChan := make(chan glowd.FlowID)
-			doneChan := make(chan struct{})
-			go namedPipe.Run(doneChan, flowChan)
-
-			ebpfBackend := ebpf.New(nil)
-			if err := ebpfBackend.Init(); err != nil {
-				fmt.Printf("error on Init(): %v\n", err)
-				return
-			}
-
-			defer func() {
-				if err := ebpfBackend.Cleanup(); err != nil {
-					fmt.Printf("error cleaning up the ebpf backend: %v\n", err)
-					return
-				}
-			}()
-
-			go ebpfBackend.Run(doneChan, flowChan)
-
-			// fireflyBackend := firefly.New()
-			// go fireflyBackend.Run(doneChan, flowChan)
-
-			// Block until we are told to quit
-			<-sigChan
-			close(doneChan)
-		},
-	}
-
-	confTest = &cobra.Command{
-		Use:   "conf-test",
-		Short: "Try to get configuration to work.",
+	runCmd = &cobra.Command{
+		Use:   "run",
+		Short: "Time to show what glowd can do!",
 		Run: func(cmd *cobra.Command, args []string) {
 			conf, err := settings.ReadConf(confPath)
 			if err != nil {
@@ -214,9 +142,7 @@ func init() {
 
 	// Add the different sub-commands
 	rootCmd.AddCommand(versionCmd)
-	rootCmd.AddCommand(ebpfTest)
-	rootCmd.AddCommand(npTest)
-	rootCmd.AddCommand(confTest)
+	rootCmd.AddCommand(runCmd)
 }
 
 func main() {
