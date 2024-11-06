@@ -16,8 +16,8 @@ import (
 )
 
 func init() {
-	rootCmd.PersistentFlags().StringVar(&confPath, "conf-path", "/etc/glowd/conf.json", "The JSON configuration path")
-	rootCmd.PersistentFlags().StringVar(&logLevelFlag, "log-level", "debug", "The log level. One of debug, info, warn, error")
+	rootCmd.PersistentFlags().StringVar(&confPath, "conf", "/etc/glowd/conf.json", "path of the JSON configuration file")
+	rootCmd.PersistentFlags().StringVar(&logLevelFlag, "log-level", "debug", "log level: one of debug, info, warn, error")
 }
 
 var (
@@ -137,19 +137,6 @@ var (
 			// Set up the broadcast channel for exiting cleanly
 			doneChan := make(chan struct{})
 
-			// Funnel plugin flowIDs into an aggregate channel.
-			// Buffer the channel so that consumers (i.e. backends)
-			// can have some wiggle room if under pressuer.
-			agg := make(chan glowd.FlowID, 10)
-			for i, ch := range pluginChans {
-				go func(c chan glowd.FlowID, i int) {
-					for flowID := range c {
-						slog.Debug("funneling flowID", "i", i)
-						agg <- flowID
-					}
-				}(ch, i)
-			}
-
 			// Dispatch the producers (i.e. plugins)
 			for i, plugin := range plugins {
 				pluginChans = append(pluginChans, make(chan glowd.FlowID))
@@ -162,6 +149,20 @@ var (
 				go backend.Run(doneChan, backendChans[i])
 			}
 
+			// Funnel plugin flowIDs into an aggregate channel.
+			// Buffer the channel so that consumers (i.e. backends)
+			// can have some wiggle room if under pressuer.
+			agg := make(chan glowd.FlowID)
+			for i, ch := range pluginChans {
+				go func(c chan glowd.FlowID, i int) {
+					slog.Debug("began listening for plugin flowIDs", "i", i)
+					for flowID := range c {
+						slog.Debug("funneling flowID", "i", i)
+						agg <- flowID
+					}
+				}(ch, i)
+			}
+
 			// Set up the machinery for catching SIGINT
 			sigChan := make(chan os.Signal, 1)
 			signal.Notify(sigChan, os.Interrupt)
@@ -170,6 +171,7 @@ var (
 			// them to the backends. Another option could be reflect.Select,
 			// although it's much less performing... Could a point-to-point
 			// (i.e. mesh) architecture be better?
+			slog.Info("let's go!", "nPlugins", len(pluginChans), "nBackends", len(backendChans))
 			for {
 				select {
 				case flowID, ok := <-agg:

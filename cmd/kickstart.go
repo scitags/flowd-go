@@ -18,6 +18,8 @@ func createPlugins(conf settings.Config) ([]glowd.Plugin, error) {
 		switch c := v.(type) {
 		case np.NamedPipePluginConf:
 			plugins = append(plugins, np.New(&c))
+		default:
+			return nil, fmt.Errorf("unknown plugin type for %q", v)
 		}
 	}
 
@@ -41,12 +43,14 @@ func cleanupPlugins(plugins []glowd.Plugin) {
 func createBackends(conf settings.Config) ([]glowd.Backend, error) {
 	backends := make([]glowd.Backend, 0, len(conf.Backends))
 	// backends := make([]glowd.Backend, 0, len(conf.Backends))
-	for _, v := range conf.Plugins {
+	for _, v := range conf.Backends {
 		switch c := v.(type) {
 		case ebpf.EbpfBackendConf:
 			backends = append(backends, ebpf.New(&c))
 		case firefly.FireflyBackendConf:
 			backends = append(backends, firefly.New(&c))
+		default:
+			return nil, fmt.Errorf("unknown plugin type for %q", v)
 		}
 	}
 

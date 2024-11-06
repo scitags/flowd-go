@@ -10,7 +10,10 @@
         "namedPipe": {
             "maxReaders": 5,
             "buffSize": 1000,
-            "pipePath": "npp"
+            "pipePath": "np"
         }
+    },
+    "backends": {
+        "ebpf": {}
     }
 }

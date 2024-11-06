@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/pcolladosoto/glowd/backends/ebpf"
+	"github.com/pcolladosoto/glowd/backends/firefly"
 	"github.com/pcolladosoto/glowd/plugins/np"
 )
 
@@ -68,13 +70,38 @@ func (c *Config) UnmarshalJSON(data []byte) error {
 		switch strings.ToLower(k) {
 		case "namedpipe":
 			slog.Debug("got a namedPipe plugin", "v", v)
-			npConf := np.NamedPipePluginConf{}
-			if err := json.Unmarshal(pluginConf, &npConf); err != nil {
-				return fmt.Errorf("couldn't unmarshal the named pipe: %w", err)
+			conf := np.NamedPipePluginConf{}
+			if err := json.Unmarshal(pluginConf, &conf); err != nil {
+				return fmt.Errorf("couldn't unmarshal the named pipe configuration: %w", err)
 			}
-			tmpConf.Plugins = append(tmpConf.Plugins, npConf)
+			tmpConf.Plugins = append(tmpConf.Plugins, conf)
 		default:
 			return fmt.Errorf("unknown plugin %q", k)
+		}
+	}
+
+	for k, v := range genericConf.Backends {
+		backendConf, err := json.Marshal(v)
+		if err != nil {
+			return fmt.Errorf("couldn't marshall the backend configuration for %q: %w", k, err)
+		}
+		switch strings.ToLower(k) {
+		case "ebpf":
+			slog.Debug("got an ebpf backend", "v", v)
+			conf := ebpf.EbpfBackendConf{}
+			if err := json.Unmarshal(backendConf, &conf); err != nil {
+				return fmt.Errorf("couldn't unmarshal the ebpf configuration: %w", err)
+			}
+			tmpConf.Backends = append(tmpConf.Backends, conf)
+		case "firefly":
+			slog.Debug("got a firefly backend", "v", v)
+			conf := firefly.FireflyBackendConf{}
+			if err := json.Unmarshal(backendConf, &conf); err != nil {
+				return fmt.Errorf("couldn't unmarshal the firefly configuration: %w", err)
+			}
+			tmpConf.Backends = append(tmpConf.Backends, conf)
+		default:
+			return fmt.Errorf("unknown backend %q", k)
 		}
 	}
 
