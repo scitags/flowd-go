@@ -9,6 +9,7 @@ import (
 
 	"github.com/pcolladosoto/glowd/backends/ebpf"
 	"github.com/pcolladosoto/glowd/backends/firefly"
+	"github.com/pcolladosoto/glowd/plugins/api"
 	"github.com/pcolladosoto/glowd/plugins/np"
 )
 
@@ -73,6 +74,13 @@ func (c *Config) UnmarshalJSON(data []byte) error {
 			conf := np.NamedPipePluginConf{}
 			if err := json.Unmarshal(pluginConf, &conf); err != nil {
 				return fmt.Errorf("couldn't unmarshal the named pipe configuration: %w", err)
+			}
+			tmpConf.Plugins = append(tmpConf.Plugins, conf)
+		case "api":
+			slog.Debug("got an api plugin", "v", v)
+			conf := api.ApiPluginConf{}
+			if err := json.Unmarshal(pluginConf, &conf); err != nil {
+				return fmt.Errorf("couldn't unmarshal the api configuration: %w", err)
 			}
 			tmpConf.Plugins = append(tmpConf.Plugins, conf)
 		default:
