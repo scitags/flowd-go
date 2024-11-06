@@ -116,6 +116,11 @@ var (
 			}
 			slog.Debug("read configuration", "conf", conf)
 
+			if err := os.WriteFile(conf.PIDPath, []byte(fmt.Sprintf("%d\n", os.Getpid())), 0644); err != nil {
+				slog.Error("couldn't create the PID file", "path", conf.PIDPath, "err", err)
+			}
+			defer os.Remove(conf.PIDPath)
+
 			plugins, err := createPlugins(conf)
 			if err != nil {
 				slog.Error("couldn't create the plugins", "err", err)
