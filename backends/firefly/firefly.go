@@ -70,19 +70,60 @@ type firefly struct {
 }
 
 var (
+	configurationTags = map[string]bool{
+		"fireflydestinationport": false,
+		"prependsyslog":          false,
+	}
+
 	DefaultConf = FireflyBackendConf{
-		FireFlyDestinationPort: 10514,
+		FireflyDestinationPort: 10514,
 		PrependSyslog:          false,
 	}
 )
 
 type FireflyBackendConf struct {
-	FireFlyDestinationPort uint16
-	PrependSyslog          bool
+	FireflyDestinationPort uint16 `json:"FireflyDestinationPort"`
+	PrependSyslog          bool   `json:"prependSyslog"`
 }
+
+// We need an alias to avoid infinite recursion
+// in the unmarshalling logic
+type AuxFireflyBackendConf FireflyBackendConf
 
 type FireflyBackend struct {
 	conf FireflyBackendConf
+}
+
+func (c *FireflyBackendConf) UnmarshalJSON(data []byte) error {
+	tmp := map[string]interface{}{}
+	if err := json.Unmarshal(data, &tmp); err != nil {
+		return fmt.Errorf("couldn't unmarshall into tmp map: %w", err)
+	}
+
+	for k := range tmp {
+		delete(configurationTags, strings.ToLower(k))
+	}
+
+	tmpConf := AuxFireflyBackendConf{}
+	if err := json.Unmarshal(data, &tmpConf); err != nil {
+		return fmt.Errorf("couldn't unmarshall into tmpConf: %w", err)
+	}
+
+	for k := range configurationTags {
+		switch strings.ToLower(k) {
+		case "fireflydestinationport":
+			tmpConf.FireflyDestinationPort = DefaultConf.FireflyDestinationPort
+		case "prependsyslog":
+			tmpConf.PrependSyslog = DefaultConf.PrependSyslog
+		default:
+			return fmt.Errorf("unknown configuration key %q", k)
+		}
+	}
+
+	// Store the results!
+	*c = FireflyBackendConf(tmpConf)
+
+	return nil
 }
 
 func New(conf *FireflyBackendConf) *FireflyBackend {
@@ -97,7 +138,7 @@ func (b *FireflyBackend) sendFirefly(flowID glowd.FlowID) error {
 	if !strings.Contains(flowID.Dst.IP.String(), ":") {
 		dialNet = "udp4"
 	}
-	conn, err := net.Dial(dialNet, fmt.Sprintf("%s:%d", flowID.Dst.IP, b.conf.FireFlyDestinationPort))
+	conn, err := net.Dial(dialNet, fmt.Sprintf("%s:%d", flowID.Dst.IP, b.conf.FireflyDestinationPort))
 	if err != nil {
 		return fmt.Errorf("couldn't initialize UDP socket: %w", err)
 	}

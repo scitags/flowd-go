@@ -1,6 +1,7 @@
 package np
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -16,6 +17,12 @@ import (
 )
 
 var (
+	configurationTags = map[string]bool{
+		"maxreaders": false,
+		"buffsize":   false,
+		"pipepath":   false,
+	}
+
 	DefaultConf = NamedPipePluginConf{
 		MaxReaders: 5,
 		BuffSize:   1000,
@@ -24,9 +31,47 @@ var (
 )
 
 type NamedPipePluginConf struct {
-	MaxReaders int
-	BuffSize   int
-	PipePath   string
+	MaxReaders int    `json:"maxReaders"`
+	BuffSize   int    `json:"buffSize"`
+	PipePath   string `json:"pipePath"`
+}
+
+// We need an alias to avoid infinite recursion
+// in the unmarshalling logic
+type AuxNamedPipePluginConf NamedPipePluginConf
+
+func (c *NamedPipePluginConf) UnmarshalJSON(data []byte) error {
+	tmp := map[string]interface{}{}
+	if err := json.Unmarshal(data, &tmp); err != nil {
+		return fmt.Errorf("couldn't unmarshall into tmp map: %w", err)
+	}
+
+	for k := range tmp {
+		delete(configurationTags, strings.ToLower(k))
+	}
+
+	tmpConf := AuxNamedPipePluginConf{}
+	if err := json.Unmarshal(data, &tmpConf); err != nil {
+		return fmt.Errorf("couldn't unmarshall into tmpConf: %w", err)
+	}
+
+	for k := range configurationTags {
+		switch strings.ToLower(k) {
+		case "maxreaders":
+			tmpConf.MaxReaders = DefaultConf.MaxReaders
+		case "buffsize":
+			tmpConf.BuffSize = DefaultConf.BuffSize
+		case "pipepath":
+			tmpConf.PipePath = DefaultConf.PipePath
+		default:
+			return fmt.Errorf("unknown configuration key %q", k)
+		}
+	}
+
+	// Store the results!
+	*c = NamedPipePluginConf(tmpConf)
+
+	return nil
 }
 
 type NamedPipePlugin struct {
@@ -39,6 +84,10 @@ func New(conf *NamedPipePluginConf) *NamedPipePlugin {
 		return &NamedPipePlugin{conf: DefaultConf}
 	}
 	return &NamedPipePlugin{conf: *conf}
+}
+
+func (np *NamedPipePlugin) String() string {
+	return "named pipe"
 }
 
 func (np *NamedPipePlugin) Init() error {
@@ -60,7 +109,17 @@ func (np *NamedPipePlugin) Init() error {
 func (np *NamedPipePlugin) Run(done <-chan struct{}, outChan chan<- glowd.FlowID) {
 	slog.Debug("running the named pipe plugin")
 
-	pipe, err := os.OpenFile(np.conf.PipePath, os.O_RDONLY, os.ModeNamedPipe)
+	// If we open the FIFO (i.e. named pipe) only for reading, the call will block
+	// until there's at least a writer. This basically means we need to write once
+	// to reach the for {} driving the readout of the FIFO. If we instead open
+	// the pipe with O_RDWR we are ourselves a writer and so the blocking won't
+	// take place. Note the 'correct' approach would be to leverage the O_NONBLOCK
+	// flag (i.e. syscall.O_NONBLOCK), but this solution is NOT portable for Darwin.
+	// We'd rather not sacrifice portability over this caveat, and so we just
+	// open up the FIFO with the O_RDWR flag set and call it a day. Be sure to check
+	// https://pubs.opengroup.org/onlinepubs/9799919799/ for a detailed discussion
+	// on what O_NONBLOCK implies in terms of behaviour when opening files.
+	pipe, err := os.OpenFile(np.conf.PipePath, os.O_RDWR, os.ModeNamedPipe)
 	if err != nil {
 		slog.Error("couldn't open the named pipe", "err", err)
 		close(outChan)

@@ -4,9 +4,11 @@ package ebpf
 
 import (
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net"
+	"strings"
 	"syscall"
 	"time"
 	"unsafe"
@@ -30,6 +32,11 @@ var (
 	//go:embed marker.bpf.o
 	bpfObj []byte
 
+	configurationTags = map[string]bool{
+		"targetinterface": false,
+		"removeqdisc":     false,
+	}
+
 	DefaultConf = EbpfBackendConf{
 		TargetInterface: "lo",
 		RemoveQdisc:     true,
@@ -37,9 +44,13 @@ var (
 )
 
 type EbpfBackendConf struct {
-	TargetInterface string
-	RemoveQdisc     bool
+	TargetInterface string `json:"targetInterface"`
+	RemoveQdisc     bool   `json:"removeQdisc"`
 }
+
+// We need an alias to avoid infinite recursion
+// in the unmarshalling logic
+type AuxEbpfBackendConf EbpfBackendConf
 
 type EbpfBackend struct {
 	module  *bpf.Module
@@ -58,6 +69,38 @@ type flowFourTuple struct {
 	IPv6Lo  uint64
 	DstPort uint16
 	SrcPort uint16
+}
+
+func (c *EbpfBackendConf) UnmarshalJSON(data []byte) error {
+	tmp := map[string]interface{}{}
+	if err := json.Unmarshal(data, &tmp); err != nil {
+		return fmt.Errorf("couldn't unmarshall into tmp map: %w", err)
+	}
+
+	for k := range tmp {
+		delete(configurationTags, strings.ToLower(k))
+	}
+
+	tmpConf := AuxEbpfBackendConf{}
+	if err := json.Unmarshal(data, &tmpConf); err != nil {
+		return fmt.Errorf("couldn't unmarshall into tmpConf: %w", err)
+	}
+
+	for k := range configurationTags {
+		switch strings.ToLower(k) {
+		case "targetinterface":
+			tmpConf.TargetInterface = DefaultConf.TargetInterface
+		case "removeqdisc":
+			tmpConf.RemoveQdisc = DefaultConf.RemoveQdisc
+		default:
+			return fmt.Errorf("unknown configuration key %q", k)
+		}
+	}
+
+	// Store the results!
+	*c = EbpfBackendConf(tmpConf)
+
+	return nil
 }
 
 func New(conf *EbpfBackendConf) *EbpfBackend {
