@@ -10,12 +10,14 @@ import (
 	"github.com/pcolladosoto/glowd"
 	"github.com/pcolladosoto/glowd/backends/ebpf"
 	"github.com/pcolladosoto/glowd/plugins/np"
+	"github.com/pcolladosoto/glowd/settings"
 
 	"github.com/spf13/cobra"
 )
 
 func init() {
-	rootCmd.PersistentFlags().BoolVar(&sampleBoolFlag, "json", false, "Just an example for now...")
+	rootCmd.PersistentFlags().StringVar(&confPath, "conf-path", "/etc/glowd/conf.json", "The JSON configuration path")
+	rootCmd.PersistentFlags().StringVar(&logLevelFlag, "log-level", "debug", "The log level. One of debug, info, warn, error")
 }
 
 var (
@@ -103,8 +105,100 @@ var (
 		},
 	}
 
-	sampleBoolFlag bool
-	builtCommit    = "dev"
+	confTest = &cobra.Command{
+		Use:   "conf-test",
+		Short: "Try to get configuration to work.",
+		Run: func(cmd *cobra.Command, args []string) {
+			conf, err := settings.ReadConf(confPath)
+			if err != nil {
+				slog.Error("couldn't read the configuration", "err", err)
+				return
+			}
+			slog.Debug("read configuration", "conf", conf)
+
+			plugins, err := createPlugins(conf)
+			if err != nil {
+				slog.Error("couldn't create the plugins", "err", err)
+				return
+			}
+			defer cleanupPlugins(plugins)
+
+			backends, err := createBackends(conf)
+			if err != nil {
+				slog.Error("couldn't create the backends", "err", err)
+				return
+			}
+			defer cleanupBackends(backends)
+
+			// Set up the necessary channels, one per plugin and per backend
+			pluginChans := make([]chan glowd.FlowID, 0, len(plugins))
+			backendChans := make([]chan glowd.FlowID, 0, len(backends))
+
+			// Set up the broadcast channel for exiting cleanly
+			doneChan := make(chan struct{})
+
+			// Funnel plugin flowIDs into an aggregate channel.
+			// Buffer the channel so that consumers (i.e. backends)
+			// can have some wiggle room if under pressuer.
+			agg := make(chan glowd.FlowID, 10)
+			for i, ch := range pluginChans {
+				go func(c chan glowd.FlowID, i int) {
+					for flowID := range c {
+						slog.Debug("funneling flowID", "i", i)
+						agg <- flowID
+					}
+				}(ch, i)
+			}
+
+			// Dispatch the producers (i.e. plugins)
+			for i, plugin := range plugins {
+				pluginChans = append(pluginChans, make(chan glowd.FlowID))
+				go plugin.Run(doneChan, pluginChans[i])
+			}
+
+			// Dispatch the consumers (i.e. backends)
+			for i, backend := range backends {
+				backendChans = append(backendChans, make(chan glowd.FlowID))
+				go backend.Run(doneChan, backendChans[i])
+			}
+
+			// Set up the machinery for catching SIGINT
+			sigChan := make(chan os.Signal, 1)
+			signal.Notify(sigChan, os.Interrupt)
+
+			// Simply listen for events on the aggregated channel and dispatch
+			// them to the backends. Another option could be reflect.Select,
+			// although it's much less performing... Could a point-to-point
+			// (i.e. mesh) architecture be better?
+			for {
+				select {
+				case flowID, ok := <-agg:
+					if !ok {
+						slog.Warn("somebody closed the aggregated channel!")
+						return
+					}
+					slog.Debug("dispatching flowID to backends")
+					for _, ch := range backendChans {
+						ch <- flowID
+					}
+				case <-sigChan:
+					close(doneChan)
+					return
+				}
+			}
+		},
+	}
+
+	confPath     string
+	logLevelFlag string
+	builtCommit  = "dev"
+
+	logLevelMap = map[string]slog.Level{
+		"debug": slog.LevelDebug,
+		"info":  slog.LevelInfo,
+		"warn":  slog.LevelWarn,
+		"error": slog.LevelError,
+	}
 )
 
 func init() {
@@ -115,26 +209,30 @@ func init() {
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(ebpfTest)
 	rootCmd.AddCommand(npTest)
+	rootCmd.AddCommand(confTest)
 }
 
 func main() {
-	replace := func(groups []string, a slog.Attr) slog.Attr {
-		// Remove time.
-		if a.Key == slog.TimeKey && len(groups) == 0 {
-			return slog.Attr{}
-		}
-		// Remove the directory from the source's filename.
-		if a.Key == slog.SourceKey {
-			source := a.Value.Any().(*slog.Source)
-			source.File = filepath.Base(source.File)
-		}
-		return a
+	logLevel, ok := logLevelMap[logLevelFlag]
+	if !ok {
+		logLevel = slog.LevelDebug
 	}
 
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
-		AddSource:   true,
-		Level:       slog.LevelDebug,
-		ReplaceAttr: replace,
+		AddSource: true,
+		Level:     logLevel,
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			// Remove time.
+			if a.Key == slog.TimeKey && len(groups) == 0 {
+				return slog.Attr{}
+			}
+			// Remove the directory from the source's filename.
+			if a.Key == slog.SourceKey {
+				source := a.Value.Any().(*slog.Source)
+				source.File = filepath.Base(source.File)
+			}
+			return a
+		},
 	}))
 	slog.SetDefault(logger)
 
