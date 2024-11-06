@@ -1,48 +1,52 @@
-# *+++++++++++++++++*************************************************** #
+# ********************************************************************* #
 # Be sure to check what tracee (https://github.com/aquasecurity/tracee) #
 # does for compiling. It basically compiles libbpf itself! Just clone   #
 # and compile it to get the commands used in the process.               #
-# *+++++++++++++++++*************************************************** #
+# ********************************************************************* #
 
 # The Go compiler to use
 GOC = go
+
+# The compiler to use for the BPF side of things
+CC = clang
 
 # Configure this release's verision and commit
 # VERSION = $(shell git describe --tags --abbrev=0)
 COMMIT = $(shell git rev-parse --short HEAD)
 
+# Where whouls we place output binaries?
 BIN_DIR = ./bin
 
 SOURCES = $(wildcard *.go)
 TRASH   = $(BIN_DIR)/* cmd
 
+# Default compilation flags.
 # The `-ldflags` option lets us define global variables at compile time!
 # Check https://stackoverflow.com/questions/11354518/application-auto-build-versioning
+CFLAGS := -tags ebpf -ldflags "-X main.builtCommit=$(COMMIT)" -o $(BIN_DIR)
 
-darwin:
-	$(GOC) build -tags ebpf -ldflags "-X main.builtCommit=$(COMMIT)"
+# Adjust GOC's environment depending on what OS we're on to deal with
+# all the BPF machinery. Note that when ENV_FALGS is not defined on
+# Darwin everything will work as expected!
+OS := $(shell uname)
+ifeq ($(OS),Linux)
+	ENV_FLAGS := $(ENV_FLAGS) CGO_CFLAGS="-I/usr/include/bpf"
 
-# TODOs:
-#     Maybe we need the -L? Check it!
-#     CGO_LDFLAGS="-L/usr/lib64/libbpf.a"
+	# Maybe we need the -L? Check it!
+	ENV_FLAGS := $(ENV_FLAGS) CGO_LDFLAGS="/usr/lib64/libbpf.a"
+	ENV_FLAGS := $(ENV_FLAGS) CC="$(CC)"
 
-# NOTE:
-#     CGO_ENABLED="1" is not needed, but we'd rather be explicit...
+	# This is not really needed, but we'd rather be explicit!
+	ENV_FLAGS := $(ENV_FLAGS) CGO_ENABLED="1"
+endif
+
+# Simply build the command
 build: $(SOURCES)
-	@echo "Building commit $(COMMIT)"
-	CGO_CFLAGS="-I/usr/include/bpf"       \
-		CGO_LDFLAGS="/usr/lib64/libbpf.a" \
-		CC="clang"                        \
-		CGO_ENABLED="1"                   \
-		$(GOC) build -tags ebpf -ldflags "-X main.builtCommit=$(COMMIT)"
+	@mkdir -p bin
+	$(ENV_FLAGS) $(GOC) build $(CFLAGS)
 
-# Check automatic make variables over at
-#    https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html
-mark.bpf.o: mark.bpf.c
-	clang -g -O2 -target bpf -D__TARGET_ARCH_x86_64 -I . -c $^ -o $@
-
-.PHONY: clean tc-show tc-clean start-ipv4-flow end-ipv4-flow start-ipv6-flow end-ipv6-flow
-
+.PHONY: clean tc-show tc-clean start-ipv4-flow end-ipv4-flow start-ipv6-flow end-ipv6-flow \
+	start-dummy-flow end-dummy-flow
 # Check https://qmonnet.github.io/whirl-offload/2020/04/11/tc-bpf-direct-action/
 # for a great discusson on tc introspection!
 tc-show:
@@ -70,6 +74,12 @@ start-ipv6-flow:
 
 end-ipv6-flow:
 	@sudo bash -c 'echo "end tcp           ::1 2345       ::1 5777 1 2" > np'
+
+start-dummy-flow:
+	curl http://localhost:7777/dummy/start
+
+end-dummy-flow:
+	curl http://localhost:7777/dummy/end
 
 clean:
 	@rm -rf $(TRASH)
