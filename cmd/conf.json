@@ -11,7 +11,8 @@
             "maxReaders": 5,
             "buffSize": 1000,
             "pipePath": "np"
-        }
+        },
+        "api": {}
     },
     "backends": {
         "ebpf": {}

@@ -7,6 +7,7 @@ import (
 	"github.com/pcolladosoto/glowd"
 	"github.com/pcolladosoto/glowd/backends/ebpf"
 	"github.com/pcolladosoto/glowd/backends/firefly"
+	"github.com/pcolladosoto/glowd/plugins/api"
 	"github.com/pcolladosoto/glowd/plugins/np"
 	"github.com/pcolladosoto/glowd/settings"
 )
@@ -18,6 +19,8 @@ func createPlugins(conf settings.Config) ([]glowd.Plugin, error) {
 		switch c := v.(type) {
 		case np.NamedPipePluginConf:
 			plugins = append(plugins, np.New(&c))
+		case api.ApiPluginConf:
+			plugins = append(plugins, api.New(&c))
 		default:
 			return nil, fmt.Errorf("unknown plugin type for %q", v)
 		}
