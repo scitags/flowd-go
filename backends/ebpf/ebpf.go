@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"os"
 	"strings"
 	"syscall"
 	"time"
@@ -35,17 +36,20 @@ var (
 	configurationTags = map[string]bool{
 		"targetinterface": false,
 		"removeqdisc":     false,
+		"programpath":     false,
 	}
 
 	DefaultConf = EbpfBackendConf{
 		TargetInterface: "lo",
 		RemoveQdisc:     true,
+		ProgramPath:     "",
 	}
 )
 
 type EbpfBackendConf struct {
 	TargetInterface string `json:"targetInterface"`
 	RemoveQdisc     bool   `json:"removeQdisc"`
+	ProgramPath     string `json:"programPath"`
 }
 
 // We need an alias to avoid infinite recursion
@@ -92,6 +96,8 @@ func (c *EbpfBackendConf) UnmarshalJSON(data []byte) error {
 			tmpConf.TargetInterface = DefaultConf.TargetInterface
 		case "removeqdisc":
 			tmpConf.RemoveQdisc = DefaultConf.RemoveQdisc
+		case "programPath":
+			tmpConf.ProgramPath = DefaultConf.ProgramPath
 		default:
 			return fmt.Errorf("unknown configuration key %q", k)
 		}
@@ -114,7 +120,20 @@ func (b *EbpfBackend) Init() error {
 	slog.Debug("initialising the ebpf backend")
 
 	// Create the BPF module
-	bpfModule, err := bpf.NewModuleFromBuffer(bpfObj, "glowd")
+	bpfProgram := bpfObj
+	if b.conf.ProgramPath != "" {
+		content, err := os.ReadFile(b.conf.ProgramPath)
+		if err != nil {
+			slog.Warn(
+				"couldn't read the eBPF program from disk. Defaulting to the embedded one", "err", err)
+		} else {
+			bpfProgram = content
+		}
+	} else {
+		slog.Debug("loading the embedded BPF program")
+	}
+
+	bpfModule, err := bpf.NewModuleFromBuffer(bpfProgram, "glowd")
 	// bpfModule, err := bpf.NewModuleFromFile("main.bpf.o")
 	if err != nil {
 		return fmt.Errorf("error creating the BPF module: %w", err)
