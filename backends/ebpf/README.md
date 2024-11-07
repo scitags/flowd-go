@@ -2,7 +2,8 @@
 This backend will set the IPv6 flow label in response to *flow events*. This implies this backend is only applicable for
 IPv6-based traffic flows which, given the WLCG's prospects, should be a reality sooner rather than later in the context
 of HEP. The backed is implemented as an eBPF program adhering to the CO:RE principles so that it's portable even across
-kernel versions and there no need to recompile it when the program starts.
+kernel versions and there no need to recompile it when the program starts. Given we leverage [`libbpf`](libbpf) we don't
+have any dependencies on `netlink(7)`,
 
 The flow label is derived from the flow event's experiment and activity IDs and 5 random bits to fill up the 20 bits comprising
 the flow label. Be sure to check [Wikipedia](https://en.wikipedia.org/wiki/IPv6) for more information on the structure of an
