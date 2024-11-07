@@ -29,13 +29,7 @@ MAIN_PACKAGE = ./cmd
 SOURCES = $(wildcard *.go)
 
 # What to remove when cleaning up
-TRASH   = $(BIN_DIR)/*
-
-# Markdown-formatted manpage to parse with pandoc.
-DOC_FILE = $(BIN_NAME).1.md
-
-# Path of the buildroot created with rpmdev-setuptree.
-RPM_BUILDROOT = $(shell echo ${HOME})/.rpmbuild
+TRASH   = $(BIN_DIR)/* *.gz rpms/
 
 # Default compilation flags.
 # The `-ldflags` option lets us define global variables at compile time!

@@ -37,7 +37,17 @@ manpage into a Roff-formatted one:
     # On macOS you can install it with Homebrew or an equivalent package manager
     $ brew install pandoc
 
-After that, one can leverage the `Makefile` with:
+Also, if you want to build an RPM with all the necessary goodies be sure to install these additional dependencies:
+
+    $ yum install rpm-build rpm-devel rpmlint rpmdevtools
+
+You can now create the necessary build infrastructure by simply running:
+
+    $ rpmdev-setuptree
+
+Be sure to check the [RPM Packaging Guide](https://rpm-packaging-guide.github.io) for a wealth of great information.
+
+With all the above out of the way, one can leverage the `Makefile` with:
 
     $ make build
 
