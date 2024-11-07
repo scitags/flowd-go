@@ -43,16 +43,19 @@ After that, one can leverage the `Makefile` with:
 
 The above will produce the `glowd` binary which one can run as usual with:
 
-    $ ./bin/glowd
+    $ ./bin/glowd --conf cmd/conf.json --log-level debug run
 
 Please bear in mind that if the eBPF backend is in use the binary should be started with privileges (i.e. by prepending `sudo(8)`). We are looking into
 setting the binaries `capabilities(7)` so that elevated permissions are not needed. Also, one can run `make` or `make help` to get a list of available
 targets together with an explanation on what they achieve.
 
+Also, be sure to run the following to be greeted with a help message showing you what other commands besides `run` are available. You can also check
+the Markdown-formatted manpage on `glowd.1.md` to get a list of available flags and commands along a more detailed description.
+
 ## Configuration
-We lied a bit before: running `./bin/glowd` will not really do much! We need to provide it with a JSON-formatted configuration. A sample configuration
-is provided on `cmd/conf.json` which should be suitable for locally running `glowd` to check everything's working as intended. For more information on
-what can be configured, please refer to the Markdown-formatted manpage on `glowd.1.md`.
+As you see above, we need to provide the path to a JSON-formatted configuration file. We provide a sample on `cmd/conf.json` which should be suitable
+for locally running `glowd` to check everything's working as intended. If left unspecified, `glowd` will look for a configuration file at
+`/etc/glowd/conf.json`. For more information on what can be configured, please refer to the Markdown-formatted manpage on `glowd.1.md`.
 
 Also, each plugin and backend will have a bit of documentation in their respective directories which is worth a read.
 
