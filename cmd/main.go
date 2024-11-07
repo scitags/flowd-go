@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"syscall"
 
 	"github.com/pcolladosoto/glowd"
 	"github.com/pcolladosoto/glowd/settings"
@@ -15,7 +16,7 @@ import (
 
 func init() {
 	rootCmd.PersistentFlags().StringVar(&confPath, "conf", "/etc/glowd/conf.json", "path of the JSON configuration file")
-	rootCmd.PersistentFlags().StringVar(&logLevelFlag, "log-level", "debug", "log level: one of debug, info, warn, error")
+	rootCmd.PersistentFlags().StringVar(&logLevelFlag, "log-level", "info", "log level: one of debug, info, warn, error")
 }
 
 var (
@@ -96,9 +97,10 @@ var (
 				}(ch, i)
 			}
 
-			// Set up the machinery for catching SIGINT
+			// Set up the machinery for catching SIGINT (i.e. os.Interrupt) and SIGTERM
+			// which will be sent by SystemD when stopping/restarting the service.
 			sigChan := make(chan os.Signal, 1)
-			signal.Notify(sigChan, os.Interrupt)
+			signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
 			// Simply listen for events on the aggregated channel and dispatch
 			// them to the backends. Another option could be reflect.Select,
