@@ -43,16 +43,16 @@ After that, one can leverage the `Makefile` with:
 
 The above will produce the `glowd` binary which one can run as usual with:
 
-    $ ./glowd
+    $ ./bin/glowd
 
 Please bear in mind that if the eBPF backend is in use the binary should be started with privileges (i.e. by prepending `sudo(8)`). We are looking into
 setting the binaries `capabilities(7)` so that elevated permissions are not needed. Also, one can run `make` or `make help` to get a list of available
 targets together with an explanation on what they achieve.
 
 ## Configuration
-We lied a bit before: running `./glowd` will not really do much! We need to provide it with a JSON-formatted configuration. A sample configuration is provided
-on `cmd/conf.json` which should be suitable for locally running `glowd` to check everything's working as intended. For more information on what can be
-configured, please refer to the Markdown-formatted manpage on `glowd.1.md`.
+We lied a bit before: running `./bin/glowd` will not really do much! We need to provide it with a JSON-formatted configuration. A sample configuration
+is provided on `cmd/conf.json` which should be suitable for locally running `glowd` to check everything's working as intended. For more information on
+what can be configured, please refer to the Markdown-formatted manpage on `glowd.1.md`.
 
 Also, each plugin and backend will have a bit of documentation in their respective directories which is worth a read.
 
@@ -117,6 +117,9 @@ Other than that, we also have some weird-looking files here and there:
 - `glowd.1.md`: The Markdown-formatted manpage for `glowd`. It's converted into a normal Roff-formatted manpage by `pandoc`.
 - `glowd.service`: The SystemD Unit file for running `glowd` as a regular SystemD service.
 - `glowd.spec`: The RPM spec file used to build RPMs to make `glowd` easily available on RHEL-like systems.
+
+And to finish up we have a ton of `Makefiles` on the `mk` directory. These are pulled in by the main `Makefile` and provide
+convenient automations for several interactions we usually carry out with `glowd` when developing it.
 
 ## Adding new backends or plugins
 The code has been designed so that adding new plugins and backends is as easy as possible. Leaving configuration aside (which you can
