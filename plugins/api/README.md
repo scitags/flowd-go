@@ -1,5 +1,5 @@
 # API plugin
-This plugin provides a REST API allowing for the creation of *flow* events.
+This plugin provides a REST API allowing for the creation of *flow events*.
 
 ## Use
 Interaction with this plugin is carried out through HTTP requests to particular URLs we refer to as endpoints.
