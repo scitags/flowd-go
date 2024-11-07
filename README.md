@@ -7,6 +7,7 @@ Why reimplement something that's already working? Well, because...
 - ... we wanted to try our hand at implementing the flow marking infrastructure leveraging vanilla eBPF instead of BCC.
 - ... Go produces statically compiled binaries which make it much easier to deploy on target machines: we don't need containerisation!
 - ... Go lends itself very well to the model underlying the solution where channel-based concurrency feels natural.
+- ... Go allows for known-to-work concurrency to be implemented making scaling for high load scenarios easily achievable.
 - ... the SciTags effort might find our work useful!
 
 Given the heavy drawing from `flowd` the original authors have been included in the LICENSE and other documents to make that
