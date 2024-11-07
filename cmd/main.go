@@ -24,6 +24,34 @@ var (
 		Use:   "glowd",
 		Short: "A SciTags client.",
 		Long:  "Go nuts!",
+
+		// Note we need to configure logging here as flags are not parsed before
+		// calling rootCmd.Execute on main... As this PreRun function is persistent,
+		// it'll be inherited by subcommands
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			logLevel, ok := logLevelMap[logLevelFlag]
+			if !ok {
+				logLevel = slog.LevelInfo
+			}
+
+			logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+				AddSource: true,
+				Level:     logLevel,
+				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+					// Remove time.
+					if a.Key == slog.TimeKey && len(groups) == 0 {
+						return slog.Attr{}
+					}
+					// Remove the directory from the source's filename.
+					if a.Key == slog.SourceKey {
+						source := a.Value.Any().(*slog.Source)
+						source.File = filepath.Base(source.File)
+					}
+					return a
+				},
+			}))
+			slog.SetDefault(logger)
+		},
 	}
 
 	versionCmd = &cobra.Command{
@@ -148,29 +176,6 @@ func init() {
 }
 
 func main() {
-	logLevel, ok := logLevelMap[logLevelFlag]
-	if !ok {
-		logLevel = slog.LevelDebug
-	}
-
-	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
-		AddSource: true,
-		Level:     logLevel,
-		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-			// Remove time.
-			if a.Key == slog.TimeKey && len(groups) == 0 {
-				return slog.Attr{}
-			}
-			// Remove the directory from the source's filename.
-			if a.Key == slog.SourceKey {
-				source := a.Value.Any().(*slog.Source)
-				source.File = filepath.Base(source.File)
-			}
-			return a
-		},
-	}))
-	slog.SetDefault(logger)
-
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
