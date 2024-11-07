@@ -22,8 +22,10 @@ vmlinux.h
 *.log
 
 # Ignore build artifacts
-*.tar.gz
+*.gz
 *.man
+rpms/
+*.rpm
 
 # Ignore files created at runtime
 *.pid
