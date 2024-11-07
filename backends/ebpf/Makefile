@@ -14,7 +14,7 @@ CFLAGS := $(CFLAGS) -DGLOWD_DEBUG
 endif
 
 # The files to eliminate when cleaning up
-TRASH := marker.bpf.o
+TRASH := marker.bpf.o vmlinux.h
 
 # Check automatic make variables over at
 #    https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html
