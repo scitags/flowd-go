@@ -31,12 +31,11 @@ import (
 // SS_PATH = '/usr/sbin/ss'
 
 type Config struct {
-	PIDPath        string        `json:"pidPath"`
-	WorkDir        string        `json:"workDir"`
-	DefaultBackend string        `json:"defaultBackend"`
-	StunServers    []string      `json:"stunServers"`
-	Plugins        []interface{} `json:"-"`
-	Backends       []interface{} `json:"-"`
+	PIDPath     string        `json:"pidPath"`
+	WorkDir     string        `json:"workDir"`
+	StunServers []string      `json:"stunServers"`
+	Plugins     []interface{} `json:"-"`
+	Backends    []interface{} `json:"-"`
 }
 
 // We need a type alias to avoid infinite recursion!
