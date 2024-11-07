@@ -20,3 +20,7 @@ vmlinux.h
 
 # Ignore logs generated with the likes of {l,s}trace
 *.log
+
+# Ignore build artifacts
+*.tar.gz
+*.man
