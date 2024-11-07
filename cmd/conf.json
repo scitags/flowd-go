@@ -1,7 +1,6 @@
 {
     "pidPath": "./glowd.pid",
     "workDir": ".",
-    "defaultBackend": "none",
     "stunServers": [
         "stun:stun.l.google.com:19305",
         "stun:stun.services.mozilla.org:3478"
