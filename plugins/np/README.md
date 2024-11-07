@@ -18,8 +18,8 @@ Where:
 - `sourcePort` is an integer equal to or below `65535`.
 - `destinationIP` is a valid IPv4 or IPv6 address.
 - `destinationPort` is an integer equal to or below `65535`.
-- `experimentID` is an integer.
-- `activityID` is an integer.
+- `experimentID` is a positive integer.
+- `activityID` is a positive integer.
 
 For example, the following will start and end a flow, respectively:
 
