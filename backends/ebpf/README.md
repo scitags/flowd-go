@@ -2,7 +2,7 @@
 Our objective is simply getting an eBPF program to compile so that it can be deployed 'everywhere', simple as that!
 
 Now, the reality is a bit more complex than one would think! Long story short, we've settled on leveraging the
-rather new *Compile-Once Run-Everywhere* (CORE) methodology to accomplish just that.
+rather new *Compile-Once Run-Everywhere* (CO:RE) methodology to accomplish just that.
 
 ## Achieving portability in the context of eBPF
 Put simply, eBPF programs run in a Kernel VM. Now, changes in the kernel types (i.e. addition of `struct` fields)
@@ -22,10 +22,10 @@ One can also check whether this option was used when compiling the kernel with:
 
     $ grep CONFIG_DEBUG_INFO_BTF /boot/config-$(uname -r)
 
-If a kernel has not been compiled with this option it should be recompiled to support CORE, so the best approach
+If a kernel has not been compiled with this option it should be recompiled to support CO:RE, so the best approach
 rapidly becomes going back to [BCC][].
 
-### What does CORE look like?
+### What does CO:RE look like?
 From the eBPF's program point of view not much changes really. One need stick to 'vanilla' primitives (i.e. no BCC
 are available) and the rest pretty much follows. Compilation does require some additional tooling, namely LLVM, Clang
 and `libbpf-devel` to get the necessary helpers. On AlmaLinux 9 this can be achieved with:
@@ -34,7 +34,7 @@ and `libbpf-devel` to get the necessary helpers. On AlmaLinux 9 this can be achi
     $ dnf install epel-release; dnf config-manager --set-enabled crb
 
     # Install libbpf together with headers, llvm, clang and the auxiliary bpftool
-    $ yum install libbpf-devel clang llvm bpftool
+    $ yum install libbpf-devel libbpf-static clang llvm bpftool
 
 With that, we can compile right away! We just need to generate the `vmlinux.h` header containing the definition of
 all kernel structs which can be easily accomplished with:
@@ -81,7 +81,7 @@ it's rather feasible to replicate whatever functionality's needed.
 ## Other considered solutions
 Aside from `libbpf`, we also considered leveraging [`ebpf`][ebpf] by the Cilium team which is a great tool in
 its own right. However, even though it might be possible, it wasn't obvious (at least for us) from the documentation
-how one could leverage a CORE model (see [the doc][ebpf-core])... [This discussion][ebpf-disc] also shed some very
+how one could leverage a CO:RE model (see [the doc][ebpf-core])... [This discussion][ebpf-disc] also shed some very
 valuable information informing this choice.
 
 BCC was a clear contender, but the first-class API is written in Python despite [gobpf][] being available. Again, it's
@@ -96,7 +96,7 @@ be defined was a deal breaker too... The documentation even has an [example][go-
 ## Further reading
 Information on eBPF and co. is rather sparse and heavily technical. However, there are some great resources out there
 who deserve mentioning. These include articles by Andrii Nakryiko covering [bootstraping `libbpf`][libbpf-bootstrap-blog]
-and [CORE][core-blog]. The [`libbpf-bootstrap`][libbpf-bootstrap] repository is a treasure trove of information too!
+and [CO:RE][core-blog]. The [`libbpf-bootstrap`][libbpf-bootstrap] repository is a treasure trove of information too!
 
 The [BPF series][bpf-series] over at The Gray Node is also a great source!
 
