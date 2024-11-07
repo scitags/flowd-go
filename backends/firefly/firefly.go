@@ -82,7 +82,7 @@ var (
 )
 
 type FireflyBackendConf struct {
-	FireflyDestinationPort uint16 `json:"FireflyDestinationPort"`
+	FireflyDestinationPort uint16 `json:"fireflyDestinationPort"`
 	PrependSyslog          bool   `json:"prependSyslog"`
 }
 
