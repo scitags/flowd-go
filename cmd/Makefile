@@ -17,13 +17,22 @@ COMMIT = $(shell git rev-parse --short HEAD)
 # Where whouls we place output binaries?
 BIN_DIR = ./bin
 
+# Name of the output binary
+BIN_NAME = glowd
+
 SOURCES = $(wildcard *.go)
 TRASH   = $(BIN_DIR)/* cmd
+
+# Markdown-formatted manpage to parse with pandoc.
+DOC_FILE = $(BIN_NAME).1.md
+
+# Path of the buildroot created with rpmdev-setuptree.
+RPM_BUILDROOT = $(shell echo ${HOME})/.rpmbuild
 
 # Default compilation flags.
 # The `-ldflags` option lets us define global variables at compile time!
 # Check https://stackoverflow.com/questions/11354518/application-auto-build-versioning
-CFLAGS := -tags ebpf -ldflags "-X main.builtCommit=$(COMMIT)" -o $(BIN_DIR)
+CFLAGS := -tags ebpf -ldflags "-X main.builtCommit=$(COMMIT)" -o $(BIN_DIR)/$(BIN_NAME)
 
 # Adjust GOC's environment depending on what OS we're on to deal with
 # all the BPF machinery. Note that when ENV_FALGS is not defined on
@@ -40,13 +49,43 @@ ifeq ($(OS),Linux)
 	ENV_FLAGS := $(ENV_FLAGS) CGO_ENABLED="1"
 endif
 
+help:
+	@echo "usage: make <target>"
+	@echo "targets:"
+	@echo "             build: build the binary for {linux,darwin}/amd64"
+	@echo "                    the target OS is determined by the one make"
+	@echo "                    is ran on."
+	@echo ""
+	@echo "               doc: build and compress the manpage."
+	@echo ""
+	@echo "               rpm: build the RPM. Make sure the machine this runs on has a"
+	@echo "                    RPM buildroot configured through rpmdev-setuptree."
+	@echo ""
+	@echo "           tc-show: show information gathered through tc(8) pertaining the eBPF backend."
+	@echo "          tc-clean: remove the qdisc implicitly created when loading the eBPF program."
+	@echo "        ebpf-trace: show the contents of the kernel's trace pipe where the"
+	@echo "                    debug information of eBPF programs is dumped."
+	@echo "   start-ipv4-flow: write to glowd's named pipe to strart an IPv4 flow."
+	@echo "     end-ipv4-flow: write to glowd's named pipe to end an IPv4 flow."
+	@echo "   start-ipv6-flow: write to glowd's named pipe to strart an IPv6 flow."
+	@echo "     end-ipv6-flow: write to glowd's named pipe to end an IPv6 flow."
+	@echo "  start-dummy-flow: send an HTTP GET reuqest to glowd's API to start an IPv6 flow."
+	@echo "    end-dummy-flow: send an HTTP GET reuqest to glowd's API to end an IPv6 flow."
+	@echo ""
+	@echo "             clean: delete everything defined as rubbish."
+
 # Simply build the command
 build: $(SOURCES)
 	@mkdir -p bin
 	$(ENV_FLAGS) $(GOC) build $(CFLAGS)
 
+doc: $(DOC_FILE)
+	@echo "Building documentation"
+	@pandoc --standalone --to man $(DOC_FILE) | gzip > $(basename $(DOC_FILE)).gz
+
 .PHONY: clean tc-show tc-clean start-ipv4-flow end-ipv4-flow start-ipv6-flow end-ipv6-flow \
-	start-dummy-flow end-dummy-flow
+	start-dummy-flow end-dummy-flow rpm
+
 # Check https://qmonnet.github.io/whirl-offload/2020/04/11/tc-bpf-direct-action/
 # for a great discusson on tc introspection!
 tc-show:
@@ -80,6 +119,17 @@ start-dummy-flow:
 
 end-dummy-flow:
 	curl http://localhost:7777/dummy/end
+
+rpm: linux doc
+	@echo "Building RPM with buildroot $(RPM_BUILDROOT)"
+	@echo "Copying artifacts to the RPM buildroot..."
+	@cp $(BIN_DIR)/$(BIN_NAME)     $(RPM_BUILDROOT)/SOURCES/$(BIN_NAME)
+	@cp conf.json                  $(RPM_BUILDROOT)/SOURCES/$(BIN_NAME).json
+	@cp $(BIN_NAME).service        $(RPM_BUILDROOT)/SOURCES/$(BIN_NAME).service
+	@cp $(basename $(DOC_FILE)).gz $(RPM_BUILDROOT)/SOURCES/$(basename $(DOC_FILE)).gz
+	@echo "Building the RPM..."
+	@rpmbuild -bb $(RPM_BUILDROOT)/SPECS/wlcg-site-snmp.spec
+
 
 clean:
 	@rm -rf $(TRASH)
