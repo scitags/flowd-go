@@ -99,10 +99,16 @@ build: $(SOURCES) marker.bpf.o
 	@mkdir -p bin
 	$(ENV_FLAGS) $(GOC) build $(CFLAGS) -o $(BIN_DIR)/$(BIN_NAME) $(MAIN_PACKAGE)
 
+# We'll only compile the eBPF progra if we're on Linux
+ifeq ($(OS),Linux)
 # Recursively build the eBPF program. Be sure to check
 # https://www.gnu.org/software/make/manual/html_node/Recursion.html
 marker.bpf.o:
 	$(MAKE) -C backends/ebpf
+else
+# Just provide a stub it we're not on Linux!
+marker.bpf.o:
+endif
 
 # Include Makefiles with additional targets automating stuff.
 # Check https://www.gnu.org/software/make/manual/html_node/Include.html
