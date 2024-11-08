@@ -11,7 +11,7 @@ DOC_FILE = $(BIN_NAME).1.md
 RPM_BUILDROOT = $(shell echo ${HOME})/rpmbuild
 
 # The directory on which to place the resulting RPM for easier access
-RPM_OUTPUT_DIR = rmps
+RPM_OUTPUT_DIR = rpms
 
 # Be sure to check https://rpm-packaging-guide.github.io for more info!
 rpm: doc build
