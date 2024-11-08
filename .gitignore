@@ -24,7 +24,6 @@ vmlinux.h
 # Ignore build artifacts
 *.gz
 *.man
-rpms/
 *.rpm
 
 # Ignore files created at runtime

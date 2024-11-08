@@ -1,6 +1,9 @@
 # This Makefile provides several targets hadling the creation of of RPM packages
 # and documentation for publishing glowd
 
+# The directory on which to place the build files and resulting RPMs for easier access
+RPM_DIR = rpms
+
 # Markdown-formatted manpage to parse with pandoc.
 DOC_FILE = $(BIN_NAME).1.md
 
@@ -10,23 +13,19 @@ DOC_FILE = $(BIN_NAME).1.md
 # default on ${HOME}/rpmbuild, hence the definition of this variable.
 RPM_BUILDROOT = $(shell echo ${HOME})/rpmbuild
 
-# The directory on which to place the resulting RPM for easier access
-RPM_OUTPUT_DIR = rpms
-
 # Be sure to check https://rpm-packaging-guide.github.io for more info!
 rpm: doc build
 	@echo "Building RPM with buildroot $(RPM_BUILDROOT)"
 	@echo "Copying artifacts to the RPM buildroot..."
-	@cp $(BIN_DIR)/$(BIN_NAME)     $(RPM_BUILDROOT)/SOURCES/$(BIN_NAME)
-	@cp cmd/conf.json              $(RPM_BUILDROOT)/SOURCES/$(BIN_NAME).json
-	@cp $(BIN_NAME).service        $(RPM_BUILDROOT)/SOURCES/$(BIN_NAME).service
-	@cp $(basename $(DOC_FILE)).gz $(RPM_BUILDROOT)/SOURCES/$(basename $(DOC_FILE)).gz
+	@cp $(BIN_DIR)/$(BIN_NAME)                $(RPM_BUILDROOT)/SOURCES/$(BIN_NAME)
+	@cp $(RPM_DIR)/conf.json                  $(RPM_BUILDROOT)/SOURCES/$(BIN_NAME).json
+	@cp $(RPM_DIR)/$(BIN_NAME).service        $(RPM_BUILDROOT)/SOURCES/$(BIN_NAME).service
+	@cp $(RPM_DIR)/$(basename $(DOC_FILE)).gz $(RPM_BUILDROOT)/SOURCES/$(basename $(DOC_FILE)).gz
 	@echo "Building the RPM..."
-	@rpmbuild -bb $(BIN_NAME).spec
-	@echo "Copying the RPM to $(RPM_OUTPUT_DIR)"
-	@mkdir -p $(RPM_OUTPUT_DIR)
-	@cp $(RPM_BUILDROOT)/RPMS/x86_64/glowd-1.0-1.x86_64.rpm $(RPM_OUTPUT_DIR)
+	@rpmbuild -bb $(RPM_DIR)/$(BIN_NAME).spec
+	@echo "Copying the RPM to $(RPM_DIR)"
+	@cp $(RPM_BUILDROOT)/RPMS/x86_64/glowd-1.0-1.x86_64.rpm $(RPM_DIR)
 
-doc: $(DOC_FILE)
+doc: $(RPM_DIR)/$(DOC_FILE)
 	@echo "Building documentation"
-	@pandoc --standalone --to man $(DOC_FILE) | gzip > $(basename $(DOC_FILE)).gz
+	@pandoc --standalone --to man $(RPM_DIR)/$(DOC_FILE) | gzip > $(RPM_DIR)/$(basename $(DOC_FILE)).gz

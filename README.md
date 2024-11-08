@@ -60,12 +60,12 @@ setting the binaries `capabilities(7)` so that elevated permissions are not need
 targets together with an explanation on what they achieve.
 
 Also, be sure to run the following to be greeted with a help message showing you what other commands besides `run` are available. You can also check
-the Markdown-formatted manpage on `glowd.1.md` to get a list of available flags and commands along a more detailed description.
+the Markdown-formatted manpage on `rpms/glowd.1.md` to get a list of available flags and commands along a more detailed description.
 
 ## Configuration
 As you see above, we need to provide the path to a JSON-formatted configuration file. We provide a sample on `cmd/conf.json` which should be suitable
 for locally running `glowd` to check everything's working as intended. If left unspecified, `glowd` will look for a configuration file at
-`/etc/glowd/conf.json`. For more information on what can be configured, please refer to the Markdown-formatted manpage on `glowd.1.md`.
+`/etc/glowd/conf.json`. For more information on what can be configured, please refer to the Markdown-formatted manpage on `rpms/glowd.1.md`.
 
 Also, each plugin and backend will have a bit of documentation in their respective directories which is worth a read.
 
@@ -125,14 +125,17 @@ a bit overwhelming for people not familiar with Go's ecosystem. The following sh
 - `backends`: The implementations of the available backends. Each of them is an independent Go module.
 - `plugins`: The implementations of the available plugins. Each of them is an independent Go module.
 
-Other than that, we also have some weird-looking files here and there:
+Other than that, we also have pother couple of directories with auxiliary files:
 
-- `glowd.1.md`: The Markdown-formatted manpage for `glowd`. It's converted into a normal Roff-formatted manpage by `pandoc`.
-- `glowd.service`: The SystemD Unit file for running `glowd` as a regular SystemD service.
-- `glowd.spec`: The RPM spec file used to build RPMs to make `glowd` easily available on RHEL-like systems.
+- `rpms`: This directory contains all the goodies for bundling up RPM packages for distribution, including:
+    - `glowd.1.md`: The Markdown-formatted manpage for `glowd`. It's converted into a normal Roff-formatted manpage by `pandoc`.
+    - `glowd.service`: The SystemD Unit file for running `glowd` as a regular SystemD service.
+    - `glowd.spec`: The RPM spec file used to build RPMs to make `glowd` easily available on RHEL-like systems.
+    - `conf.json`: A configuration file meant for deployment on real machines. For development the configuration one should use
+      is located on `cmd/conf.json`.
 
-And to finish up we have a ton of `Makefiles` on the `mk` directory. These are pulled in by the main `Makefile` and provide
-convenient automations for several interactions we usually carry out with `glowd` when developing it.
+- `mk`: Several auxiliary `Makefiles` which are included from the main `Makefile` that provide convenient automations for several
+  interactions we usually carry out with `glowd` when developing it.
 
 ## Adding new backends or plugins
 The code has been designed so that adding new plugins and backends is as easy as possible. Leaving configuration aside (which you can
