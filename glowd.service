@@ -6,7 +6,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/glowd --conf /etc/glowd/conf.json
+ExecStart=/usr/bin/glowd --conf /etc/glowd/conf.json run
 Restart=always
 
 [Install]
