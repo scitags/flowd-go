@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/pcolladosoto/glowd"
-	"github.com/pcolladosoto/glowd/settings"
+	glowd "github.com/scitags/flowd-go"
+	"github.com/scitags/flowd-go/settings"
 
 	"github.com/spf13/cobra"
 )

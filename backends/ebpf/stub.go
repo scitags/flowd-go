@@ -3,7 +3,7 @@
 package ebpf
 
 import (
-	"github.com/pcolladosoto/glowd"
+	glowd "github.com/scitags/flowd-go"
 )
 
 type EbpfBackend struct {

@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
-	"github.com/pcolladosoto/glowd"
+	glowd "github.com/scitags/flowd-go"
 )
 
 var (
