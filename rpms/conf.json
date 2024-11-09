@@ -1,5 +1,5 @@
 {
-    "pidPath": "/var/run/glowd.pid",
+    "pidPath": "/var/run/flowd-go.pid",
     "workDir": ".",
     "stunServers": [
         "stun:stun.l.google.com:19305",
@@ -9,7 +9,7 @@
         "namedPipe": {
             "maxReaders": 5,
             "buffSize": 1000,
-            "pipePath": "/var/run/glowd.np"
+            "pipePath": "/var/run/flowd-go.np"
         },
         "api": {}
     },

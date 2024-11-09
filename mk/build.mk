@@ -1,5 +1,5 @@
 # This Makefile provides several targets hadling the creation of of RPM packages
-# and documentation for publishing glowd
+# and documentation for publishing flowd-go
 
 # The directory on which to place the build files and resulting RPMs for easier access
 RPM_DIR = rpms
@@ -24,7 +24,7 @@ rpm: doc build
 	@echo "Building the RPM..."
 	@rpmbuild -bb $(RPM_DIR)/$(BIN_NAME).spec
 	@echo "Copying the RPM to $(RPM_DIR)"
-	@cp $(RPM_BUILDROOT)/RPMS/x86_64/glowd-1.0-1.x86_64.rpm $(RPM_DIR)
+	@cp $(RPM_BUILDROOT)/RPMS/x86_64/flowd-go-1.0-1.x86_64.rpm $(RPM_DIR)
 
 doc: $(RPM_DIR)/$(DOC_FILE)
 	@echo "Building documentation"
