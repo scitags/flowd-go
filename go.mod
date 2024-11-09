@@ -1,4 +1,4 @@
-module github.com/pcolladosoto/glowd
+module github.com/scitags/flowd-go
 
 go 1.23.0
 
