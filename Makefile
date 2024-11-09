@@ -18,7 +18,7 @@ COMMIT = $(shell git rev-parse --short HEAD)
 BIN_DIR = ./bin
 
 # Name of the output binary
-BIN_NAME = glowd
+BIN_NAME = flowd-go
 
 # Path to wher the main package lives
 MAIN_PACKAGE = ./cmd
@@ -79,16 +79,16 @@ help:
 	@echo "          tc-clean: remove the qdisc implicitly created when loading the eBPF program."
 	@echo "        ebpf-trace: show the contents of the kernel's trace pipe where the"
 	@echo "                    debug information of eBPF programs is dumped."
-	@echo "   start-ipv4-flow: write to glowd's named pipe to strart an IPv4 flow."
-	@echo "     end-ipv4-flow: write to glowd's named pipe to end an IPv4 flow."
-	@echo "   start-ipv6-flow: write to glowd's named pipe to strart an IPv6 flow."
-	@echo "     end-ipv6-flow: write to glowd's named pipe to end an IPv6 flow."
-	@echo "  start-dummy-flow: send an HTTP GET reuqest to glowd's API to start an IPv6 flow."
-	@echo "    end-dummy-flow: send an HTTP GET reuqest to glowd's API to end an IPv6 flow."
+	@echo "   start-ipv4-flow: write to flowd-go's named pipe to strart an IPv4 flow."
+	@echo "     end-ipv4-flow: write to flowd-go's named pipe to end an IPv4 flow."
+	@echo "   start-ipv6-flow: write to flowd-go's named pipe to strart an IPv6 flow."
+	@echo "     end-ipv6-flow: write to flowd-go's named pipe to end an IPv6 flow."
+	@echo "  start-dummy-flow: send an HTTP GET reuqest to flowd-go's API to start an IPv6 flow."
+	@echo "    end-dummy-flow: send an HTTP GET reuqest to flowd-go's API to end an IPv6 flow."
 	@echo ""
 	@echo "             clean: delete everything defined as rubbish."
 
-# Simply build glowd
+# Simply build flowd-go
 build: $(SOURCES) marker.bpf.o
 	@mkdir -p bin
 	$(ENV_FLAGS) $(GOC) build $(CFLAGS) -o $(BIN_DIR)/$(BIN_NAME) $(MAIN_PACKAGE)

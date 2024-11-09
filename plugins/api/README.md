@@ -15,17 +15,17 @@ Returns  JSON-formatted object detailing the available endpoints.
             {
                 "method": "GET",
                 "path": "/",
-                "name": "github.com/pcolladosoto/glowd/plugins/api.handleRoot"
+                "name": "github.com/scitags/flowd/plugins/api.handleRoot"
             },
             {
                 "method": "GET",
                 "path": "/dummy/start",
-                "name": "github.com/pcolladosoto/glowd/plugins/api.handleDummyStartFlow"
+                "name": "github.com/scitags/flowd/plugins/api.handleDummyStartFlow"
             },
             {
                 "method": "GET",
                 "path": "/dummy/end",
-                "name": "github.com/pcolladosoto/glowd/plugins/api.handleDummyEndFlow"
+                "name": "github.com/scitags/flowd/plugins/api.handleDummyEndFlow"
             }
         ]
     }

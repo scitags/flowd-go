@@ -1,5 +1,5 @@
 {
-    "pidPath": "./glowd.pid",
+    "pidPath": "./flowd-go.pid",
     "workDir": ".",
     "stunServers": [
         "stun:stun.l.google.com:19305",

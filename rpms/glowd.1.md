@@ -1,28 +1,28 @@
-% glowd(1) | General Commands Manual
+% flowd-go(1) | General Commands Manual
 
 # NAME
-glowd - SciTags Glowd Daemon
+flowd-go - SciTags Flowd-go Daemon
 
 # SYNOPSIS
-`glowd [-h | --help] [--conf CONFIG_FILE_PATH] [--log-level=info] [run | version | help]`
+`flowd-go [-h | --help] [--conf CONFIG_FILE_PATH] [--log-level=info] [run | version | help]`
 
 # DESCRIPTION
-The glowd daemon will listen for flow events through its various plugins and exert the actions as defined in its several
+The flowd-go daemon will listen for flow events through its various plugins and exert the actions as defined in its several
 backends. For instance, if a new flow is defined the eBPF backend will modify the IPv6 flow label of datagrams until that
 same flow is stopped.
 
-In the context of glowd a *flow* is usually represented as a 5-tuple including the source and destination IPv{4,6} addresses and
-ports together with the transport (i.e. L4) protocol. Through *flow events* one can instruct glowd to either keep track or
+In the context of flowd-go a *flow* is usually represented as a 5-tuple including the source and destination IPv{4,6} addresses and
+ports together with the transport (i.e. L4) protocol. Through *flow events* one can instruct flowd-go to either keep track or
 ignore these flows.
 
 Given their complexity, explaining the internals of the different plugins and backends is out of the scope of this manpage.
 A simple overview of each of them will be presented and the reader is encouraged to query the implementation along with the
 accompanying documentation files presented as Markdown (i.e. `*.md`) documents.
 
-Given glowd's purpose, it is intended to be a long-running service (i.e. a *daemon*). This explains why this service can
-be managed through SystemD by interacting with the `glowd` unit by means of `systemctl(1)`.
+Given flowd-go's purpose, it is intended to be a long-running service (i.e. a *daemon*). This explains why this service can
+be managed through SystemD by interacting with the `flowd-go` unit by means of `systemctl(1)`.
 
-The implementation can be found at https://github.com/pcolladosoto/glowd.
+The implementation can be found at https://github.com/scitags/flowd-go.
 
 # OPTIONS
 `-h, --help`
@@ -31,7 +31,7 @@ The implementation can be found at https://github.com/pcolladosoto/glowd.
 
 `--conf CONFIG_FILE_PATH`
 
-:   Provides the path of the configuration file. If left unspecified, it will default to `/etc/glowd/conf.json`.
+:   Provides the path of the configuration file. If left unspecified, it will default to `/etc/flowd-go/conf.json`.
     The syntax of the configuration file is explained in the **CONFIGURATION** section.
 
 `--log-level=info`
@@ -51,7 +51,7 @@ The implementation can be found at https://github.com/pcolladosoto/glowd.
 
 `run`
 
-:   Run the glowd daemon.
+:   Run the flowd-go daemon.
 
 # PLUGINS
 This section lists the configuration options available for each of the provided plugins. For a deeper explanation please
@@ -69,7 +69,7 @@ settings are:
 - **buffSize [int] {1000}**: The size of the buffer (in bytes) writes to the named pipe are read into. The default value should
   be more than enough, but if flow events are extremely large increasing this value could help.
 
-- **pipePath [string] {"/var/run/glowd/np"}**: The path on which to create the named pipe.
+- **pipePath [string] {"/var/run/flowd-go/np"}**: The path on which to create the named pipe.
 
 ## api
 The **API** plugin will create an HTTP server providing a REST API through which one can send flow events. Please refer to the
@@ -96,14 +96,14 @@ hooked on a *clsact qdisc* which only deals with egress datagrams. The loading a
   `ip-link(8)`.
 
 - **removeQdisc [bool] {true}**: Whether to remove the qdisc (see `tc(8)`) implicitly created to hook the eBPF program. Unless you have a very
-  good reason to, don't reconfigure this value as doing so might leave the system in a 'dirty' state after glowd exits. In order to remove
+  good reason to, don't reconfigure this value as doing so might leave the system in a 'dirty' state after flowd-go exits. In order to remove
   the qdisc manually you can run:
 
         $ tc qdisc del dev <targetInterface> clsact
 
   Where `targetInterface` is the one configured with the previous option.
 
-- **programPath [string] {""}**: The path to an eBPF program to load instead of the one embedded into glowd. This program should have been compiled
+- **programPath [string] {""}**: The path to an eBPF program to load instead of the one embedded into flowd-go. This program should have been compiled
   in a particular way as the loading into the kernel won't work otherwise. Please refer to the eBPF documentation bundled with the implementation
   to take a look at how the embedded program is compiled.
 
@@ -119,7 +119,7 @@ payload including flow information.
   in a production scenario this setting should be `true`.
 
 # CONFIGURATION
-Glowd's configuration is defined through a JSON file which by default will be `/etc/glowd/conf.json`. A different
+Flowd-go's configuration is defined through a JSON file which by default will be `/etc/flowd-go/conf.json`. A different
 path can be specified through the `--conf` option.
 
 Please note **every** configuration parameter is optional. The configuration parsing logic can tell wether an option
@@ -147,17 +147,17 @@ you expect or not.
 The following details the available configuration options. The setting's value type is enclosed in brackets (`[]`) and
 its default value is enclosed in braces (`{}`).
 
-**pidPath [string] {"/var/run/glowd.pid"}**
+**pidPath [string] {"/var/run/flowd-go.pid"}**
 
 :   The path where the main process' PID will be written.
 
-**workDir [string] {"/var/cache/glowd"}**
+**workDir [string] {"/var/cache/flowd-go"}**
 
-:   The directory where glowd will drop cache's and otherwise persistent files.
+:   The directory where flowd-go will drop cache's and otherwise persistent files.
 
 **stunServers [array of string] {[]}**
 
-:   Additional STUN servers to leverage for outbound IPv4 address discovery. Glowd already has a couple
+:   Additional STUN servers to leverage for outbound IPv4 address discovery. Flowd-go already has a couple
     of STUN servers defined so this option can be left empty. If providing one, the expected format is
     `stun:<stun-server-hostname>:<stun-server-port>`. For instance, the following would be completely
     valid: `stun:stun.services.mozilla.org:3478`.
@@ -167,7 +167,7 @@ its default value is enclosed in braces (`{}`).
 :   This object defines the plugins to instantiate as well as their configuration. The object's keys **MUST**
     be the identifier of the desired plugin and the associated values are objects representing each plugin's
     particular configuration. The details of these per-plugin configurations can be found on the PLUGINS
-    section. If key specifying a non-existent plugin is included, glowd will refuse to start and print
+    section. If key specifying a non-existent plugin is included, flowd-go will refuse to start and print
     a (hopefully) informative error indicating the problem.
 
 **backends [object]**
@@ -175,7 +175,7 @@ its default value is enclosed in braces (`{}`).
 :   This object defines the backends to instantiate as well as their configuration. The object's keys **MUST**
     be the identifier of the desired backend and the associated values are objects representing each backend's
     particular configuration. The details of these per-backend configurations can be found on the BACKENDS
-    section. If key specifying a non-existent backend is included, glowd will refuse to start and print
+    section. If key specifying a non-existent backend is included, flowd-go will refuse to start and print
     a (hopefully) informative error indicating the problem.
 
 # AUTHORS
