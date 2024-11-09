@@ -1,12 +1,12 @@
 # Be sure to check https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html!
 [Unit]
-Description=SciTags Glowd Service
-Documentation=man:glowd(1) https://github.com/pcolladosoto/glowd
+Description=SciTags Flowd-go Service
+Documentation=man:flowd-go(1) https://github.com/scitags/flowd-go
 After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/glowd --conf /etc/glowd/conf.json run
+ExecStart=/usr/bin/flowd-go --conf /etc/flowd-go/conf.json run
 Restart=always
 
 [Install]
