@@ -12,8 +12,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/pcolladosoto/glowd"
 	"github.com/rjeczalik/notify"
+	glowd "github.com/scitags/flowd-go"
 )
 
 var (

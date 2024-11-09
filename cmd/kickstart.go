@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/pcolladosoto/glowd"
-	"github.com/pcolladosoto/glowd/backends/ebpf"
-	"github.com/pcolladosoto/glowd/backends/firefly"
-	"github.com/pcolladosoto/glowd/plugins/api"
-	"github.com/pcolladosoto/glowd/plugins/np"
-	"github.com/pcolladosoto/glowd/settings"
+	glowd "github.com/scitags/flowd-go"
+	"github.com/scitags/flowd-go/backends/ebpf"
+	"github.com/scitags/flowd-go/backends/firefly"
+	"github.com/scitags/flowd-go/plugins/api"
+	"github.com/scitags/flowd-go/plugins/np"
+	"github.com/scitags/flowd-go/settings"
 )
 
 func createPlugins(conf settings.Config) ([]glowd.Plugin, error) {

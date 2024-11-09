@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pcolladosoto/glowd"
+	glowd "github.com/scitags/flowd-go"
 )
 
 const (
