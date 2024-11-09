@@ -1,10 +1,10 @@
-Name:		glowd
+Name:		flowd-go
 Version:	1.0
 Release:	1
-Summary:	SciTags Glowd Daemon
+Summary:	SciTags Flowd-go Daemon
 BuildArch:	x86_64
 
-URL: https://github.com/pcolladosoto/glowd
+URL: https://github.com/scitags/flowd-go
 
 License:	GPLv3
 
@@ -14,7 +14,7 @@ BuildRequires:	systemd
 %description
 Reimplementation of the flowd daemon in Go.
 
-The glowd daemon serves as the backbone for HEPiX's
+The flowd-go daemon serves as the backbone for HEPiX's
 SciTags initiative as seen on https://www.scitags.org
 
 # Time to copy the binary file!

@@ -14,7 +14,7 @@ import (
 
 const (
 	FIREFLY_VERSION int    = 1
-	APPLICATION     string = "glowd v1.0.0"
+	APPLICATION     string = "flowd-go v1.0.0"
 
 	// Let's replicate 2024-11-02T16:07:01.769470+00:00.
 	TIME_FORMAT string = "2006-01-02T15:04:05.999999-07:00"
@@ -23,7 +23,7 @@ const (
 	SYSLOG_SEVERITY_INFORMATIONAL int    = 6
 	SYSLOG_PRIORITY               int    = (SYSLOG_FACILITY_LOCAL0 << 3) | SYSLOG_SEVERITY_INFORMATIONAL
 	SYSLOG_VERSION                int    = 1
-	SYSLOG_APP_NAME               string = "glowd"
+	SYSLOG_APP_NAME               string = "flowd-go"
 	SYSLOG_PROC_ID                string = "-"
 	SYSLOG_MSG_ID                 string = "firefly-json"
 	SYSLOG_STRUCT_DATA            string = "-"

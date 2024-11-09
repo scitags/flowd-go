@@ -1,5 +1,5 @@
 # Named pipe plugin
-This plugin provides named pipe for the creation of *flow events*. This named pipe will be created when `glowd` is
+This plugin provides named pipe for the creation of *flow events*. This named pipe will be created when `flowd-go` is
 executed and deleted upon its exit.
 
 ## Use

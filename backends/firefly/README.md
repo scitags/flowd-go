@@ -159,7 +159,7 @@ Work is ongoing to define the internal Go `struct` based on this schema instead 
 Aside from the JSON object, a Syslog-like header is prepended in the datagram's payload, an example being (also extracted
 from the specification):
 
-    <134>1 2021-09-22T11:12:27.808092+00:00 26799cfec63a glowd - firefly-json -
+    <134>1 2021-09-22T11:12:27.808092+00:00 26799cfec63a flowd-go - firefly-json -
 
 At the moment, these fireflies are sent to the destination IPv{4,6} address specified in the flow event, but that can very
 easily be altered.
