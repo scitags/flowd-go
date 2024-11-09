@@ -22,24 +22,12 @@
 #include <bpf/bpf_endian.h>
 #include <bpf/bpf_tracing.h>
 
-// Enforceable actions. These are defined on include/uapi/linux/if_ether.h
-// (i.e. /usr/include/linux/pkt_cls.h). The problem is including linux/pkt_cls.h
-// conflicts with the inclusion of vmlinux.h!
-#define TC_ACT_UNSPEC (-1)
-#define TC_ACT_OK 0
+// Include useful functions we defined ourselves. Note these must be
+// included after the above so that all the necessary types are defined.
+#include "utils.bpf.c"
 
-// The ETH_P_* constants are defined in include/uapi/linux/if_ether.h
-// (i.e. /usr/include/linux/if_ether.h). Again, their inclusion conflicts
-// with vmlinux.h...
-#define ETH_P_IP    0x0800 /* Internet Protocol packet */
-#define ETH_P_IPV6  0x86DD /* IPv6 over bluebook */
-#define ETH_P_8021Q 0x8100 /* 802.1Q VLAN Extended Header */
-
-// Protocol numbers. Check https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml
-#define PROTO_IP_ICMP   0x01
-#define PROTO_TCP       0x06
-#define PROTO_UDP       0x11
-#define PROTO_IPV6_ICMP 0x3A
+// Include all the constants we've defined
+#include "consts.h"
 
 // The keys for our hash maps. Should we maybe combine the ports into a __u32?
 struct fourTuple {
@@ -49,7 +37,8 @@ struct fourTuple {
 	__u16 sPort;
 };
 
-// Let's define our map!
+// Let's define our map. Note it'll be included in
+// section .maps in the resulting binary.
 struct {
 	__uint(type, BPF_MAP_TYPE_LRU_HASH);
 	__uint(max_entries, 100000);
@@ -57,78 +46,89 @@ struct {
 	__type(value, __u32);
 } flowLabels SEC(".maps");
 
-// long ringBufferFlags = 0;
+int handleICMP(struct ipv6hdr *l3) {
+	bpf_printk("flowd-go: IPv6 source      address: %pI6", &l3->saddr);
+	bpf_printk("flowd-go: IPv6 destination address: %pI6", &l3->daddr);
 
-// Let's hook the program on the TC! XDP will only look at the ingress traffic :(
-// This macro simply configures the section where the following will be inserted.
-// When loading BPF programs, libbpf will look in sections tc and classifier for
-// programs. to actually load.
-SEC("tc")
+	__u64 ipv6SaddrLo = ipv6AddrLo(l3->saddr);
+	__u64 ipv6SaddrHi = ipv6AddrHi(l3->saddr);
 
-/*
- * The program will receive an __sk_buff which is a 'mirror' of the kernel's own
- * sk_buff [0]. This struct is very well documented over at [1].
- * References:
- *   0: https://docs.kernel.org/networking/skbuff.html
- *   1: https://docs.ebpf.io/linux/program-context/__sk_buff
-*/
-int marker(struct __sk_buff *ctx) {
-	void *data_end = (void *)(__u64)ctx->data_end;
-	void *data = (void *)(__u64)ctx->data;
+	__u64 ipv6DaddrLo = ipv6AddrLo(l3->daddr);
+	__u64 ipv6DaddrHi = ipv6AddrLo(l3->daddr);
 
-	// Check vmlinux.h for the definitions of these structs!
-	// Also, the struct for 802.1Q seems to be vlan_ethhdr!
-	// We just need to consider it on top of ETH_P_IPV6 basically.
-	struct ethhdr *l2;
-	struct ipv6hdr *l3;
-	struct tcphdr *l4;
+	bpf_printk("flowd-go: IPv6 saddr (hi --- lo): %x --- %x", ipv6SaddrHi, ipv6SaddrLo);
+	bpf_printk("flowd-go: IPv6 daddr (hi --- lo): %x --- %x", ipv6DaddrHi, ipv6DaddrLo);
 
-	// Let's check whether the contents of the Ethernet frame are an IPv6 datagram.
-	// We'll also need to be careful with the network's endianness, hence the call
-	// to bpf_htons. This helper function is defined on libbpf's bpf_endian.h.
-	if (ctx->protocol != bpf_htons(ETH_P_IPV6))
+	bpf_printk("flowd-go: IPv6 flow label: %x --- %x --- %x",
+		(__u8)l3->flow_lbl[0], (__u8)l3->flow_lbl[1], (__u8)l3->flow_lbl[2]);
+
+	// Declare the struct we'll use to index the map
+	struct fourTuple flowHash;
+
+	// Initialise the struct with 0s. This is necessary for some reason to do
+	// with compiler padding. Check that's the case...
+	__builtin_memset(&flowHash, 0, sizeof(flowHash));
+
+	// Hardcode the port numbers we'll 'look for': there are none in ICMP!
+	flowHash.ip6Hi = ipv6DaddrHi;
+	flowHash.ip6Lo = ipv6DaddrLo;
+	flowHash.dPort = 5777;
+	flowHash.sPort = 2345;
+
+	// Check if a flow with the above criteria has been defined by flowd-go
+	__u32 *flowTag = bpf_map_lookup_elem(&flowLabels, &flowHash);
+
+	// If ther's a flow defined (i.e. flowTag != NULL)
+	if (flowTag) {
+		bpf_printk("flowd-go: retrieved flowTag: %u", *flowTag);
+
+		// Embed the configured flowTag into the IPv6 header.
+		l3->flow_lbl[0] = (*flowTag & ( 0xF << 16)) >> 16;
+		l3->flow_lbl[1] = (*flowTag & (0xFF <<  8)) >> 8;
+		l3->flow_lbl[2] =  *flowTag &  0xFF;
+
 		return TC_ACT_OK;
+	}
 
-	// Check https://docs.ebpf.io/linux/helper-function/bpf_trace_printk/
-	// bpf_printk("hello from glowd's eBPF backend: we got an IPv6 datagram!");
+	// If we got here there's no flow defined...
+	bpf_printk("flowd-go: found no entry in the map...");
 
-	// Get a hold of the Ethernet frame header. We'll check we do indeed have more
-	// information to read before going on.
-	l2 = data;
-	if ((void *)(l2 + 1) > data_end)
-		return TC_ACT_OK;
+	// Simply force the whole flow label to 1 so that we can
+	// check the tag is altered when capturing traffic.
+	l3->flow_lbl[2] = 0xFF;
+	l3->flow_lbl[1] = 0xFF;
+	l3->flow_lbl[0] =  0xF;
 
-	// Get a hold of the IPv6 header and check we do have some payload!
-	l3 = (void *)(l2 + 1);
-	if ((void *)(l3 + 1) > data_end)
-		return TC_ACT_OK;
+	return TC_ACT_OK;
+}
 
-	__u64 ipv6SaddrLo = bpf_htonl(l3->saddr.in6_u.u6_addr32[2]);
-	ipv6SaddrLo = ipv6SaddrLo << 32 | bpf_htonl(l3->saddr.in6_u.u6_addr32[3]);
+int handleDatagram(struct __sk_buff *ctx, struct ipv6hdr *l3, void *data_end) {
+	// If running in debug mode we'll handle ICMP messages as well
+	// as TCP segments. That way we can leverage ping(8) to easily
+	// generate traffic...
+	#ifdef GLOWD_DEBUG
+		if (l3->nexthdr == PROTO_IPV6_ICMP)
+			return handleICMP(l3);
+	#endif
 
-	__u64 ipv6SaddrHi = bpf_htonl(l3->saddr.in6_u.u6_addr32[0]);
-	ipv6SaddrHi = ipv6SaddrHi << 32 | bpf_htonl(l3->saddr.in6_u.u6_addr32[1]);
+	// We'll only handle TCP traffic flows
+	if (l3->nexthdr == PROTO_TCP) {
+		// The pointer to the header of an TCP segment. As usual, struct tcphdr is
+		// defined on vmlinux.h.
+		struct tcphdr *l4;
 
-	__u64 ipv6DaddrLo = bpf_htonl(l3->daddr.in6_u.u6_addr32[2]);
-	ipv6DaddrLo = ipv6DaddrLo << 32 | bpf_htonl(l3->daddr.in6_u.u6_addr32[3]);
+		// Get a hold of the TCP header!
+		l4 = (void *)(l3 + 1);
+		if ((void *)(l4 + 1) > data_end)
+			return TC_ACT_OK;
 
-	__u64 ipv6DaddrHi = bpf_htonl(l3->daddr.in6_u.u6_addr32[0]);
-	ipv6DaddrHi = ipv6DaddrHi << 32 | bpf_htonl(l3->daddr.in6_u.u6_addr32[1]);
-
-	__u8 flowLblLo = l3->flow_lbl[2];
-	__u8 flowLblMi = l3->flow_lbl[1];
-	__u8 flowLblHi = l3->flow_lbl[0];
-
-	if (l3->nexthdr == PROTO_IPV6_ICMP) {
 		#ifdef GLOWD_DEBUG
-			bpf_printk("   IPv6 saddr: %pI6", &l3->saddr);
-			bpf_printk("   IPv6 daddr: %pI6", &l3->daddr);
-
-			bpf_printk("   IPv6 saddr (hi --- lo): %x --- %x", ipv6SaddrHi, ipv6SaddrLo);
-			bpf_printk("   IPv6 daddr (hi --- lo): %x --- %x", ipv6DaddrHi, ipv6DaddrLo);
-
-			bpf_printk("IPv6 flow_lbl: %x --- %x --- %x", flowLblHi, flowLblMi, flowLblLo);
+			bpf_printk("flowd-go:      TCP source port: %x", bpf_htons(l4->source));
+			bpf_printk("flowd-go: TCP destination port: %x", bpf_htons(l4->dest));
 		#endif
+
+		__u64 ipv6DaddrLo = ipv6AddrLo(l3->daddr);
+		__u64 ipv6DaddrHi = ipv6AddrLo(l3->daddr);
 
 		// Declare the struct we'll use to index the map
 		struct fourTuple flowHash;
@@ -137,50 +137,114 @@ int marker(struct __sk_buff *ctx) {
 		// with compiler padding. Check that's the case...
 		__builtin_memset(&flowHash, 0, sizeof(flowHash));
 
-		// Fake the port numbers: there are none on ICPM!
+		// Hardcode the port numbers we'll 'look for': there are none in ICMP!
 		flowHash.ip6Hi = ipv6DaddrHi;
 		flowHash.ip6Lo = ipv6DaddrLo;
-		flowHash.dPort = 5777;
-		flowHash.sPort = 2345;
-	
+		flowHash.dPort = l4->dest;
+		flowHash.sPort = l4->source;
+
+		// Check if a flow with the above criteria has been defined by flowd-go
 		__u32 *flowTag = bpf_map_lookup_elem(&flowLabels, &flowHash);
 
-		if (!flowTag) {
-			bpf_printk("found no entry in the map...");
-		} else {
-			bpf_printk("retrieved flowTag: %u", *flowTag);
-
-			// Embed the configured flowTag into the IPv6 header.
+		// If there's a flow configured, mark the packet
+		if (flowTag) {
 			l3->flow_lbl[0] = (*flowTag & ( 0xF << 16)) >> 16;
 			l3->flow_lbl[1] = (*flowTag & (0xFF <<  8)) >> 8;
-			l3->flow_lbl[2] = *flowTag & 0xFF;
-
-			return TC_ACT_OK;
+			l3->flow_lbl[2] =  *flowTag &  0xFF;
 		}
 
-		// If there was no match, simply force the whole flow label to 1.
-		l3->flow_lbl[2] = 0xFF;
-		l3->flow_lbl[1] = 0xFF;
-		l3->flow_lbl[0] = 0xF;
-
+		// We can also fall-through to the function's return statement, but
+		// doing so here seems logically much clearer.
 		return TC_ACT_OK;
 	}
 
-	if (l3->nexthdr == PROTO_TCP) {
-		l4 = (void *)(l3 + 1);
-		if ((void *)(l4 + 1) > data_end)
-			return TC_ACT_OK;
-
-		#ifdef GLOWD_DEBUG
-			bpf_printk("TCP source: %x", bpf_htons(l4->source));
-			bpf_printk("  TCP dest: %x", bpf_htons(l4->dest));
-		#endif
-	}
-
-	// At this point we have access to the full IPv6 header and payload. Time to mark the packet!
-
 	// Simply signal that the packet should proceed!
 	return TC_ACT_OK;
+}
+
+// Let's hook the program on the TC! XDP will only look at the ingress traffic :(
+// This macro simply configures the section where the following function will be
+// inserted. When loading BPF programs, libbpf will look in sections tc and
+// classifier for programs to actually load.
+SEC("tc")
+
+/*
+ * The program will receive an __sk_buff which is a 'mirror' of the kernel's own
+ * sk_buff [0]. This struct is very well documented over at [1].
+ * References:
+ *   0: https://docs.kernel.org/networking/skbuff.html
+ *   1: https://docs.ebpf.io/linux/program-context/__sk_buff
+ */
+int marker(struct __sk_buff *ctx) {
+	// Get a hold of the pointers to the start and end of the data so that we
+	// can move around the payload.
+	void *data_end = (void *)(__u64)ctx->data_end;
+	void *data = (void *)(__u64)ctx->data;
+
+	// The pointer to the header of an Ethernet frame. As usual, struct ethhdr
+	// is defined in vmlinux.h.
+	struct ethhdr *l2;
+
+	// The pointer to the header of a Dot1q frame. As usual, struct vlan_ethhdr
+	// is defined on vmlinux.h. Bear in mind this struct defines both the MAC
+	// addresses, the 802.1Q header and the EtherType field all together.
+	struct vlan_ethhdr *l2Q;
+
+	// The pointer to the header of an IPv6 datagram. As usual, struct ipv6hdr is
+	// defined on vmlinux.h.
+	struct ipv6hdr *l3;
+
+	// Let's check whether the contents of the Ethernet frame are an IPv6 datagram.
+	// We'll also need to be careful with the network's endianness, hence the call
+	// to bpf_htons. This helper function is defined on libbpf's bpf_endian.h.
+
+	// Let's check whether we got an Ethernet frame. If so, the encapsulated protocol
+	// should be IPv6 (i.e. ETH_P_IPV6).
+	if (ctx->protocol == bpf_htons(ETH_P_IPV6)) {
+		#ifdef GLOWD_DEBUG
+			// Check https://docs.ebpf.io/linux/helper-function/bpf_trace_printk/
+			bpf_printk("flowd-go: got an Ethernet frame");
+		#endif
+
+		// Get a hold of the Ethernet frame header. We'll check we do indeed have more
+		// information to read before going on. Otherwise the eBPF won't be accepted
+		// by the kernel! This will be the case whenever we're making out way through
+		// the payload defined by data and data_end, so we'll stop mentioning that...
+		l2 = data;
+		if ((void *)(l2 + 1) > data_end)
+			return TC_ACT_OK;
+
+		// Get a hold of the IPv6 header too!
+		l3 = (void *)(l2 + 1);
+		if ((void *)(l3 + 1) > data_end)
+			return TC_ACT_OK;
+	} else if (ctx->protocol == bpf_htons(ETH_P_8021Q)) {
+		#ifdef GLOWD_DEBUG
+			bpf_printk("flowd-go: got a 802.1Q frame");
+		#endif
+
+		// Get a hold of the 802.1Q header.
+		l2Q = data;
+		if ((void *)(l2Q + 1) > data_end)
+			return TC_ACT_OK;
+
+		// Is the encapsulated protocol IPv6?
+		if (l2Q->h_vlan_encapsulated_proto != bpf_htons(ETH_P_IPV6))
+			return TC_ACT_OK;
+
+		// Get a hold of the IPv6 header too!
+		l3 = (void *)(l2Q + 1);
+		if ((void *)(l3 + 1) > data_end)
+			return TC_ACT_OK;
+	} else {
+		// If we don't have an Ethernet or 802.1Q frame we'll just let the packet through.
+		return TC_ACT_OK;
+	}
+
+	// If we made it here, we are dealing with an Ethernet or a 802.1Q frame and we have
+	// already populated l3 so that it points to the IPv6 header. Let's process the
+	// datagram and simply return whatever it determines.
+	return handleDatagram(ctx, l3, data_end);
 }
 
 // Oh wow, the kernel refuses to load unlicensed stuff!

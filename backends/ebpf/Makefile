@@ -25,7 +25,10 @@ marker.bpf.o: marker.bpf.c vmlinux.h
 vmlinux.h:
 	bpftool btf dump file /sys/kernel/btf/vmlinux format c > vmlinux.h
 
-.PHONY: clean
+.PHONY: objdump
+objdump: marker.bpf.o
+	objdump --syms $<
 
+.PHONY: clean
 clean:
 	@rm -rf $(TRASH)
