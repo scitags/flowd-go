@@ -1,6 +1,8 @@
-# Ignore hidden files except the .gitignore
+# Ignore hidden files except the .gitignore and
+# the GitHub-specific stuff
 .*
 !.gitignore
+!.github
 
 # Ignore binaries
 bin/
