@@ -71,24 +71,29 @@ is that the resulting command is a bit frightening...
 
 Please bear in mind the following has been **only tested** on Docker Desktop 4.30.0 running on macOS 13.5.1: YMMV!
 
+#### Makefile to the rescue!
+We have added three targets (i.e. `docker-{start,shell,stop}`) taking care of automating the following discussion away. With this, the workflow
+boils down to:
+
+    # Start the container in the background
+    $ make docker-start
+
+    # Open as many shells as you want in that container
+    $ make docker-shell
+
+    # Stop (and implicitly remove) the container
+    $ make docker-stop
+
+The following paragraphs explain a bit more in depth what's actually going on behind the scenes in case you'd rather set things up yourself.
+
+#### What if I despise Makefiles?
 Without further ado:
 
     $ docker run -v $(pwd):/root/flowd-go --cap-add SYS_ADMIN --cap-add BPF --cap-add NET_ADMIN -it --rm --name flowd-go ghcr.io/scitags/flowd-go-cont:v1.0 bash
 
-Now, what does each option accomplish? Well:
+To get an idea of what each option accomplishes be sure to taje a look at `mk/docker.mk`.
 
-- `-v $(pwd):/root/flowd-go`: This will mount the current directory (i.e. the `flowd-go` repo) under `/root/flowd-go` in the container.
-- `--cap-add SYS_ADMIN`: Add the `CAP_SYS_ADMIN` capability to the container which allows us to do a bunch of stuff. Check `capabilities(7)`.
-- `--cap-add BPF`: Add the `CAP_BPF` capability which, unsurprisingly, allows loading BPF programs into the kernel. Bear in mind this capability
-  exists since Linux 5.8: it was part of `CAP_SYS_ADMIN` before!
-- `--cap-add NET_ADMIN`: Add the `CAP_NET_ADMIN` capability, allowing us to create the qdiscs to attach the BPF programs to.
-- `-it`: Attach the TTY and make the session interactive.
-- `--name flowd-go`: Give the container a deterministic name so that the following commands are reproducible.
-- `--rm`: Delete the container once we exit to help with the cleanup.
-- `ghcr.io/scitags/flowd-go-cont:v1.0`: The purposefully built image we are going to run.
-- `bash`: The command to run (i.e. a regular `bash` shell).
-
-With that we should be dropped into a working shell where we can just run:
+With the above we should be dropped into a working shell where we can just run:
 
     $ cd flowd-go; make build; ./bin/flowd-go --conf cmd/conf.json --log-level debug run
 
