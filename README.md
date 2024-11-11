@@ -62,6 +62,62 @@ targets together with an explanation on what they achieve.
 Also, be sure to run the following to be greeted with a help message showing you what other commands besides `run` are available. You can also check
 the Markdown-formatted manpage on `rpms/flowd-go.1.md` to get a list of available flags and commands along a more detailed description.
 
+### Not so quickstart
+One can also leverage Docker containers to run `flowd-go`. However, given we'll be making use of some rather advanced technologies in the sense that
+they are not for every day use, we'll need to do some convincing so that the containers can actually run as expected. In order to maintain a sane
+degree of security, Docker containers are started with very few `capabilities(7)` by default. Things like loading eBPF programs and creating qdiscs
+require a great deal of privileges which we don't really have by default. The good news is we can just 'ask' for these capabilities, the bad news
+is that the resulting command is a bit frightening...
+
+Please bear in mind the following has been **only tested** on Docker Desktop 4.30.0 running on macOS 13.5.1: YMMV!
+
+#### Makefile to the rescue!
+We have added three targets (i.e. `docker-{start,shell,stop}`) taking care of automating the following discussion away. With this, the workflow
+boils down to:
+
+    # Start the container in the background
+    $ make docker-start
+
+    # Open as many shells as you want in that container
+    $ make docker-shell
+
+    # Stop (and implicitly remove) the container
+    $ make docker-stop
+
+The following paragraphs explain a bit more in depth what's actually going on behind the scenes in case you'd rather set things up yourself.
+
+#### What if I despise Makefiles?
+Without further ado:
+
+    $ docker run -v $(pwd):/root/flowd-go --cap-add SYS_ADMIN --cap-add BPF --cap-add NET_ADMIN -it --rm --name flowd-go ghcr.io/scitags/flowd-go-cont:v1.0 bash
+
+To get an idea of what each option accomplishes be sure to taje a look at `mk/docker.mk`.
+
+With the above we should be dropped into a working shell where we can just run:
+
+    $ cd flowd-go; make build; ./bin/flowd-go --conf cmd/conf.json --log-level debug run
+
+As always, we can open more shells in the same container with:
+
+    $ docker exec -it flowd-go bash
+
+Now, if we want to have access to the eBPF program's debug output on a machine running Docker Desktop we need to manually mount
+the `debugfs` filesystem (see `mount(8)`). On Linux-based machines, `debugfs` should be mounted by default and these next steps
+should not be necessary. Anyway, we can mount `debugfs` manually by running the following within the container:
+
+    $ mount -t debugfs debugfs /sys/kernel/debug
+
+We can also do the same thing persistently by running:
+
+    $ docker volume create --driver local --opt type=debugfs --opt device=debugfs debugfs
+
+Then, we just need to add the following when invoking `docker run ... bash` to mount this new filesystem:
+
+    -v debugfs:/sys/kernel/debug:rw
+
+Please be sure to check [this site](https://hemslo.io/run-ebpf-programs-in-docker-using-docker-bpf/) which contains very valuable
+info on this topic! All in all, getting Docker to work with eBPF machinery can be a bit of a pain, but the payback is huge!
+
 ## Configuration
 As you see above, we need to provide the path to a JSON-formatted configuration file. We provide a sample on `cmd/conf.json` which should be suitable
 for locally running `flowd-go` to check everything's working as intended. If left unspecified, `flowd-go` will look for a configuration file at

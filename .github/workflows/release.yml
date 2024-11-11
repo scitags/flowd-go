@@ -1,0 +1,60 @@
+---
+
+########################################################################################################################
+# For a syntax reference check https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions #
+########################################################################################################################
+
+# What should the action be called?
+name: Release
+
+# We'll run when SemVer (https://semver.org) tags are pushed
+on:
+  push:
+    tags: [ 'v*.*.*' ]
+
+# Let's define what we want to do!
+jobs:
+    build:
+        name: build
+        runs-on: ubuntu-latest
+        container:
+            image: ghcr.io/scitags/flowd-go:v1.0
+            credentials:
+                username: ${{ github.actor }}
+                password: ${{ secrets.SCITAGS_ORG_TOKEN }}
+        steps:
+            - name: Show environment information
+              env:
+                GITHUB_CONTEXT: ${{ toJson(github) }}
+              shell: bash
+              run: |
+                echo "Environment:"
+                env
+                echo "The current directory is:"
+                pwd
+                echo "It's contents are:"
+                ls -lh
+                echo "Who are we?"
+                id
+                echo "GitHub's context"
+                echo $GITHUB_CONTEXT
+
+            - name: Clone the flowd-go repo
+              shell: bash
+              run: |
+                git clone https://github.com/scitags/flowd-go.git flowd-go
+
+            - name: Build the RPM
+              shell: bash
+              working-directory: ./flowd-go
+              run: |
+                make rpm
+
+            - name: Release time!
+              shell: bash
+              env:
+                TAG_NAME: ${{ github.ref_name }}
+                GITHUB_TOKEN: ${{ secrets.SCITAGS_ORG_TOKEN }}
+              working-directory: ./datad/src
+              run: |
+                gh release create --repo scitags/flowd --generate-notes $TAG_NAME ./bin/flowd-go rpms/*.rpm
