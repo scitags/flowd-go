@@ -18,3 +18,14 @@
 #define PROTO_TCP       0x06
 #define PROTO_UDP       0x11
 #define PROTO_IPV6_ICMP 0x3A
+
+// Check RFC 2460 Section 4.3: https://www.rfc-editor.org/rfc/rfc2460.html#section-4.3
+#define NEXT_HDR_HOP_BY_HOP 0x0
+
+// Hop-by-Hop Extension Header in IPv6. See RFC 2460 Section 4.3
+// https://www.rfc-editor.org/rfc/rfc2460.html#section-4.3
+struct hopByHopHdr_t {
+	__u8 nextHdr;
+	__u8 hdrLen;
+	__u8 opts[6];
+};

@@ -15,7 +15,7 @@
     },
     "backends": {
         "ebpf": {
-            "markingStrategy": "flowLabel",
+            "markingStrategy": "extensionHeaders",
             "debugMode": true
         }
     }
