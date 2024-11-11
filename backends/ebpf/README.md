@@ -25,7 +25,9 @@ options. The following replicates the default configuration:
         "ebpf": {
             "targetInterface": "lo",
             "removeQdisc": true,
-            "programPath": ""
+            "programPath": "",
+            "markingStrategy": "flowLabel",
+            "debugMode": true
         }
     }
 }
