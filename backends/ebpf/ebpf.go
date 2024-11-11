@@ -36,11 +36,17 @@ const (
 )
 
 var (
-	//go:embed marker.bpf.o
+	//go:embed marker-flow-label.bpf.o
 	flowLabelBPFProg []byte
 
-	//go:embed marker-dbg.bpf.o
+	//go:embed marker-flow-label-dbg.bpf.o
 	flowLabelDebugBPFProg []byte
+
+	//go:embed marker-ext-headers.bpf.o
+	extHeadersBPFProg []byte
+
+	//go:embed marker-ext-headers-dbg.bpf.o
+	extHeadersDebugBPFProg []byte
 
 	configurationTags = map[string]bool{
 		"targetinterface": false,
@@ -177,6 +183,11 @@ func (b *EbpfBackend) chooseBPFProgram() []byte {
 			return flowLabelDebugBPFProg
 		}
 		return flowLabelBPFProg
+	case ExtensionHeaderMarking:
+		if b.conf.DebugMode {
+			return extHeadersDebugBPFProg
+		}
+		return extHeadersBPFProg
 	default:
 		slog.Warn("wrong marking strategy, defaulting to flowLabel-based (non-debug) marking",
 			"markingStrategy", b.conf.MarkingStrategy)
@@ -197,7 +208,12 @@ func (b *EbpfBackend) SetupLogging() {
 		Log: func(level int, msg string) {
 			if level <= libbpfLogLevel {
 				// Remove the trailing newline coming from C-land...
-				slog.Info(msg[:len(msg)-1])
+				for _, line := range strings.Split(msg, "\n") {
+					if line != "" {
+						slog.Info(line)
+					}
+				}
+
 			}
 		},
 	})
