@@ -62,6 +62,53 @@ targets together with an explanation on what they achieve.
 Also, be sure to run the following to be greeted with a help message showing you what other commands besides `run` are available. You can also check
 the Markdown-formatted manpage on `rpms/flowd-go.1.md` to get a list of available flags and commands along a more detailed description.
 
+### Not so quickstart
+One can also leverage Docker containers to run `flowd-go`. However, given we'll be making use of some rather advanced technologies in the sense that
+they are not for every day use, we'll need to do some convincing so that the containers can actually run as expected. In order to maintain a sane
+degree of security, Docker containers are started with very few `capabilities(7)` by default. Things like loading eBPF programs and creating qdiscs
+require a great deal of privileges which we don't really have by default. The good news is we can just 'ask' for these capabilities, the bad news
+is that the resulting command is a bit frightening...
+
+Please bear in mind the following has been **only tested** on Docker Desktop 4.30.0 running on macOS 13.5.1: YMMV!
+
+Without further ado:
+
+    $ docker run -v $(pwd):/root/flowd-go --cap-add SYS_ADMIN --cap-add BPF --cap-add NET_ADMIN -it --rm --name flowd-go ghcr.io/scitags/flowd-go-cont:v1.0 bash
+
+Now, what does each option accomplish? Well:
+
+- `-v $(pwd):/root/flowd-go`: This will mount the current directory (i.e. the `flowd-go` repo) under `/root/flowd-go` in the container.
+- `--cap-add SYS_ADMIN`: Add the `CAP_SYS_ADMIN` capability to the container which allows us to do a bunch of stuff. Check `capabilities(7)`.
+- `--cap-add BPF`: Add the `CAP_BPF` capability which, unsurprisingly, allows loading BPF programs into the kernel. Bear in mind this capability
+  exists since Linux 5.8: it was part of `CAP_SYS_ADMIN` before!
+- `--cap-add NET_ADMIN`: Add the `CAP_NET_ADMIN` capability, allowing us to create the qdiscs to attach the BPF programs to.
+- `-it`: Attach the TTY and make the session interactive.
+- `--name flowd-go`: Give the container a deterministic name so that the following commands are reproducible.
+- `--rm`: Delete the container once we exit to help with the cleanup.
+- `ghcr.io/scitags/flowd-go-cont:v1.0`: The purposefully built image we are going to run.
+- `bash`: The command to run (i.e. a regular `bash` shell).
+
+With that we should be dropped into a working shell where we can just run:
+
+    $ cd flowd-go; make build; ./bin/flowd-go --conf cmd/conf.json --log-level debug run
+
+Now, if we want to have access to the eBPF program's debug output on a machine running Docker Desktop we need to manually mount
+the `debugfs` filesystem (see `mount(8)`). On Linux-based machines, `debugfs` should be mounted by default and these next steps
+should not be necessary. Anyway, we can mount `debugfs` manually by running the following within the container:
+
+    $ mount -t debugfs debugfs /sys/kernel/debug
+
+We can also do the same thing persistently by running:
+
+    $ docker volume create --driver local --opt type=debugfs --opt device=debugfs debugfs
+
+Then, we just need to add the following when invoking `docker run ... bash` to mount this new filesystem:
+
+    -v debugfs:/sys/kernel/debug:rw
+
+Please be sure to check [this site](https://hemslo.io/run-ebpf-programs-in-docker-using-docker-bpf/) which contains very valuable
+info on this topic! All in all, getting Docker to work with eBPF machinery can be a bit of a pain, but the payback is huge!
+
 ## Configuration
 As you see above, we need to provide the path to a JSON-formatted configuration file. We provide a sample on `cmd/conf.json` which should be suitable
 for locally running `flowd-go` to check everything's working as intended. If left unspecified, `flowd-go` will look for a configuration file at
