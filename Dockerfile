@@ -35,6 +35,7 @@ RUN yum check-update || true  && \
         rpmdevtools-9.5       \
         make-1:4.3            \
         git-2.43.5            \
+        tcpdump-4.99.0        \
     && yum clean all
 
 # Get Go
