@@ -92,6 +92,10 @@ With that we should be dropped into a working shell where we can just run:
 
     $ cd flowd-go; make build; ./bin/flowd-go --conf cmd/conf.json --log-level debug run
 
+As always, we can open more shells in the same container with:
+
+    $ docker exec -it flowd-go bash
+
 Now, if we want to have access to the eBPF program's debug output on a machine running Docker Desktop we need to manually mount
 the `debugfs` filesystem (see `mount(8)`). On Linux-based machines, `debugfs` should be mounted by default and these next steps
 should not be necessary. Anyway, we can mount `debugfs` manually by running the following within the container:
