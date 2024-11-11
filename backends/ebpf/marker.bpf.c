@@ -129,6 +129,9 @@ static __always_inline int handleICMP(struct __sk_buff *ctx, struct ipv6hdr *l3)
 			// Signal the next header is a Hop-by-Hop extension header
 			l3->nexthdr = NEXT_HDR_HOP_BY_HOP;
 
+			// Update the payload length
+			l3->payload_len = bpf_htons(bpf_ntohs(l3->payload_len) + sizeof(struct hopByHopHdr_t));
+
 			bpf_printk("flowd-go: Hop-by-Hop header nextHdr: %x", hopByHopHdr.nextHdr);
 			bpf_printk("flowd-go: Hop-by-Hop header hdrLen: %x", hopByHopHdr.hdrLen);
 			bpf_printk("flowd-go: Hop-by-Hop header opts[0]: %x", hopByHopHdr.opts[0]);
@@ -145,15 +148,16 @@ static __always_inline int handleICMP(struct __sk_buff *ctx, struct ipv6hdr *l3)
 				// return TC_ACT_SHOT;
 			}
 
-			if (bpf_skb_store_bytes(ctx, sizeof(struct ethhdr) + sizeof(struct ipv6hdr), &hopByHopHdr, sizeof(struct hopByHopHdr_t))) {
+			if (bpf_skb_store_bytes(ctx, sizeof(struct ethhdr) + sizeof(struct ipv6hdr), &hopByHopHdr, sizeof(struct hopByHopHdr_t), 0)) {
 				bpf_printk("flowd-go: error making room for the Hop-by-Hop header");
 				return TC_ACT_OK;
 				// return TC_ACT_SHOT;
 			}
 
 			// Check https://github.com/xdp-project/bpf-examples/blob/master/nat64-bpf/nat64_kern.c for an example on how to fix
-			// mangled checksums. This must be applied to TCP too, so we'd better get it fixed on ICMP first...
-			// if (bpf_l4_csum_replace(ctx, )) {
+			// mangled checksums. This shouldn't really be needed on IPv6 AFAIK given how upper layer (i.e. L4) protocols leverage
+			// a pseudo-header for computing checksums as seen on RFC 2460 Section 8.1: https://www.rfc-editor.org/rfc/rfc2460.html#section-8.1
+			// if (bpf_l4_csum_replace(ctx, ...)) {
 			// 	bpf_printk("flowd-go: error recomputing the L4 checksum");
 			// 	return TC_ACT_OK;
 			// 	// return TC_ACT_SHOT;
