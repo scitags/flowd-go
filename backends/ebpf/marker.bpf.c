@@ -46,7 +46,16 @@ struct {
 	__type(value, __u32);
 } flowLabels SEC(".maps");
 
-int handleICMP(struct ipv6hdr *l3) {
+// When calling function we'll just let the compiler know we **really** want it to 'inline' the functions.
+// Technicalities aside, this boils down to 'copy-pasting' the function's body wherever the function is
+// called. Given the usual workflow in eBPF programs this actually makes a lot of sense! We're also declaring
+// the function as 'static' to avoid having the compiler generate an equivalent non-inline version of the
+// function so that other translation units can links against it. In other words, we simply ask the compiler
+// to just focus on the inline-version of the function. Be sure to check the following for more info:
+//   0: https://stackoverflow.com/questions/21835664/why-declare-a-c-function-as-static-inline
+//   1: https://en.wikipedia.org/wiki/Inline_function
+//   2: https://docs.ebpf.io/ebpf-library/libbpf/ebpf/__always_inline/
+static __always_inline int handleICMP(struct ipv6hdr *l3) {
 	bpf_printk("flowd-go: IPv6 source      address: %pI6", &l3->saddr);
 	bpf_printk("flowd-go: IPv6 destination address: %pI6", &l3->daddr);
 
@@ -102,7 +111,7 @@ int handleICMP(struct ipv6hdr *l3) {
 	return TC_ACT_OK;
 }
 
-int handleDatagram(struct __sk_buff *ctx, struct ipv6hdr *l3, void *data_end) {
+static __always_inline int handleDatagram(struct ipv6hdr *l3, void *data_end) {
 	// If running in debug mode we'll handle ICMP messages as well
 	// as TCP segments. That way we can leverage ping(8) to easily
 	// generate traffic...
@@ -244,7 +253,7 @@ int marker(struct __sk_buff *ctx) {
 	// If we made it here, we are dealing with an Ethernet or a 802.1Q frame and we have
 	// already populated l3 so that it points to the IPv6 header. Let's process the
 	// datagram and simply return whatever it determines.
-	return handleDatagram(ctx, l3, data_end);
+	return handleDatagram(l3, data_end);
 }
 
 // Oh wow, the kernel refuses to load unlicensed stuff!

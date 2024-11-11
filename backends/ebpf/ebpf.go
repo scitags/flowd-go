@@ -3,6 +3,7 @@
 package ebpf
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -24,14 +25,22 @@ import (
 //   https://github.com/libbpf/libbpf-bootstrap/blob/4a567f229efe8fc79ee1a2249569eb6b9c02ad1b/examples/c/tc.c
 //   https://github.com/aquasecurity/libbpfgo/blob/282d44353ac28b015afb469d378e9d178afd3304/selftest/tc/main.go
 
+type MarkingStrategy int
+
 const (
 	PROG_NAME string = "marker"
 	MAP_NAME  string = "flowLabels"
+
+	FlowLabelMarking MarkingStrategy = iota
+	ExtensionHeaderMarking
 )
 
 var (
 	//go:embed marker.bpf.o
-	bpfObj []byte
+	flowLabelBPFProg []byte
+
+	//go:embed marker-dbg.bpf.o
+	flowLabelDebugBPFProg []byte
 
 	configurationTags = map[string]bool{
 		"targetinterface": false,
@@ -43,13 +52,32 @@ var (
 		TargetInterface: "lo",
 		RemoveQdisc:     true,
 		ProgramPath:     "",
+		MarkingStrategy: FlowLabelMarking,
+		DebugMode:       false,
+	}
+
+	markingStrategyMap = map[string]MarkingStrategy{
+		strings.ToLower("flowLabel"):        FlowLabelMarking,
+		strings.ToLower("extensionHeaders"): ExtensionHeaderMarking,
+	}
+
+	logLevelTranslation = map[slog.Level]int{
+		slog.LevelDebug: bpf.LibbpfDebugLevel,
+		slog.LevelInfo:  bpf.LibbpfInfoLevel,
+		slog.LevelWarn:  bpf.LibbpfWarnLevel,
 	}
 )
 
 type EbpfBackendConf struct {
-	TargetInterface string `json:"targetInterface"`
-	RemoveQdisc     bool   `json:"removeQdisc"`
-	ProgramPath     string `json:"programPath"`
+	TargetInterface string          `json:"targetInterface"`
+	RemoveQdisc     bool            `json:"removeQdisc"`
+	ProgramPath     string          `json:"programPath"`
+	MarkingStrategy MarkingStrategy `json:"-"`
+	DebugMode       bool            `json:"debugMode"`
+}
+
+type ebpfBackendMarkingConf struct {
+	MarkingStrategy string `json:"markingStrategy"`
 }
 
 // We need an alias to avoid infinite recursion
@@ -90,6 +118,16 @@ func (c *EbpfBackendConf) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("couldn't unmarshall into tmpConf: %w", err)
 	}
 
+	tmpMarkingStrategy := ebpfBackendMarkingConf{}
+	if err := json.Unmarshal(data, &tmpMarkingStrategy); err != nil {
+		return fmt.Errorf("couldn't unmarshall into tmpMarkingStrategy: %w", err)
+	}
+	markingStrategy, ok := markingStrategyMap[strings.ToLower(tmpMarkingStrategy.MarkingStrategy)]
+	if !ok {
+		return fmt.Errorf("wrong marking strategy %s", tmpMarkingStrategy.MarkingStrategy)
+	}
+	tmpConf.MarkingStrategy = markingStrategy
+
 	for k := range configurationTags {
 		switch strings.ToLower(k) {
 		case "targetinterface":
@@ -98,6 +136,10 @@ func (c *EbpfBackendConf) UnmarshalJSON(data []byte) error {
 			tmpConf.RemoveQdisc = DefaultConf.RemoveQdisc
 		case "programpath":
 			tmpConf.ProgramPath = DefaultConf.ProgramPath
+		case "markingstrategy":
+			tmpConf.MarkingStrategy = DefaultConf.MarkingStrategy
+		case "debugmode":
+			tmpConf.DebugMode = DefaultConf.DebugMode
 		default:
 			return fmt.Errorf("unknown configuration key %q", k)
 		}
@@ -116,24 +158,59 @@ func New(conf *EbpfBackendConf) *EbpfBackend {
 	return &EbpfBackend{conf: *conf}
 }
 
-func (b *EbpfBackend) Init() error {
-	slog.Debug("initialising the ebpf backend")
-
-	// Create the BPF module
-	bpfProgram := bpfObj
+func (b *EbpfBackend) chooseBPFProgram() []byte {
 	if b.conf.ProgramPath != "" {
 		content, err := os.ReadFile(b.conf.ProgramPath)
 		if err != nil {
 			slog.Warn(
-				"couldn't read the eBPF program from disk. Defaulting to the embedded one", "err", err)
-		} else {
-			bpfProgram = content
+				"couldn't read the eBPF program from disk, defaulting to flowLabel-based marking", "err", err)
+			return flowLabelBPFProg
 		}
-	} else {
-		slog.Debug("loading the embedded BPF program")
+		slog.Debug("loading the provided eBPF program", "path", b.conf.ProgramPath)
+		return content
 	}
 
-	bpfModule, err := bpf.NewModuleFromBuffer(bpfProgram, "glowd")
+	slog.Debug("loading an embedded BPF program", "markingStrategy", b.conf.MarkingStrategy, "debugMode", b.conf.DebugMode)
+	switch b.conf.MarkingStrategy {
+	case FlowLabelMarking:
+		if b.conf.DebugMode {
+			return flowLabelDebugBPFProg
+		}
+		return flowLabelBPFProg
+	default:
+		slog.Warn("wrong marking strategy, defaulting to flowLabel-based (non-debug) marking",
+			"markingStrategy", b.conf.MarkingStrategy)
+		return flowLabelBPFProg
+	}
+}
+
+func (b *EbpfBackend) SetupLogging() {
+	slog.Debug("setting up logging")
+	libbpfLogLevel := bpf.LibbpfWarnLevel
+	if slog.Default().Handler().Enabled(context.TODO(), slog.LevelDebug) {
+		libbpfLogLevel = logLevelTranslation[slog.LevelDebug]
+	} else if slog.Default().Handler().Enabled(context.TODO(), slog.LevelInfo) {
+		libbpfLogLevel = logLevelTranslation[slog.LevelInfo]
+	}
+
+	bpf.SetLoggerCbs(bpf.Callbacks{
+		Log: func(level int, msg string) {
+			if level <= libbpfLogLevel {
+				// Remove the trailing newline coming from C-land...
+				slog.Info(msg[:len(msg)-1])
+			}
+		},
+	})
+}
+
+func (b *EbpfBackend) Init() error {
+	slog.Debug("initialising the eBPF backend")
+
+	// Setup the logging from libbpf
+	b.SetupLogging()
+
+	// Create the BPF module
+	bpfModule, err := bpf.NewModuleFromBuffer(b.chooseBPFProgram(), "glowd")
 	// bpfModule, err := bpf.NewModuleFromFile("main.bpf.o")
 	if err != nil {
 		return fmt.Errorf("error creating the BPF module: %w", err)
