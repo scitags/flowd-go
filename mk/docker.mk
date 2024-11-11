@@ -47,3 +47,15 @@ docker-shell:
 .PHONY: docker-stop
 docker-stop:
 	@docker stop -s SIGKILL $(CONTAINER_NAME)
+
+# Please note we should handle the tag in an automatic way, maybe making use of constructs
+# such as '$(shell git describe --tags --abbrev=0)' or something of the sort. That's on
+# the TODO list!
+.PHONY: docker-build
+docker-build:
+	@docker build -t $(CONTAINER_IMAGE) .
+
+# Push the image to GitHub's registry.
+.PHONY: docker-push
+docker-push:
+	@docker push $(CONTAINER_IMAGE)
