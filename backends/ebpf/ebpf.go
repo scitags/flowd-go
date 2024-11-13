@@ -36,16 +36,16 @@ const (
 )
 
 var (
-	//go:embed marker-flow-label.bpf.o
+	//go:embed progs/marker-flow-label.bpf.o
 	flowLabelBPFProg []byte
 
-	//go:embed marker-flow-label-dbg.bpf.o
+	//go:embed progs/marker-flow-label-dbg.bpf.o
 	flowLabelDebugBPFProg []byte
 
-	//go:embed marker-ext-headers.bpf.o
+	//go:embed progs/marker-ext-headers.bpf.o
 	extHeadersBPFProg []byte
 
-	//go:embed marker-ext-headers-dbg.bpf.o
+	//go:embed progs/marker-ext-headers-dbg.bpf.o
 	extHeadersDebugBPFProg []byte
 
 	configurationTags = map[string]bool{

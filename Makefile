@@ -36,6 +36,10 @@ TRASH   = $(BIN_DIR)/* *.gz rpms/*.rpm
 # Check https://stackoverflow.com/questions/11354518/application-auto-build-versioning
 CFLAGS := -tags ebpf -ldflags "-X main.builtCommit=$(COMMIT)"
 
+# Path to the eBPF sources need to build flowd-go. Make will be invoked
+# recursively there.
+EBPF_PROGS_PATH := backends/ebpf/progs
+
 # Adjust GOC's environment depending on what OS we're on to deal with
 # all the BPF machinery. Note that when ENV_FALGS is not defined on
 # Darwin everything will work as expected!
@@ -98,7 +102,7 @@ help:
 	@echo "             clean: delete everything defined as rubbish."
 
 # Simply build flowd-go
-build: $(SOURCES) marker.bpf.o
+build: $(SOURCES) ebpf-progs
 	@mkdir -p bin
 	$(ENV_FLAGS) $(GOC) build $(CFLAGS) -o $(BIN_DIR)/$(BIN_NAME) $(MAIN_PACKAGE)
 
@@ -106,11 +110,11 @@ build: $(SOURCES) marker.bpf.o
 ifeq ($(OS),Linux)
 # Recursively build the eBPF program. Be sure to check
 # https://www.gnu.org/software/make/manual/html_node/Recursion.html
-marker.bpf.o:
-	$(MAKE) -C backends/ebpf
+ebpf-progs:
+	$(MAKE) -C $(EBPF_PROGS_PATH)
 else
 # Just provide a stub it we're not on Linux!
-marker.bpf.o:
+ebpf-progs:
 endif
 
 # Include Makefiles with additional targets automating stuff.
@@ -119,5 +123,5 @@ include mk/*.mk
 
 .PHONY: clean
 clean:
-	$(MAKE) -C backends/ebpf clean
+	$(MAKE) -C $(EBPF_PROGS_PATH) clean
 	@rm -rf $(TRASH)
