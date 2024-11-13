@@ -22,6 +22,23 @@
 // Check RFC 2460 Section 4.3: https://www.rfc-editor.org/rfc/rfc2460.html#section-4.3
 #define NEXT_HDR_HOP_BY_HOP 0x0
 
+// The keys for our hash maps. Should we maybe combine the ports into a __u32?
+struct fourTuple {
+	__u64 ip6Hi;
+	__u64 ip6Lo;
+	__u16 dPort;
+	__u16 sPort;
+};
+
+// Let's define our map. Note it'll be included in
+// section .maps in the resulting binary.
+struct {
+	__uint(type, BPF_MAP_TYPE_LRU_HASH);
+	__uint(max_entries, 100000);
+	__type(key, struct fourTuple);
+	__type(value, __u32);
+} flowLabels SEC(".maps");
+
 // Hop-by-Hop Extension Header in IPv6. See RFC 2460 Section 4.3
 // https://www.rfc-editor.org/rfc/rfc2460.html#section-4.3
 struct hopByHopHdr_t {
