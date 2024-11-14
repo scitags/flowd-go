@@ -4,12 +4,8 @@ package ebpf
 
 import (
 	_ "embed"
-	"encoding/json"
 	"fmt"
 	"log/slog"
-	"net"
-	"os"
-	"strings"
 	"syscall"
 	"time"
 	"unsafe"
@@ -30,31 +26,30 @@ const (
 )
 
 var (
-	//go:embed marker.bpf.o
-	bpfObj []byte
+	//go:embed progs/marker-flow-label.bpf.o
+	flowLabelBPFProg []byte
 
-	configurationTags = map[string]bool{
-		"targetinterface": false,
-		"removeqdisc":     false,
-		"programpath":     false,
-	}
+	//go:embed progs/marker-flow-label-dbg.bpf.o
+	flowLabelDebugBPFProg []byte
 
-	DefaultConf = EbpfBackendConf{
-		TargetInterface: "lo",
-		RemoveQdisc:     true,
-		ProgramPath:     "",
+	//go:embed progs/marker-hbh-header.bpf.o
+	hopByHopHeaderBPFProg []byte
+
+	//go:embed progs/marker-hbh-header-dbg.bpf.o
+	hopByHopHeaderDebugBPFProg []byte
+
+	//go:embed progs/marker-hbh-do-headers.bpf.o
+	hopByHopDestHeaderBPFProg []byte
+
+	//go:embed progs/marker-hbh-do-headers-dbg.bpf.o
+	hopByHopDestHeaderDebugBPFProg []byte
+
+	logLevelTranslation = map[slog.Level]int{
+		slog.LevelDebug: bpf.LibbpfDebugLevel,
+		slog.LevelInfo:  bpf.LibbpfInfoLevel,
+		slog.LevelWarn:  bpf.LibbpfWarnLevel,
 	}
 )
-
-type EbpfBackendConf struct {
-	TargetInterface string `json:"targetInterface"`
-	RemoveQdisc     bool   `json:"removeQdisc"`
-	ProgramPath     string `json:"programPath"`
-}
-
-// We need an alias to avoid infinite recursion
-// in the unmarshalling logic
-type AuxEbpfBackendConf EbpfBackendConf
 
 type EbpfBackend struct {
 	module  *bpf.Module
@@ -75,40 +70,6 @@ type flowFourTuple struct {
 	SrcPort uint16
 }
 
-func (c *EbpfBackendConf) UnmarshalJSON(data []byte) error {
-	tmp := map[string]interface{}{}
-	if err := json.Unmarshal(data, &tmp); err != nil {
-		return fmt.Errorf("couldn't unmarshall into tmp map: %w", err)
-	}
-
-	for k := range tmp {
-		delete(configurationTags, strings.ToLower(k))
-	}
-
-	tmpConf := AuxEbpfBackendConf{}
-	if err := json.Unmarshal(data, &tmpConf); err != nil {
-		return fmt.Errorf("couldn't unmarshall into tmpConf: %w", err)
-	}
-
-	for k := range configurationTags {
-		switch strings.ToLower(k) {
-		case "targetinterface":
-			tmpConf.TargetInterface = DefaultConf.TargetInterface
-		case "removeqdisc":
-			tmpConf.RemoveQdisc = DefaultConf.RemoveQdisc
-		case "programpath":
-			tmpConf.ProgramPath = DefaultConf.ProgramPath
-		default:
-			return fmt.Errorf("unknown configuration key %q", k)
-		}
-	}
-
-	// Store the results!
-	*c = EbpfBackendConf(tmpConf)
-
-	return nil
-}
-
 func New(conf *EbpfBackendConf) *EbpfBackend {
 	if conf == nil {
 		return &EbpfBackend{conf: DefaultConf}
@@ -117,23 +78,13 @@ func New(conf *EbpfBackendConf) *EbpfBackend {
 }
 
 func (b *EbpfBackend) Init() error {
-	slog.Debug("initialising the ebpf backend")
+	slog.Debug("initialising the eBPF backend")
+
+	// Setup the logging from libbpf
+	b.SetupLogging()
 
 	// Create the BPF module
-	bpfProgram := bpfObj
-	if b.conf.ProgramPath != "" {
-		content, err := os.ReadFile(b.conf.ProgramPath)
-		if err != nil {
-			slog.Warn(
-				"couldn't read the eBPF program from disk. Defaulting to the embedded one", "err", err)
-		} else {
-			bpfProgram = content
-		}
-	} else {
-		slog.Debug("loading the embedded BPF program")
-	}
-
-	bpfModule, err := bpf.NewModuleFromBuffer(bpfProgram, "glowd")
+	bpfModule, err := bpf.NewModuleFromBuffer(b.chooseBPFProgram(), "glowd")
 	// bpfModule, err := bpf.NewModuleFromFile("main.bpf.o")
 	if err != nil {
 		return fmt.Errorf("error creating the BPF module: %w", err)
@@ -201,26 +152,6 @@ func (b *EbpfBackend) Init() error {
 	b.rGen = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	return nil
-}
-
-func extractHalves(ip net.IP) (uint64, uint64) {
-	var addrHi uint64
-	var addrLo uint64
-
-	rawIP := []byte(ip)
-
-	// net.IPs are internally represented as a 16-element []byte with
-	// the last element being the LSByte and the first the MSByte.
-	if len(rawIP) != 16 {
-		return 0, 0
-	}
-
-	for i := 0; i < 8; i++ {
-		addrHi |= uint64(rawIP[i]) << (8 * (8 - (1 + i)))
-		addrLo |= uint64(rawIP[i+8]) << (8 * (8 - (1 + i)))
-	}
-
-	return addrHi, addrLo
 }
 
 func (b *EbpfBackend) Run(done <-chan struct{}, inChan <-chan glowd.FlowID) {
@@ -309,23 +240,4 @@ func (b *EbpfBackend) Cleanup() error {
 	}
 
 	return nil
-}
-
-// Implementation of Section 1.2 of https://docs.google.com/document/d/1x9JsZ7iTj44Ta06IHdkwpv5Q2u4U2QGLWnUeN2Zf5ts/edit?usp=sharing
-func (b *EbpfBackend) genFlowTag(experimentId, activityId uint32) uint32 {
-	// We'll slice this number up to get our needed 5 random bits
-	rNum := b.rGen.Uint32()
-
-	// The experimentId is supposed to be 9 bits long and reversed. That's why we have a hardcoded 9 here!
-	var experimentIdRev uint32 = 0
-	for i := 0; i < 9; i++ {
-		experimentIdRev |= (experimentId & (0x1 << i) >> i) << ((9 - 1) - i)
-	}
-
-	var flowTag uint32 = (rNum & (0x3 << 18)) | ((experimentIdRev & 0x1FF) << 9) | (rNum & (0x1 << 8)) | ((activityId & 0x3F) << 2) | (rNum & 0x3)
-
-	slog.Debug("genFlowTag", "experimentId", fmt.Sprintf("%b", experimentId), "experimentIdRev", fmt.Sprintf("%b", experimentIdRev),
-		"activityId", fmt.Sprintf("%b", activityId), "flowTag", fmt.Sprintf("%b", flowTag))
-
-	return flowTag
 }
