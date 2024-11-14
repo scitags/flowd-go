@@ -58,7 +58,7 @@ var (
 		Use:   "version",
 		Short: "Get the built version.",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Printf("built commit: %s\n", builtCommit)
+			fmt.Printf("built commit: %s\nbase version: %s\n", builtCommit, baseVersion)
 		},
 	}
 
@@ -156,7 +156,8 @@ var (
 
 	confPath     string
 	logLevelFlag string
-	builtCommit  = "dev"
+	builtCommit  string
+	baseVersion  string
 
 	logLevelMap = map[string]slog.Level{
 		"debug": slog.LevelDebug,
