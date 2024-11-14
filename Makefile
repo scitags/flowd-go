@@ -10,8 +10,12 @@ GOC = go
 # The compiler to use for the BPF side of things
 CC = clang
 
-# Configure this release's verision and commit
-# VERSION = $(shell git describe --tags --abbrev=0)
+# Get the current tag to embed it into the Go binary. We'll drop the
+# initial v so as to get a 'clean' version number (i.e. 1.0 instead
+# of v1.0).
+VERSION = $(shell git describe --tags --abbrev=0 | tr -d v)
+
+# Get the current commit to embed it into the Go binary.
 COMMIT = $(shell git rev-parse --short HEAD)
 
 # Where whouls we place output binaries?
@@ -34,7 +38,7 @@ TRASH   = $(BIN_DIR)/* rpms/*.gz rpms/*.rpm
 # Default compilation flags.
 # The `-ldflags` option lets us define global variables at compile time!
 # Check https://stackoverflow.com/questions/11354518/application-auto-build-versioning
-CFLAGS := -tags ebpf -ldflags "-X main.builtCommit=$(COMMIT)"
+CFLAGS := -tags ebpf -ldflags "-X main.builtCommit=$(COMMIT) -X main.baseVersion=$(VERSION)"
 
 # Path to the eBPF sources need to build flowd-go. Make will be invoked
 # recursively there.

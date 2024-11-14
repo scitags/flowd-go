@@ -1,5 +1,5 @@
 Name:		flowd-go
-Version:	1.0
+Version:	2.0
 Release:	1
 Summary:	SciTags Flowd-go Daemon
 BuildArch:	x86_64
@@ -43,5 +43,8 @@ install -m 0664 %{_sourcedir}/%{name}.1.gz    %{buildroot}%{_mandir}/man1/%{name
 
 # Changes introducd with each version
 %changelog
-* Sun Nov 6 2024 Pablo Collado Soto <pablo.collado.soto@cern.ch>
-- First RPM-packaged version
+* Thu Nov 14 2024 Pablo Collado Soto <pablo.collado.soto@cern.ch> - 2.0-1
+- Update to flowd-go-2.0
+
+* Sun Nov 6 2024 Pablo Collado Soto <pablo.collado.soto@cern.ch> - 1.0-1
+- Release flowd-go-1.0

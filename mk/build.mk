@@ -24,7 +24,7 @@ rpm: doc build
 	@echo "Building the RPM..."
 	@rpmbuild -bb $(RPM_DIR)/$(BIN_NAME).spec
 	@echo "Copying the RPM to $(RPM_DIR)"
-	@cp $(RPM_BUILDROOT)/RPMS/x86_64/flowd-go-1.0-1.x86_64.rpm $(RPM_DIR)
+	@cp $(RPM_BUILDROOT)/RPMS/x86_64/flowd-go-$(VERSION)-1.x86_64.rpm $(RPM_DIR)
 
 doc: $(RPM_DIR)/$(DOC_FILE)
 	@echo "Building documentation"
