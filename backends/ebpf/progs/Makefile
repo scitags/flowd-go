@@ -30,11 +30,11 @@ INDICES := $(shell seq $(words $(PROG_NAMES)))
 #   https://www.gnu.org/software/make/manual/html_node/Multi_002dLine.html!
 #   https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html
 define targetTemplate
-marker-$(1).bpf.o: marker.bpf.c vmlinux.h
-	$(CC) $(CFLAGS) -D $(2)                $$< -o $$@
+marker-$(1).bpf.o: *.bpf.c *.bpf.h vmlinux.h
+	$(CC) $(CFLAGS) -D $(2)                marker.bpf.c -o $$@
 
-marker-$(1)-dbg.bpf.o: marker.bpf.c vmlinux.h
-	$(CC) $(CFLAGS) -D $(2) -D GLOWD_DEBUG $$< -o $$@
+marker-$(1)-dbg.bpf.o: *.bpf.c *.bpf.h vmlinux.h
+	$(CC) $(CFLAGS) -D $(2) -D GLOWD_DEBUG marker.bpf.c -o $$@
 
 endef
 

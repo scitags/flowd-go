@@ -51,11 +51,9 @@ struct hopByHopHdr_t {
 	__u8 opts[6];
 };
 
-struct hopByHopAndDestOptsHdr_t {
-	__u8 hbhNextHdr;
-	__u8 hbhHdrLen;
-	__u8 optsHbH[6];
-	__u8 destNextHdr;
-	__u8 destHdrLen;
-	__u8 optsDest[6];
+struct hopByHopDestOptsHdr_t {
+	struct hopByHopHdr_t hbhHdr;
+	__u8 nextHdr;
+	__u8 hdrLen;
+	__u8 opts[6];
 };
