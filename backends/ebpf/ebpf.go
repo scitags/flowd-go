@@ -3,14 +3,9 @@
 package ebpf
 
 import (
-	"context"
 	_ "embed"
-	"encoding/json"
 	"fmt"
 	"log/slog"
-	"net"
-	"os"
-	"strings"
 	"syscall"
 	"time"
 	"unsafe"
@@ -25,15 +20,9 @@ import (
 //   https://github.com/libbpf/libbpf-bootstrap/blob/4a567f229efe8fc79ee1a2249569eb6b9c02ad1b/examples/c/tc.c
 //   https://github.com/aquasecurity/libbpfgo/blob/282d44353ac28b015afb469d378e9d178afd3304/selftest/tc/main.go
 
-type MarkingStrategy int
-
 const (
 	PROG_NAME string = "marker"
 	MAP_NAME  string = "flowLabels"
-
-	FlowLabelMarking MarkingStrategy = iota
-	HopByHopHeaderMarking
-	HopByHopDestHeadersMarking
 )
 
 var (
@@ -55,48 +44,12 @@ var (
 	//go:embed progs/marker-hbh-do-headers-dbg.bpf.o
 	hopByHopDestHeaderDebugBPFProg []byte
 
-	configurationTags = map[string]bool{
-		"targetinterface": false,
-		"removeqdisc":     false,
-		"programpath":     false,
-	}
-
-	DefaultConf = EbpfBackendConf{
-		TargetInterface: "lo",
-		RemoveQdisc:     true,
-		ProgramPath:     "",
-		MarkingStrategy: FlowLabelMarking,
-		DebugMode:       false,
-	}
-
-	markingStrategyMap = map[string]MarkingStrategy{
-		strings.ToLower("flowLabel"):           FlowLabelMarking,
-		strings.ToLower("hopByHopHeader"):      HopByHopHeaderMarking,
-		strings.ToLower("hopByHopDestHeaders"): HopByHopDestHeadersMarking,
-	}
-
 	logLevelTranslation = map[slog.Level]int{
 		slog.LevelDebug: bpf.LibbpfDebugLevel,
 		slog.LevelInfo:  bpf.LibbpfInfoLevel,
 		slog.LevelWarn:  bpf.LibbpfWarnLevel,
 	}
 )
-
-type EbpfBackendConf struct {
-	TargetInterface string          `json:"targetInterface"`
-	RemoveQdisc     bool            `json:"removeQdisc"`
-	ProgramPath     string          `json:"programPath"`
-	MarkingStrategy MarkingStrategy `json:"-"`
-	DebugMode       bool            `json:"debugMode"`
-}
-
-type ebpfBackendMarkingConf struct {
-	MarkingStrategy string `json:"markingStrategy"`
-}
-
-// We need an alias to avoid infinite recursion
-// in the unmarshalling logic
-type AuxEbpfBackendConf EbpfBackendConf
 
 type EbpfBackend struct {
 	module  *bpf.Module
@@ -117,119 +70,11 @@ type flowFourTuple struct {
 	SrcPort uint16
 }
 
-func (c *EbpfBackendConf) UnmarshalJSON(data []byte) error {
-	tmp := map[string]interface{}{}
-	if err := json.Unmarshal(data, &tmp); err != nil {
-		return fmt.Errorf("couldn't unmarshall into tmp map: %w", err)
-	}
-
-	for k := range tmp {
-		delete(configurationTags, strings.ToLower(k))
-	}
-
-	tmpConf := AuxEbpfBackendConf{}
-	if err := json.Unmarshal(data, &tmpConf); err != nil {
-		return fmt.Errorf("couldn't unmarshall into tmpConf: %w", err)
-	}
-
-	tmpMarkingStrategy := ebpfBackendMarkingConf{}
-	if err := json.Unmarshal(data, &tmpMarkingStrategy); err != nil {
-		return fmt.Errorf("couldn't unmarshall into tmpMarkingStrategy: %w", err)
-	}
-	markingStrategy, ok := markingStrategyMap[strings.ToLower(tmpMarkingStrategy.MarkingStrategy)]
-	if !ok {
-		return fmt.Errorf("wrong marking strategy %s", tmpMarkingStrategy.MarkingStrategy)
-	}
-	tmpConf.MarkingStrategy = markingStrategy
-
-	for k := range configurationTags {
-		switch strings.ToLower(k) {
-		case "targetinterface":
-			tmpConf.TargetInterface = DefaultConf.TargetInterface
-		case "removeqdisc":
-			tmpConf.RemoveQdisc = DefaultConf.RemoveQdisc
-		case "programpath":
-			tmpConf.ProgramPath = DefaultConf.ProgramPath
-		case "markingstrategy":
-			tmpConf.MarkingStrategy = DefaultConf.MarkingStrategy
-		case "debugmode":
-			tmpConf.DebugMode = DefaultConf.DebugMode
-		default:
-			return fmt.Errorf("unknown configuration key %q", k)
-		}
-	}
-
-	// Store the results!
-	*c = EbpfBackendConf(tmpConf)
-
-	return nil
-}
-
 func New(conf *EbpfBackendConf) *EbpfBackend {
 	if conf == nil {
 		return &EbpfBackend{conf: DefaultConf}
 	}
 	return &EbpfBackend{conf: *conf}
-}
-
-func (b *EbpfBackend) chooseBPFProgram() []byte {
-	if b.conf.ProgramPath != "" {
-		content, err := os.ReadFile(b.conf.ProgramPath)
-		if err != nil {
-			slog.Warn(
-				"couldn't read the eBPF program from disk, defaulting to flowLabel-based marking", "err", err)
-			return flowLabelBPFProg
-		}
-		slog.Debug("loading the provided eBPF program", "path", b.conf.ProgramPath)
-		return content
-	}
-
-	slog.Debug("loading an embedded BPF program", "markingStrategy", b.conf.MarkingStrategy, "debugMode", b.conf.DebugMode)
-	switch b.conf.MarkingStrategy {
-	case FlowLabelMarking:
-		if b.conf.DebugMode {
-			return flowLabelDebugBPFProg
-		}
-		return flowLabelBPFProg
-	case HopByHopHeaderMarking:
-		if b.conf.DebugMode {
-			return hopByHopHeaderDebugBPFProg
-		}
-		return hopByHopHeaderBPFProg
-	case HopByHopDestHeadersMarking:
-		if b.conf.DebugMode {
-			return hopByHopDestHeaderDebugBPFProg
-		}
-		return hopByHopDestHeaderBPFProg
-	default:
-		slog.Warn("wrong marking strategy, defaulting to flowLabel-based (non-debug) marking",
-			"markingStrategy", b.conf.MarkingStrategy)
-		return flowLabelBPFProg
-	}
-}
-
-func (b *EbpfBackend) SetupLogging() {
-	slog.Debug("setting up logging")
-	libbpfLogLevel := bpf.LibbpfWarnLevel
-	if slog.Default().Handler().Enabled(context.TODO(), slog.LevelDebug) {
-		libbpfLogLevel = logLevelTranslation[slog.LevelDebug]
-	} else if slog.Default().Handler().Enabled(context.TODO(), slog.LevelInfo) {
-		libbpfLogLevel = logLevelTranslation[slog.LevelInfo]
-	}
-
-	bpf.SetLoggerCbs(bpf.Callbacks{
-		Log: func(level int, msg string) {
-			if level <= libbpfLogLevel {
-				// Remove the trailing newline coming from C-land...
-				for _, line := range strings.Split(msg, "\n") {
-					if line != "" {
-						slog.Info(line)
-					}
-				}
-
-			}
-		},
-	})
 }
 
 func (b *EbpfBackend) Init() error {
@@ -307,26 +152,6 @@ func (b *EbpfBackend) Init() error {
 	b.rGen = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	return nil
-}
-
-func extractHalves(ip net.IP) (uint64, uint64) {
-	var addrHi uint64
-	var addrLo uint64
-
-	rawIP := []byte(ip)
-
-	// net.IPs are internally represented as a 16-element []byte with
-	// the last element being the LSByte and the first the MSByte.
-	if len(rawIP) != 16 {
-		return 0, 0
-	}
-
-	for i := 0; i < 8; i++ {
-		addrHi |= uint64(rawIP[i]) << (8 * (8 - (1 + i)))
-		addrLo |= uint64(rawIP[i+8]) << (8 * (8 - (1 + i)))
-	}
-
-	return addrHi, addrLo
 }
 
 func (b *EbpfBackend) Run(done <-chan struct{}, inChan <-chan glowd.FlowID) {
@@ -415,23 +240,4 @@ func (b *EbpfBackend) Cleanup() error {
 	}
 
 	return nil
-}
-
-// Implementation of Section 1.2 of https://docs.google.com/document/d/1x9JsZ7iTj44Ta06IHdkwpv5Q2u4U2QGLWnUeN2Zf5ts/edit?usp=sharing
-func (b *EbpfBackend) genFlowTag(experimentId, activityId uint32) uint32 {
-	// We'll slice this number up to get our needed 5 random bits
-	rNum := b.rGen.Uint32()
-
-	// The experimentId is supposed to be 9 bits long and reversed. That's why we have a hardcoded 9 here!
-	var experimentIdRev uint32 = 0
-	for i := 0; i < 9; i++ {
-		experimentIdRev |= (experimentId & (0x1 << i) >> i) << ((9 - 1) - i)
-	}
-
-	var flowTag uint32 = (rNum & (0x3 << 18)) | ((experimentIdRev & 0x1FF) << 9) | (rNum & (0x1 << 8)) | ((activityId & 0x3F) << 2) | (rNum & 0x3)
-
-	slog.Debug("genFlowTag", "experimentId", fmt.Sprintf("%b", experimentId), "experimentIdRev", fmt.Sprintf("%b", experimentIdRev),
-		"activityId", fmt.Sprintf("%b", activityId), "flowTag", fmt.Sprintf("%b", flowTag))
-
-	return flowTag
 }
