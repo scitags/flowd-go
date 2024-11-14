@@ -15,6 +15,10 @@ On section [**Taming eBPF**](#taming-ebpf) you can find much more detailed and i
 the eBPF technology which can be a bit complex... Be sure to check the eBPF program's source on `marker.bpf.c` as it's
 littered with informative comments providing context for cryptic lines and concepts.
 
+Bear in mind you can take a look at how marked IPv6 datagrams look by inspecting to provided `scitags.pcapng` traffic
+capture with [Wireshark](https://www.wireshark.org). Every ICMPv6 message contains a comment describing what you're
+looking at.
+
 ## Configuration
 Please refer to the Markdown-formatted documentation at the repository's root for more information on available
 options. The following replicates the default configuration:
