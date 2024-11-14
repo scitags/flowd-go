@@ -32,7 +32,8 @@ const (
 	MAP_NAME  string = "flowLabels"
 
 	FlowLabelMarking MarkingStrategy = iota
-	ExtensionHeaderMarking
+	HopByHopHeaderMarking
+	HopByHopDestHeadersMarking
 )
 
 var (
@@ -42,11 +43,17 @@ var (
 	//go:embed progs/marker-flow-label-dbg.bpf.o
 	flowLabelDebugBPFProg []byte
 
-	//go:embed progs/marker-ext-headers.bpf.o
-	extHeadersBPFProg []byte
+	//go:embed progs/marker-hbh-header.bpf.o
+	hopByHopHeaderBPFProg []byte
 
-	//go:embed progs/marker-ext-headers-dbg.bpf.o
-	extHeadersDebugBPFProg []byte
+	//go:embed progs/marker-hbh-header-dbg.bpf.o
+	hopByHopHeaderDebugBPFProg []byte
+
+	//go:embed progs/marker-hbh-do-headers.bpf.o
+	hopByHopDestHeaderBPFProg []byte
+
+	//go:embed progs/marker-hbh-do-headers-dbg.bpf.o
+	hopByHopDestHeaderDebugBPFProg []byte
 
 	configurationTags = map[string]bool{
 		"targetinterface": false,
@@ -63,8 +70,9 @@ var (
 	}
 
 	markingStrategyMap = map[string]MarkingStrategy{
-		strings.ToLower("flowLabel"):        FlowLabelMarking,
-		strings.ToLower("extensionHeaders"): ExtensionHeaderMarking,
+		strings.ToLower("flowLabel"):           FlowLabelMarking,
+		strings.ToLower("hopByHopHeader"):      HopByHopHeaderMarking,
+		strings.ToLower("hopByHopDestHeaders"): HopByHopDestHeadersMarking,
 	}
 
 	logLevelTranslation = map[slog.Level]int{
@@ -183,11 +191,16 @@ func (b *EbpfBackend) chooseBPFProgram() []byte {
 			return flowLabelDebugBPFProg
 		}
 		return flowLabelBPFProg
-	case ExtensionHeaderMarking:
+	case HopByHopHeaderMarking:
 		if b.conf.DebugMode {
-			return extHeadersDebugBPFProg
+			return hopByHopHeaderDebugBPFProg
 		}
-		return extHeadersBPFProg
+		return hopByHopHeaderBPFProg
+	case HopByHopDestHeadersMarking:
+		if b.conf.DebugMode {
+			return hopByHopDestHeaderDebugBPFProg
+		}
+		return hopByHopDestHeaderBPFProg
 	default:
 		slog.Warn("wrong marking strategy, defaulting to flowLabel-based (non-debug) marking",
 			"markingStrategy", b.conf.MarkingStrategy)
