@@ -15,7 +15,7 @@
     },
     "backends": {
         "ebpf": {
-            "markingStrategy": "extensionHeaders",
+            "markingStrategy": "hopByHopDestHeaders",
             "debugMode": true
         }
     }
