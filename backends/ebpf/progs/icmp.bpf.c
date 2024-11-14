@@ -47,38 +47,18 @@ static __always_inline int handleICMP(struct __sk_buff *ctx, struct ipv6hdr *l3)
 
 		#ifdef GLOWD_FLOW_LABEL
 			// Embed the configured flowTag into the IPv6 header.
-			l3->flow_lbl[0] = (*flowTag & ( 0xF << 16)) >> 16;
-			l3->flow_lbl[1] = (*flowTag & (0xFF <<  8)) >> 8;
-			l3->flow_lbl[2] =  *flowTag &  0xFF;
+			populateFlowLbl(l3->flow_lbl, *flowTag);
 		#endif
 
 		// Plundered from https://github.com/IurmanJ/ebpf-ipv6-exthdr-injection/blob/main/tc_ipv6_eh_kern.c
-		#ifdef GLOWD_EXT_HEADERS
+		#ifdef GLOWD_HBH_HEADER
 			struct hopByHopHdr_t hopByHopHdr;
+
+			// Initialise the header
 			__builtin_memset(&hopByHopHdr, 0, sizeof(hopByHopHdr));
 
-			hopByHopHdr.nextHdr = l3->nexthdr;
-			hopByHopHdr.hdrLen = 0;
-
-			// Check RFC 2460 Section 4.2: https://www.rfc-editor.org/rfc/rfc2460.html#section-4.2
-			// We specify:
-			//    00: skip the option if it's type is not recognized.
-			//     0: option data doesn't change en-route.
-			// 11111: option type.
-			hopByHopHdr.opts[0] = 0x1F;
-
-			// Check RFC 2460 Section 4.2: https://www.rfc-editor.org/rfc/rfc2460.html#section-4.2
-			// The number of octets of the option's data.
-			hopByHopHdr.opts[1] = 0x4;
-
-			// Populate the option data with the flowTag.
-			hopByHopHdr.opts[2] = 0x0 << 4 | (*flowTag & ( 0xF << 16)) >> 16;
-			hopByHopHdr.opts[3] = (*flowTag & (0xFF <<  8)) >> 8;
-			hopByHopHdr.opts[4] = *flowTag &  0xFF;
-
-			// Check RFC 2460 Section 4.2: https://www.rfc-editor.org/rfc/rfc2460.html#section-4.2
-			// Add a Pad1 option to fill up the 8 octets we need at least.
-			hopByHopHdr.opts[5] = 0x00;
+			// Fill in the Hob-by-Hop Header!
+			populateHbhHdr(&hopByHopHdr, l3->nexthdr, *flowTag);
 
 			// Signal the next header is a Hop-by-Hop extension header
 			l3->nexthdr = NEXT_HDR_HOP_BY_HOP;
@@ -86,36 +66,37 @@ static __always_inline int handleICMP(struct __sk_buff *ctx, struct ipv6hdr *l3)
 			// Update the payload length
 			l3->payload_len = bpf_htons(bpf_ntohs(l3->payload_len) + sizeof(struct hopByHopHdr_t));
 
-			bpf_printk("flowd-go: Hop-by-Hop header nextHdr: %x", hopByHopHdr.nextHdr);
-			bpf_printk("flowd-go: Hop-by-Hop header hdrLen: %x", hopByHopHdr.hdrLen);
-			bpf_printk("flowd-go: Hop-by-Hop header opts[0]: %x", hopByHopHdr.opts[0]);
-			bpf_printk("flowd-go: Hop-by-Hop header opts[1]: %x", hopByHopHdr.opts[1]);
-			bpf_printk("flowd-go: Hop-by-Hop header opts[2]: %x", hopByHopHdr.opts[2]);
-			bpf_printk("flowd-go: Hop-by-Hop header opts[3]: %x", hopByHopHdr.opts[3]);
-			bpf_printk("flowd-go: Hop-by-Hop header opts[4]: %x", hopByHopHdr.opts[4]);
-			bpf_printk("flowd-go: Hop-by-Hop header opts[5]: %x", hopByHopHdr.opts[5]);
-			bpf_printk("flowd-go:       IPv6 header nexthdr: %x", l3->nexthdr);
-
 			if (bpf_skb_adjust_room(ctx, sizeof(struct hopByHopHdr_t), BPF_ADJ_ROOM_NET, 0)) {
 				bpf_printk("flowd-go: error making room for the Hop-by-Hop header");
-				return TC_ACT_OK;
-				// return TC_ACT_SHOT;
+				return TC_ACT_SHOT;
 			}
 
 			if (bpf_skb_store_bytes(ctx, sizeof(struct ethhdr) + sizeof(struct ipv6hdr), &hopByHopHdr, sizeof(struct hopByHopHdr_t), 0)) {
 				bpf_printk("flowd-go: error making room for the Hop-by-Hop header");
-				return TC_ACT_OK;
-				// return TC_ACT_SHOT;
+				return TC_ACT_SHOT;
 			}
+		#endif
 
-			// Check https://github.com/xdp-project/bpf-examples/blob/master/nat64-bpf/nat64_kern.c for an example on how to fix
-			// mangled checksums. This shouldn't really be needed on IPv6 AFAIK given how upper layer (i.e. L4) protocols leverage
-			// a pseudo-header for computing checksums as seen on RFC 2460 Section 8.1: https://www.rfc-editor.org/rfc/rfc2460.html#section-8.1
-			// if (bpf_l4_csum_replace(ctx, ...)) {
-			// 	bpf_printk("flowd-go: error recomputing the L4 checksum");
-			// 	return TC_ACT_OK;
-			// 	// return TC_ACT_SHOT;
-			// }
+		#ifdef GLOWD_HBH_DO_HEADERS
+			struct hopByHopDestOptsHdr_t hbhDestOptsHdrs;
+
+			// Initialise the header
+			__builtin_memset(&hbhDestOptsHdrs, 0, sizeof(hbhDestOptsHdrs));
+
+			// Fill in the Hob-by-Hop and Destination Options Headers!
+			populateHbhDoHdr(&hbhDestOptsHdrs, l3->nexthdr, *flowTag);
+
+			// Signal the next header is a Hop-by-Hop extension header
+			l3->nexthdr = NEXT_HDR_HOP_BY_HOP;
+
+			// Update the payload length
+			l3->payload_len = bpf_htons(bpf_ntohs(l3->payload_len) + sizeof(struct hopByHopDestOptsHdr_t));
+
+			if (bpf_skb_adjust_room(ctx, sizeof(struct hopByHopDestOptsHdr_t), BPF_ADJ_ROOM_NET, 0))
+				return TC_ACT_SHOT;
+
+			if (bpf_skb_store_bytes(ctx, sizeof(struct ethhdr) + sizeof(struct ipv6hdr), &hbhDestOptsHdrs, sizeof(struct hopByHopDestOptsHdr_t), 0))
+				return TC_ACT_SHOT;
 		#endif
 
 		return TC_ACT_OK;
@@ -126,9 +107,7 @@ static __always_inline int handleICMP(struct __sk_buff *ctx, struct ipv6hdr *l3)
 
 	// Simply force the whole flow label to 1 so that we can
 	// check the tag is altered when capturing traffic.
-	l3->flow_lbl[2] = 0xFF;
-	l3->flow_lbl[1] = 0xFF;
-	l3->flow_lbl[0] =  0xF;
+	populateFlowLbl(l3->flow_lbl, 0xFFFFF);
 
 	return TC_ACT_OK;
 }
