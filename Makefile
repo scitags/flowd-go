@@ -29,12 +29,16 @@ MAIN_PACKAGE = ./cmd
 SOURCES = $(wildcard *.go)
 
 # What to remove when cleaning up
-TRASH   = $(BIN_DIR)/* *.gz rpms/*.rpm
+TRASH   = $(BIN_DIR)/* rpms/*.gz rpms/*.rpm
 
 # Default compilation flags.
 # The `-ldflags` option lets us define global variables at compile time!
 # Check https://stackoverflow.com/questions/11354518/application-auto-build-versioning
 CFLAGS := -tags ebpf -ldflags "-X main.builtCommit=$(COMMIT)"
+
+# Path to the eBPF sources need to build flowd-go. Make will be invoked
+# recursively there.
+EBPF_PROGS_PATH := backends/ebpf/progs
 
 # Adjust GOC's environment depending on what OS we're on to deal with
 # all the BPF machinery. Note that when ENV_FALGS is not defined on
@@ -79,17 +83,26 @@ help:
 	@echo "          tc-clean: remove the qdisc implicitly created when loading the eBPF program."
 	@echo "        ebpf-trace: show the contents of the kernel's trace pipe where the"
 	@echo "                    debug information of eBPF programs is dumped."
+	@echo ""
 	@echo "   start-ipv4-flow: write to flowd-go's named pipe to strart an IPv4 flow."
 	@echo "     end-ipv4-flow: write to flowd-go's named pipe to end an IPv4 flow."
 	@echo "   start-ipv6-flow: write to flowd-go's named pipe to strart an IPv6 flow."
 	@echo "     end-ipv6-flow: write to flowd-go's named pipe to end an IPv6 flow."
+	@echo ""
 	@echo "  start-dummy-flow: send an HTTP GET reuqest to flowd-go's API to start an IPv6 flow."
 	@echo "    end-dummy-flow: send an HTTP GET reuqest to flowd-go's API to end an IPv6 flow."
+	@echo ""
+	@echo "       docker-start: start the development container in the background."
+	@echo "       docker-shell: open a shell into the development container. Note it must be"
+	@echo "                     started first with the 'docker-start' target."
+	@echo "        docker-stop: stop the development container."
+	@echo "       docker-build: build the development container."
+	@echo "        docker-push: push the built image to GitHub's registry."
 	@echo ""
 	@echo "             clean: delete everything defined as rubbish."
 
 # Simply build flowd-go
-build: $(SOURCES) marker.bpf.o
+build: $(SOURCES) ebpf-progs
 	@mkdir -p bin
 	$(ENV_FLAGS) $(GOC) build $(CFLAGS) -o $(BIN_DIR)/$(BIN_NAME) $(MAIN_PACKAGE)
 
@@ -97,11 +110,11 @@ build: $(SOURCES) marker.bpf.o
 ifeq ($(OS),Linux)
 # Recursively build the eBPF program. Be sure to check
 # https://www.gnu.org/software/make/manual/html_node/Recursion.html
-marker.bpf.o:
-	$(MAKE) -C backends/ebpf
+ebpf-progs:
+	$(MAKE) -C $(EBPF_PROGS_PATH)
 else
 # Just provide a stub it we're not on Linux!
-marker.bpf.o:
+ebpf-progs:
 endif
 
 # Include Makefiles with additional targets automating stuff.
@@ -110,5 +123,5 @@ include mk/*.mk
 
 .PHONY: clean
 clean:
-	$(MAKE) -C backends/ebpf clean
+	$(MAKE) -C $(EBPF_PROGS_PATH) clean
 	@rm -rf $(TRASH)

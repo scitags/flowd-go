@@ -107,6 +107,16 @@ hooked on a *clsact qdisc* which only deals with egress datagrams. The loading a
   in a particular way as the loading into the kernel won't work otherwise. Please refer to the eBPF documentation bundled with the implementation
   to take a look at how the embedded program is compiled.
 
+- **markingStrategy [string] {"flowLabel"}**: The marking strategy to leverage on the eBPF program. This option must be one of the following if
+  configured, otherwise flowd-go will refuse to start. Available marking strategies are:
+
+    - `"flowLabel"`: The eBPF program embeds the flow information in the IPv6 header's *Flow Label* field as defined in SciTags' technical specification.
+    - `"hopByHopHeader"`: The eBPF programs adds a *Hop-by-Hop Options* extension header encoding the flow information.
+    - `"hopByHopDestHeaders"`: The eBPF programs adds a *Hop-by-Hop Options* and a *Destination Options* extension header encoding the flow information.
+
+- **debugMode [bool] {false}**: Whether to load an eBPF program compiled with debug support. This option **should be false on production** environments.
+  The many calls to `bpf_printk` preset if compiled with debugging support can have an effect on performance. You have been warned!
+
 ## firefly
 The **Firefly** backend will send UDP fireflies as defined in https://www.scitags.org. These are basically UDP datagrams including a JSON-formatted
 payload including flow information.
