@@ -18,9 +18,11 @@ const (
 
 var (
 	configurationTags = map[string]bool{
-		"targetinterface": false,
-		"removeqdisc":     false,
-		"programpath":     false,
+		strings.ToLower("targetInterface"): false,
+		strings.ToLower("removeQdisc"):     false,
+		strings.ToLower("programPath"):     false,
+		strings.ToLower("markingStrategy"): false,
+		strings.ToLower("debugMode"):       false,
 	}
 
 	DefaultConf = EbpfBackendConf{
@@ -74,7 +76,7 @@ func (c *EbpfBackendConf) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("couldn't unmarshall into tmpMarkingStrategy: %w", err)
 	}
 	markingStrategy, ok := markingStrategyMap[strings.ToLower(tmpMarkingStrategy.MarkingStrategy)]
-	if !ok {
+	if !ok && tmpMarkingStrategy.MarkingStrategy != "" {
 		return fmt.Errorf("wrong marking strategy %s, available ones are %v", tmpMarkingStrategy.MarkingStrategy,
 			func() []string {
 				markingStrategies := []string{}
