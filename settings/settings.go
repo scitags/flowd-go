@@ -95,18 +95,20 @@ func populateBP(conf *viper.Viper, path string, defaults map[string]defaultConfi
 		return nil, fmt.Errorf("no %s configured: you need at least one", path)
 	}
 
-	// The defaults are not propagated when calling Sub()...
-	populateDefaults(subConf, defaults)
-
-	if err := subConf.Unmarshal(unmarshalTarget); err != nil {
-		return nil, err
-	}
-
+	// Get a hold of the configured plugins/backends before setting the defaults. Doing
+	// so will always trigger IsSet()!
 	configuredKeys := []string{}
 	for k := range defaults {
 		if subConf.IsSet(k) {
 			configuredKeys = append(configuredKeys, k)
 		}
+	}
+
+	// The defaults are not propagated when calling Sub()...
+	populateDefaults(subConf, defaults)
+
+	if err := subConf.Unmarshal(unmarshalTarget); err != nil {
+		return nil, err
 	}
 
 	return configuredKeys, nil
