@@ -73,40 +73,38 @@ var (
 			}
 			slog.Debug("read configuration", "conf", conf)
 
-			if err := os.WriteFile(conf.PIDPath, []byte(fmt.Sprintf("%d\n", os.Getpid())), 0644); err != nil {
-				slog.Error("couldn't create the PID file", "path", conf.PIDPath, "err", err)
+			if err := os.WriteFile(conf.General.PIDPath, []byte(fmt.Sprintf("%d\n", os.Getpid())), 0644); err != nil {
+				slog.Error("couldn't create the PID file", "path", conf.General.PIDPath, "err", err)
 			}
-			defer os.Remove(conf.PIDPath)
+			defer os.Remove(conf.General.PIDPath)
 
-			plugins, err := createPlugins(conf)
-			if err != nil {
-				slog.Error("couldn't create the plugins", "err", err)
+			if err := initPlugins(conf.Plugins); err != nil {
+				slog.Error("couldn't initialise the plugins", "err", err)
 				return
 			}
-			defer cleanupPlugins(plugins)
+			defer cleanupPlugins(conf.Plugins)
 
-			backends, err := createBackends(conf)
-			if err != nil {
-				slog.Error("couldn't create the backends", "err", err)
+			if err := initBackends(conf.Backends); err != nil {
+				slog.Error("couldn't initialise the backends", "err", err)
 				return
 			}
-			defer cleanupBackends(backends)
+			defer cleanupBackends(conf.Backends)
 
 			// Set up the necessary channels, one per plugin and per backend
-			pluginChans := make([]chan glowd.FlowID, 0, len(plugins))
-			backendChans := make([]chan glowd.FlowID, 0, len(backends))
+			pluginChans := make([]chan glowd.FlowID, 0, len(conf.Plugins))
+			backendChans := make([]chan glowd.FlowID, 0, len(conf.Backends))
 
 			// Set up the broadcast channel for exiting cleanly
 			doneChan := make(chan struct{})
 
 			// Dispatch the producers (i.e. plugins)
-			for i, plugin := range plugins {
+			for i, plugin := range conf.Plugins {
 				pluginChans = append(pluginChans, make(chan glowd.FlowID))
 				go plugin.Run(doneChan, pluginChans[i])
 			}
 
 			// Dispatch the consumers (i.e. backends)
-			for i, backend := range backends {
+			for i, backend := range conf.Backends {
 				backendChans = append(backendChans, make(chan glowd.FlowID))
 				go backend.Run(doneChan, backendChans[i])
 			}
