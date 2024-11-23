@@ -14,37 +14,37 @@ import (
 )
 
 func (b *EbpfBackend) chooseBPFProgram() []byte {
-	if b.conf.ProgramPath != "" {
-		content, err := os.ReadFile(b.conf.ProgramPath)
+	if b.ProgramPath != "" {
+		content, err := os.ReadFile(b.ProgramPath)
 		if err != nil {
 			slog.Warn(
 				"couldn't read the eBPF program from disk, defaulting to flowLabel-based marking", "err", err)
 			return flowLabelBPFProg
 		}
-		slog.Debug("loading the provided eBPF program", "path", b.conf.ProgramPath)
+		slog.Debug("loading the provided eBPF program", "path", b.ProgramPath)
 		return content
 	}
 
-	slog.Debug("loading an embedded BPF program", "markingStrategy", b.conf.MarkingStrategy, "debugMode", b.conf.DebugMode)
-	switch b.conf.MarkingStrategy {
+	slog.Debug("loading an embedded BPF program", "markingStrategy", b.MarkingStrategy, "debugMode", b.DebugMode)
+	switch b.MarkingStrategy {
 	case FlowLabelMarking:
-		if b.conf.DebugMode {
+		if b.DebugMode {
 			return flowLabelDebugBPFProg
 		}
 		return flowLabelBPFProg
 	case HopByHopHeaderMarking:
-		if b.conf.DebugMode {
+		if b.DebugMode {
 			return hopByHopHeaderDebugBPFProg
 		}
 		return hopByHopHeaderBPFProg
 	case HopByHopDestHeadersMarking:
-		if b.conf.DebugMode {
+		if b.DebugMode {
 			return hopByHopDestHeaderDebugBPFProg
 		}
 		return hopByHopDestHeaderBPFProg
 	default:
 		slog.Warn("wrong marking strategy, defaulting to flowLabel-based (non-debug) marking",
-			"markingStrategy", b.conf.MarkingStrategy)
+			"markingStrategy", b.MarkingStrategy)
 		return flowLabelBPFProg
 	}
 }
