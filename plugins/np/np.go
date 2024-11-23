@@ -1,7 +1,6 @@
 package np
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -17,73 +16,17 @@ import (
 )
 
 var (
-	configurationTags = map[string]bool{
-		"maxreaders": false,
-		"buffsize":   false,
-		"pipepath":   false,
-	}
-
-	DefaultConf = NamedPipePluginConf{
-		MaxReaders: 5,
-		BuffSize:   1000,
-		PipePath:   "np",
+	Defaults = map[string]interface{}{
+		"maxReaders": 5,
+		"buffSize":   1000,
+		"pipePath":   "np",
 	}
 )
 
-type NamedPipePluginConf struct {
+type NamedPipePlugin struct {
 	MaxReaders int    `json:"maxReaders"`
 	BuffSize   int    `json:"buffSize"`
 	PipePath   string `json:"pipePath"`
-}
-
-// We need an alias to avoid infinite recursion
-// in the unmarshalling logic
-type AuxNamedPipePluginConf NamedPipePluginConf
-
-func (c *NamedPipePluginConf) UnmarshalJSON(data []byte) error {
-	tmp := map[string]interface{}{}
-	if err := json.Unmarshal(data, &tmp); err != nil {
-		return fmt.Errorf("couldn't unmarshall into tmp map: %w", err)
-	}
-
-	for k := range tmp {
-		delete(configurationTags, strings.ToLower(k))
-	}
-
-	tmpConf := AuxNamedPipePluginConf{}
-	if err := json.Unmarshal(data, &tmpConf); err != nil {
-		return fmt.Errorf("couldn't unmarshall into tmpConf: %w", err)
-	}
-
-	for k := range configurationTags {
-		switch strings.ToLower(k) {
-		case "maxreaders":
-			tmpConf.MaxReaders = DefaultConf.MaxReaders
-		case "buffsize":
-			tmpConf.BuffSize = DefaultConf.BuffSize
-		case "pipepath":
-			tmpConf.PipePath = DefaultConf.PipePath
-		default:
-			return fmt.Errorf("unknown configuration key %q", k)
-		}
-	}
-
-	// Store the results!
-	*c = NamedPipePluginConf(tmpConf)
-
-	return nil
-}
-
-type NamedPipePlugin struct {
-	conf NamedPipePluginConf
-}
-
-func New(conf *NamedPipePluginConf) *NamedPipePlugin {
-	// Parenthesis required due to a parsing ambiguity!
-	if conf == nil {
-		return &NamedPipePlugin{conf: DefaultConf}
-	}
-	return &NamedPipePlugin{conf: *conf}
 }
 
 func (np *NamedPipePlugin) String() string {
@@ -93,13 +36,13 @@ func (np *NamedPipePlugin) String() string {
 func (np *NamedPipePlugin) Init() error {
 	slog.Debug("initialising the named pipe plugin")
 
-	if _, err := os.Stat(np.conf.PipePath); !errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(np.PipePath); !errors.Is(err, os.ErrNotExist) {
 		slog.Debug("it looks like the named pipe exists!")
 		return nil
 	}
 
 	// Consider using the unix package...
-	if err := syscall.Mkfifo(np.conf.PipePath, 0666); err != nil {
+	if err := syscall.Mkfifo(np.PipePath, 0666); err != nil {
 		return fmt.Errorf("couldn't create the named pipe: %w", err)
 	}
 
@@ -119,7 +62,7 @@ func (np *NamedPipePlugin) Run(done <-chan struct{}, outChan chan<- glowd.FlowID
 	// open up the FIFO with the O_RDWR flag set and call it a day. Be sure to check
 	// https://pubs.opengroup.org/onlinepubs/9799919799/ for a detailed discussion
 	// on what O_NONBLOCK implies in terms of behaviour when opening files.
-	pipe, err := os.OpenFile(np.conf.PipePath, os.O_RDWR, os.ModeNamedPipe)
+	pipe, err := os.OpenFile(np.PipePath, os.O_RDWR, os.ModeNamedPipe)
 	if err != nil {
 		slog.Error("couldn't open the named pipe", "err", err)
 		close(outChan)
@@ -129,13 +72,13 @@ func (np *NamedPipePlugin) Run(done <-chan struct{}, outChan chan<- glowd.FlowID
 
 	// A buffered channel guarantees that we don't loose events even
 	// if writes take place at the exact same time
-	c := make(chan notify.EventInfo, np.conf.MaxReaders)
+	c := make(chan notify.EventInfo, np.MaxReaders)
 
 	// Hook the notifications
-	notify.Watch(np.conf.PipePath, c, notify.Write|notify.Remove)
+	notify.Watch(np.PipePath, c, notify.Write|notify.Remove)
 
 	// Listen for events
-	buff := make([]byte, np.conf.BuffSize)
+	buff := make([]byte, np.BuffSize)
 	for {
 		select {
 		case e := <-c:
@@ -164,7 +107,7 @@ func (np *NamedPipePlugin) Run(done <-chan struct{}, outChan chan<- glowd.FlowID
 
 func (np *NamedPipePlugin) Cleanup() error {
 	slog.Debug("cleaning up the named pipe plugin")
-	if err := os.Remove(np.conf.PipePath); err != nil {
+	if err := os.Remove(np.PipePath); err != nil {
 		return fmt.Errorf("error removing named pipe: %w", err)
 	}
 	return nil
