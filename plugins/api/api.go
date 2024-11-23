@@ -2,81 +2,26 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
-	"strings"
 
 	"github.com/labstack/echo/v4"
 	glowd "github.com/scitags/flowd-go"
 )
 
 var (
-	configurationTags = map[string]bool{
-		"bindaddress": false,
-		"bindport":    false,
-	}
-
-	DefaultConf = ApiPluginConf{
-		BindAddress: "127.0.0.1",
-		BindPort:    7777,
+	Defaults = map[string]interface{}{
+		"bindAddress": "127.0.0.1",
+		"bindPort":    7777,
 	}
 )
-
-type ApiPluginConf struct {
-	BindAddress string `json:"bindAddress"`
-	BindPort    int    `json:"bindPort"`
-}
-
-// We need an alias to avoid infinite recursion
-// in the unmarshalling logic
-type AuxApiPluginConf ApiPluginConf
-
-func (c *ApiPluginConf) UnmarshalJSON(data []byte) error {
-	tmp := map[string]interface{}{}
-	if err := json.Unmarshal(data, &tmp); err != nil {
-		return fmt.Errorf("couldn't unmarshall into tmp map: %w", err)
-	}
-
-	for k := range tmp {
-		delete(configurationTags, strings.ToLower(k))
-	}
-
-	tmpConf := AuxApiPluginConf{}
-	if err := json.Unmarshal(data, &tmpConf); err != nil {
-		return fmt.Errorf("couldn't unmarshall into tmpConf: %w", err)
-	}
-
-	for k := range configurationTags {
-		switch strings.ToLower(k) {
-		case "bindaddress":
-			tmpConf.BindAddress = DefaultConf.BindAddress
-		case "bindport":
-			tmpConf.BindPort = DefaultConf.BindPort
-		default:
-			return fmt.Errorf("unknown configuration key %q", k)
-		}
-	}
-
-	// Store the results!
-	*c = ApiPluginConf(tmpConf)
-
-	return nil
-}
 
 type ApiPlugin struct {
 	server *echo.Echo
 
-	conf ApiPluginConf
-}
-
-func New(conf *ApiPluginConf) *ApiPlugin {
-	// Parenthesis required due to a parsing ambiguity!
-	if conf == nil {
-		return &ApiPlugin{conf: DefaultConf}
-	}
-	return &ApiPlugin{conf: *conf}
+	BindAddress string `json:"bindAddress"`
+	BindPort    int    `json:"bindPort"`
 }
 
 func (p *ApiPlugin) String() string {
@@ -112,7 +57,7 @@ func (p *ApiPlugin) Run(done <-chan struct{}, outChan chan<- glowd.FlowID) {
 	})
 
 	go func() {
-		if err := p.server.Start(fmt.Sprintf("%s:%d", p.conf.BindAddress, p.conf.BindPort)); err != http.ErrServerClosed {
+		if err := p.server.Start(fmt.Sprintf("%s:%d", p.BindAddress, p.BindPort)); err != http.ErrServerClosed {
 			slog.Error("couldn't start the API server", "err", err)
 		}
 	}()
