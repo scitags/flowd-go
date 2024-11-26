@@ -1,4 +1,8 @@
 # Flowd-go
+<!-- [![PkgGoDev](https://pkg.go.dev/badge/github.com/cilium/ebpf)](https://pkg.go.dev/github.com/cilium/ebpf) -->
+
+![FlowyGopher](flowd-go.svg)
+
 Flowd-go is a network flow and packet marking daemon. It is heavily inspired by [`scitags/flowd`](https://github.com/scitags/flowd), but
 instead of Python it's implemented in Go.
 
@@ -213,6 +217,14 @@ type Plugin interface {
 ```
 
 These are more documented on the source code.
+
+## Kudos
+The logo is a composition of a couple of images:
+
+- [Go's Gopher](https://github.com/golang-samples/gopher-vector/blob/master/gopher.svg)
+- [A Vector Field](https://commons.wikimedia.org/wiki/File:Vector_field.svg)
+
+These were handled with [Inkscape](https://inkscape.org).
 
 ## Questions or comments?
 Feel free to reach me over at <pcolladosoto@gmx.com> or open up an issue on the repo. PRs are also welcome!
