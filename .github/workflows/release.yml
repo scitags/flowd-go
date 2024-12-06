@@ -19,9 +19,6 @@ jobs:
         runs-on: ubuntu-latest
         container:
             image: ghcr.io/scitags/flowd-go:v1.0
-            credentials:
-                username: ${{ github.actor }}
-                password: ${{ secrets.SCITAGS_ORG_TOKEN }}
         steps:
             - name: Show environment information
               env:
@@ -41,6 +38,7 @@ jobs:
 
             - name: Clone the flowd-go repo
               shell: bash
+              working-directory: ./flowd-go
               run: |
                 git clone https://github.com/scitags/flowd-go.git flowd-go
 
@@ -52,9 +50,9 @@ jobs:
 
             - name: Release time!
               shell: bash
+              working-directory: ./flowd-go
               env:
                 TAG_NAME: ${{ github.ref_name }}
-                GITHUB_TOKEN: ${{ secrets.SCITAGS_ORG_TOKEN }}
-              working-directory: ./datad/src
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
-                gh release create --repo scitags/flowd --generate-notes $TAG_NAME ./bin/flowd-go rpms/*.rpm
+                gh release create --repo scitags/flowd-go --generate-notes $TAG_NAME ./bin/flowd-go rpms/*.rpm
