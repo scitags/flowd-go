@@ -38,7 +38,6 @@ jobs:
 
             - name: Clone the flowd-go repo
               shell: bash
-              working-directory: ./flowd-go
               run: |
                 git clone https://github.com/scitags/flowd-go.git flowd-go
 
