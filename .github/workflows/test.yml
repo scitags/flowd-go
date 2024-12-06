@@ -46,6 +46,7 @@ jobs:
             # the binary or not.
             - name: Check we can build the project
               shell: bash
+              working-directory: ./flowd-go
               run: |
                 make build
               if: ${{ ! startsWith(github.ref, 'refs/tags/') }}
