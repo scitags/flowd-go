@@ -27,14 +27,14 @@ jobs:
               run: |
                 echo "Environment:"
                 env
-                echo "The current directory is:"
-                pwd
+                echo "The current directory is: $(pwd)"
                 echo "It's contents are:"
                 ls -lh
-                echo "Who are we?"
-                id
+                echo "Who are we? $(id)"
                 echo "GitHub's context"
                 echo $GITHUB_CONTEXT
+                echo "HOME contents: ls -lh ${HOME}"
+                echo "Does this exist: $(ls -lh /github/home/rpmbuild)"
 
             - name: Clone the flowd-go repo
               shell: bash
