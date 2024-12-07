@@ -35,13 +35,9 @@ jobs:
                 echo $GITHUB_CONTEXT
                 echo "HOME contents"
                 ls -lh ${HOME}
-                echo "Does this exist:"
-                ls -lh /github/home/rpmbuild
                 rpmdev-setuptree
                 echo "HOME contents"
                 ls -lh ${HOME}
-                echo "Does this exist:"
-                ls -lh /github/home/rpmbuild
 
             - name: Clone the flowd-go repo
               shell: bash
