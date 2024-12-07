@@ -35,9 +35,6 @@ jobs:
                 echo $GITHUB_CONTEXT
                 echo "HOME contents"
                 ls -lh ${HOME}
-                rpmdev-setuptree
-                echo "HOME contents"
-                ls -lh ${HOME}
 
             - name: Clone the flowd-go repo
               shell: bash
@@ -47,7 +44,10 @@ jobs:
             - name: Build the RPM
               shell: bash
               working-directory: ./flowd-go
+              # Note we cannot create the RPM build tree when building the container
+              # as GitHub's CI implementation will mangle the HOME directory...
               run: |
+                rpmdev-setuptree
                 make rpm
 
             - name: Release time!
