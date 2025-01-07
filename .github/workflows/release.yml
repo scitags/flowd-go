@@ -18,7 +18,7 @@ jobs:
         name: build
         runs-on: ubuntu-latest
         container:
-            image: ghcr.io/scitags/flowd-go:v1.0
+            image: ghcr.io/scitags/flowd-go:release-v2.0
         steps:
             - name: Show environment information
               env:
