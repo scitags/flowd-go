@@ -197,6 +197,13 @@ Other than that, we also have pother couple of directories with auxiliary files:
 - `mk`: Several auxiliary `Makefiles` which are included from the main `Makefile` that provide convenient automations for several
   interactions we usually carry out with `flowd-go` when developing it.
 
+- `dockerfiles`: The different Dockerfiles we use to build the images used by the project. The current flavours are:
+    - `dev`: A development image based on `almalinux/9.4` that includes everything necessary to work on and develop flowd-go locally.
+    - `test`: A lean image based on `almalinux/9.4-minimal` including the bare minimum needed to build flowd-go and check things are okay.
+    - `release`: A lean image based on the previous one which also adds dependencies needed for RPM packaging.
+
+As usual, you can check all the available images and their versions [here](https://github.com/scitags/flowd-go/pkgs/container/flowd-go).
+
 ## Adding new backends or plugins
 The code has been designed so that adding new plugins and backends is as easy as possible. Leaving configuration aside (which you can
 learn more about by looking at the implementation of any plugin and/or backend) you just need to provide something that adheres to the

@@ -1,5 +1,12 @@
 # This Makefile provides several PHONY targets automating the creation, deletion
-# and use of the auxiliary container for development and debugging.
+# and use of the auxiliary container for development and debugging. It also
+# bootstraps the build of the different Docker images in use by the project.
+
+# Configure the image flavour to use. FLAVOUR is not defined, then it'll be set to dev.
+FLAVOUR ?= dev
+
+# The directory where all our Dockerfiles (and dependencies) are
+DOCKERFILES_PATH := dockerfiles
 
 # Get a hold of the current directory so as to mount the volume with an absolute path.
 # Otherwise Docker will try to create its own volume, at least on Docker Desktop-based
@@ -7,7 +14,7 @@
 PWD = $(shell pwd)
 
 # Unclutter the target recipes a bit by pulling information out.
-CONTAINER_IMAGE = ghcr.io/scitags/flowd-go-cont:v1.0
+CONTAINER_IMAGE = ghcr.io/scitags/flowd-go:$(FLAVOUR)-v2.0
 CONTAINER_NAME = flowd-go
 
 # Now, what do each of these flags do?
@@ -53,9 +60,10 @@ docker-stop:
 # the TODO list!
 .PHONY: docker-build
 docker-build:
-	@docker build -t $(CONTAINER_IMAGE) .
+	$(MAKE) -C $(DOCKERFILES_PATH)
 
-# Push the image to GitHub's registry.
+# Push the image to GitHub's registry. We'll only be pushing the officially supported
+# linux/amd64 images.
 .PHONY: docker-push
 docker-push:
-	@docker push $(CONTAINER_IMAGE)
+	@docker push --platform linux/amd64 $(CONTAINER_IMAGE)
