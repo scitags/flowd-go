@@ -12,8 +12,16 @@ CC = clang
 
 # Get the current tag to embed it into the Go binary. We'll drop the
 # initial v so as to get a 'clean' version number (i.e. 1.0 instead
-# of v1.0).
-VERSION = $(shell git describe --tags --abbrev=0 | tr -d v)
+# of v1.0). We'll however 'force' the version as this can clash when
+# working on tagged branches... We do need to figure out a better way
+# to propagate all this to the SPEC file and so on...
+# VERSION = $(shell git describe --tags --abbrev=0 | tr -d v)
+VERSION = 2.0
+
+# The version to embed in image tags. Note this is exported so that both the
+# recursive image building and the use of images can leverage it.
+DOCKER_IMG_VERSION := v2.0
+export DOCKER_IMG_VERSION
 
 # Get the current commit to embed it into the Go binary.
 COMMIT = $(shell git rev-parse --short HEAD)
@@ -45,7 +53,7 @@ CFLAGS := -tags ebpf -ldflags "-X main.builtCommit=$(COMMIT) -X main.baseVersion
 EBPF_PROGS_PATH := backends/ebpf/progs
 
 # Adjust GOC's environment depending on what OS we're on to deal with
-# all the BPF machinery. Note that when ENV_FALGS is not defined on
+# all the BPF machinery. Note that when ENV_FLAGS is not defined on
 # Darwin everything will work as expected!
 OS := $(shell uname)
 ifeq ($(OS),Linux)
@@ -88,15 +96,18 @@ help:
 	@echo "        ebpf-trace: show the contents of the kernel's trace pipe where the"
 	@echo "                    debug information of eBPF programs is dumped."
 	@echo ""
-	@echo "   start-ipv4-flow: write to flowd-go's named pipe to strart an IPv4 flow."
+	@echo "   start-ipv4-flow: write to flowd-go's named pipe to start an IPv4 flow."
 	@echo "     end-ipv4-flow: write to flowd-go's named pipe to end an IPv4 flow."
-	@echo "   start-ipv6-flow: write to flowd-go's named pipe to strart an IPv6 flow."
+	@echo "   start-ipv6-flow: write to flowd-go's named pipe to start an IPv6 flow."
 	@echo "     end-ipv6-flow: write to flowd-go's named pipe to end an IPv6 flow."
 	@echo ""
-	@echo "  start-dummy-flow: send an HTTP GET reuqest to flowd-go's API to start an IPv6 flow."
-	@echo "    end-dummy-flow: send an HTTP GET reuqest to flowd-go's API to end an IPv6 flow."
+	@echo "  start-dummy-flow: send an HTTP GET request to flowd-go's API to start an IPv6 flow."
+	@echo "    end-dummy-flow: send an HTTP GET request to flowd-go's API to end an IPv6 flow."
 	@echo ""
-	@echo "       docker-start: start the development container in the background."
+	@echo "       docker-start: start the development container in the background. You can pass the"
+	@echo "                     additional argument FLAVOUR with a value of one of {dev,test,release}"
+	@echo "                     to specify the image to run. By default FLAVOUR is set to dev. Passing"
+	@echo "                     the argument looks like: 'make docker-start FLAVOUR=test'."
 	@echo "       docker-shell: open a shell into the development container. Note it must be"
 	@echo "                     started first with the 'docker-start' target."
 	@echo "        docker-stop: stop the development container."
@@ -110,7 +121,7 @@ build: $(SOURCES) ebpf-progs
 	@mkdir -p bin
 	$(ENV_FLAGS) $(GOC) build $(CFLAGS) -o $(BIN_DIR)/$(BIN_NAME) $(MAIN_PACKAGE)
 
-# We'll only compile the eBPF progra if we're on Linux
+# We'll only compile the eBPF program if we're on Linux
 ifeq ($(OS),Linux)
 # Recursively build the eBPF program. Be sure to check
 # https://www.gnu.org/software/make/manual/html_node/Recursion.html
