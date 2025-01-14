@@ -1,16 +1,56 @@
 package settings
 
 import (
-	"encoding/json"
 	"fmt"
 	"log/slog"
-	"os"
 	"strings"
+
+	glowd "github.com/scitags/flowd-go"
 
 	"github.com/scitags/flowd-go/backends/ebpf"
 	"github.com/scitags/flowd-go/backends/firefly"
 	"github.com/scitags/flowd-go/plugins/api"
 	"github.com/scitags/flowd-go/plugins/np"
+
+	"github.com/spf13/viper"
+)
+
+type PluginConfigurations struct {
+	NamedPipe np.NamedPipePlugin
+	Api       api.ApiPlugin
+}
+
+type BackendConfigurations struct {
+	Ebpf    ebpf.EbpfBackend
+	Firefly firefly.FireflyBackend
+}
+
+type Configuration struct {
+	General  GeneralConfiguration
+	Plugins  []glowd.Plugin
+	Backends []glowd.Backend
+}
+
+type defaultConfiguration map[string]interface{}
+
+var (
+	Defaults = map[string]defaultConfiguration{
+		"": {
+			"pidPath":     "/var/run/flowd-go.pid",
+			"workDir":     "/var/cache/flowd-go",
+			"stunServers": nil,
+		},
+	}
+
+	pluginDefaults = map[string]defaultConfiguration{
+		"namedPipe": np.Defaults,
+		"api":       api.Defaults,
+	}
+
+	backendDefaults = map[string]defaultConfiguration{
+		"ebpf":    ebpf.Defaults,
+		"firefly": firefly.Defaults,
+	}
 )
 
 // Sample config ripped from flowd
@@ -30,104 +70,121 @@ import (
 // PROMETHEUS_SRV_PORT = 9000
 // SS_PATH = '/usr/sbin/ss'
 
-type Config struct {
-	PIDPath     string        `json:"pidPath"`
-	WorkDir     string        `json:"workDir"`
-	StunServers []string      `json:"stunServers"`
-	Plugins     []interface{} `json:"-"`
-	Backends    []interface{} `json:"-"`
+type GeneralConfiguration struct {
+	PIDPath     string
+	WorkDir     string
+	StunServers []string
 }
 
-// We need a type alias to avoid infinite recursion!
-// Otherwise the first call to json.Unmarshal within
-// func (c *Config) UnmarshalJSON(data []byte) error
-// will recurse indefinitely...
-type AuxConfig Config
-
-type genericConfs struct {
-	Plugins  map[string]interface{}
-	Backends map[string]interface{}
-}
-
-func (c *Config) UnmarshalJSON(data []byte) error {
-	tmpConf := AuxConfig{}
-	if err := json.Unmarshal(data, &tmpConf); err != nil {
-		return fmt.Errorf("couldn't unmarshal into tmpConf: %w", err)
-	}
-	slog.Debug("unmarshalled tmpConf", "tmpConf", tmpConf)
-
-	genericConf := genericConfs{}
-	if err := json.Unmarshal(data, &genericConf); err != nil {
-		return fmt.Errorf("couldn't unmarshal into genericConfs: %w", err)
-	}
-	slog.Debug("unmarshalled genericConf", "genericConf", genericConf)
-
-	for k, v := range genericConf.Plugins {
-		pluginConf, err := json.Marshal(v)
-		if err != nil {
-			return fmt.Errorf("couldn't marshall the plugin configuration for %q: %w", k, err)
+func populateDefaults(conf *viper.Viper, defs map[string]defaultConfiguration) {
+	for k, v := range defs {
+		for kk, vv := range v {
+			// If setting the general defaults...
+			if k == "" {
+				conf.SetDefault(kk, vv)
+				continue
+			}
+			conf.SetDefault(fmt.Sprintf("%s.%s", k, kk), vv)
 		}
-		switch strings.ToLower(k) {
-		case "namedpipe":
-			slog.Debug("got a namedPipe plugin", "v", v)
-			conf := np.NamedPipePluginConf{}
-			if err := json.Unmarshal(pluginConf, &conf); err != nil {
-				return fmt.Errorf("couldn't unmarshal the named pipe configuration: %w", err)
-			}
-			tmpConf.Plugins = append(tmpConf.Plugins, conf)
-		case "api":
-			slog.Debug("got an api plugin", "v", v)
-			conf := api.ApiPluginConf{}
-			if err := json.Unmarshal(pluginConf, &conf); err != nil {
-				return fmt.Errorf("couldn't unmarshal the api configuration: %w", err)
-			}
-			tmpConf.Plugins = append(tmpConf.Plugins, conf)
+	}
+}
+
+func populateBP(conf *viper.Viper, path string, defaults map[string]defaultConfiguration, unmarshalTarget interface{}) ([]string, error) {
+	subConf := conf.Sub(path)
+	if subConf == nil {
+		return nil, fmt.Errorf("no %s configured: you need at least one", path)
+	}
+
+	// Get a hold of the configured plugins/backends before setting the defaults. Doing
+	// so will always trigger IsSet()!
+	configuredKeys := []string{}
+	for k := range defaults {
+		if subConf.IsSet(k) {
+			configuredKeys = append(configuredKeys, k)
+		}
+	}
+
+	// The defaults are not propagated when calling Sub()...
+	populateDefaults(subConf, defaults)
+
+	if err := subConf.Unmarshal(unmarshalTarget); err != nil {
+		return nil, err
+	}
+
+	return configuredKeys, nil
+}
+
+func populatePluginSlice(pConf PluginConfigurations, configured []string) ([]glowd.Plugin, error) {
+	plugins := []glowd.Plugin{}
+	for _, c := range configured {
+		switch strings.ToLower(c) {
+		case strings.ToLower("namedPipe"):
+			plugins = append(plugins, &pConf.NamedPipe)
+		case strings.ToLower("api"):
+			plugins = append(plugins, &pConf.Api)
 		default:
-			return fmt.Errorf("unknown plugin %q", k)
+			return nil, fmt.Errorf("plugin type %q is not recognized", c)
 		}
 	}
-
-	for k, v := range genericConf.Backends {
-		backendConf, err := json.Marshal(v)
-		if err != nil {
-			return fmt.Errorf("couldn't marshall the backend configuration for %q: %w", k, err)
-		}
-		switch strings.ToLower(k) {
-		case "ebpf":
-			slog.Debug("got an ebpf backend", "v", v)
-			conf := ebpf.EbpfBackendConf{}
-			if err := json.Unmarshal(backendConf, &conf); err != nil {
-				return fmt.Errorf("couldn't unmarshal the ebpf configuration: %w", err)
-			}
-			tmpConf.Backends = append(tmpConf.Backends, conf)
-		case "firefly":
-			slog.Debug("got a firefly backend", "v", v)
-			conf := firefly.FireflyBackendConf{}
-			if err := json.Unmarshal(backendConf, &conf); err != nil {
-				return fmt.Errorf("couldn't unmarshal the firefly configuration: %w", err)
-			}
-			tmpConf.Backends = append(tmpConf.Backends, conf)
-		default:
-			return fmt.Errorf("unknown backend %q", k)
-		}
-	}
-
-	// Propagate the configuration back
-	*c = Config(tmpConf)
-
-	return nil
+	return plugins, nil
 }
 
-func ReadConf(confFile string) (Config, error) {
-	conf := Config{}
-	content, err := os.ReadFile(confFile)
+func populateBackendSlice(bConf BackendConfigurations, configured []string) ([]glowd.Backend, error) {
+	backends := []glowd.Backend{}
+	for _, c := range configured {
+		switch strings.ToLower(c) {
+		case strings.ToLower("ebpf"):
+			backends = append(backends, &bConf.Ebpf)
+		case strings.ToLower("firefly"):
+			backends = append(backends, &bConf.Firefly)
+		default:
+			return nil, fmt.Errorf("backend type %q is not recognized", c)
+		}
+	}
+	return backends, nil
+}
+
+func ReadConf(confFile string) (*Configuration, error) {
+	conf := viper.New()
+	conf.SetConfigFile(confFile)
+
+	if err := conf.ReadInConfig(); err != nil {
+		return nil, fmt.Errorf("error reading the configuration: %w", err)
+	}
+
+	pConf := PluginConfigurations{}
+	configuredPlugins, err := populateBP(conf, "plugins", pluginDefaults, &pConf)
 	if err != nil {
-		return conf, err
+		return nil, fmt.Errorf("couldn't unmarshal the plugin configuration: %w", err)
+	}
+	plugins, err := populatePluginSlice(pConf, configuredPlugins)
+	if err != nil {
+		return nil, fmt.Errorf("error populating the plugin slice: %w", err)
 	}
 
-	if err := json.Unmarshal(content, &conf); err != nil {
-		return conf, fmt.Errorf("couldn't unmarshal the configuration: %w", err)
+	bConf := BackendConfigurations{}
+	configuredBackends, err := populateBP(conf, "backends", backendDefaults, &bConf)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't unmarshal the plugin configuration: %w", err)
+	}
+	backends, err := populateBackendSlice(bConf, configuredBackends)
+	if err != nil {
+		return nil, fmt.Errorf("error populating the backend slice: %w", err)
 	}
 
-	return conf, nil
+	populateDefaults(conf, Defaults)
+	gConf := GeneralConfiguration{}
+	if err := conf.Unmarshal(&gConf); err != nil {
+		return nil, fmt.Errorf("error unmarshaling the general configuration: %w", err)
+	}
+
+	slog.Debug("loaded general configuration", "gConf", gConf)
+	slog.Debug("loaded plugin configuration", "pConf", pConf)
+	slog.Debug("loaded backend configuration", "bConf", bConf)
+
+	return &Configuration{
+		General:  gConf,
+		Plugins:  plugins,
+		Backends: backends,
+	}, nil
 }

@@ -51,6 +51,13 @@ var (
 	}
 )
 
+type flowFourTuple struct {
+	IPv6Hi  uint64
+	IPv6Lo  uint64
+	DstPort uint16
+	SrcPort uint16
+}
+
 type EbpfBackend struct {
 	module  *bpf.Module
 	hook    *bpf.TcHook
@@ -60,21 +67,15 @@ type EbpfBackend struct {
 
 	rGen *rand.Rand
 
-	conf EbpfBackendConf
+	TargetInterface string
+	RemoveQdisc     bool
+	ProgramPath     string
+	MarkingStrategy MarkingStrategy
+	DebugMode       bool
 }
 
-type flowFourTuple struct {
-	IPv6Hi  uint64
-	IPv6Lo  uint64
-	DstPort uint16
-	SrcPort uint16
-}
-
-func New(conf *EbpfBackendConf) *EbpfBackend {
-	if conf == nil {
-		return &EbpfBackend{conf: DefaultConf}
-	}
-	return &EbpfBackend{conf: *conf}
+func (b *EbpfBackend) String() string {
+	return "eBPF"
 }
 
 func (b *EbpfBackend) Init() error {
@@ -98,8 +99,8 @@ func (b *EbpfBackend) Init() error {
 
 	// Create the TC Hook on which to place the eBPF program
 	b.hook = b.module.TcHookInit()
-	if err := b.hook.SetInterfaceByName(b.conf.TargetInterface); err != nil {
-		return fmt.Errorf("failed to set TC hook on interface %s: %w", b.conf.TargetInterface, err)
+	if err := b.hook.SetInterfaceByName(b.TargetInterface); err != nil {
+		return fmt.Errorf("failed to set TC hook on interface %s: %w", b.TargetInterface, err)
 	}
 
 	// Placce the hook in the packet egress chain
@@ -221,7 +222,7 @@ func (b *EbpfBackend) Cleanup() error {
 			slog.Error("error detaching the ebpf hook", "err", err)
 		}
 
-		if b.conf.RemoveQdisc {
+		if b.RemoveQdisc {
 			slog.Debug("removing the backing qdisc")
 			// Explicitly ask for the backing QDisc to be destroyed.
 			// See https://patchwork.kernel.org/project/netdevbpf/patch/20210428162553.719588-3-memxor@gmail.com/
