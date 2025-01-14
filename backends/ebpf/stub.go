@@ -6,19 +6,16 @@ import (
 	glowd "github.com/scitags/flowd-go"
 )
 
+var Defaults = map[string]interface{}{}
+
 type EbpfBackend struct {
 }
 
 type EbpfBackendConf struct {
 }
 
-func (c *EbpfBackendConf) UnmarshalJSON(data []byte) error {
-	*c = EbpfBackendConf{}
-	return nil
-}
-
-func New(conf *EbpfBackendConf) *EbpfBackend {
-	return &EbpfBackend{}
+func (b *EbpfBackend) String() string {
+	return "eBPF stub"
 }
 
 // Just implement the glowd.Backend interface
