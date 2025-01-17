@@ -1,4 +1,4 @@
-package glowd
+package stun
 
 // Consider using github.com/tailscale/tailscale/net/stun instead!
 import (
@@ -94,7 +94,7 @@ var (
 	}
 )
 
-func GetExternalIP(ipFamily IPFamily) (net.IP, error) {
+func GetPubIPOverSTUN(ipFamily IPFamily) (net.IP, error) {
 	// Parse a STUN URI
 	u, err := stun.ParseURI(stunServers[0])
 	if err != nil {
