@@ -22,6 +22,16 @@ The [SciTags Organization](https://www.scitags.org/) is the entity behind this e
 network flows behave in the search of strategies for optimizing data delivery in data-heavy realms such as that of High Energy Physics (HEP).
 
 ## Quickstart
+The golden rule is that 'if something can be done, then a `make` target can be leveraged for it'. This basically means that compiling, running,
+generating the documentation and all those common tasks can be accomplished by simply issuing the appropriate `make <target>`. To get an
+updated list of targets simply run:
+
+    $ make
+
+This will provide more comprehensive information than we can include here. At any rate, the following lines go a bit more in depth into what's
+actually going on when compiling and running the code. There's also a section devoted to leveraging the purposefully built Docker containers
+to develop and test the code!
+
 The code base should be compilable both on Linux and Darwin (i.e. macOS) machines. Bear in mind the eBPF backend won't be available on macOS machines by
 design as it's a feature of the Linux kernel. In order to support eBPF the following must be installed on a Linux-based machine. We're working on
 AlmaLinux 9.4, where the following installs all needed dependencies:
@@ -75,7 +85,7 @@ is that the resulting command is a bit frightening...
 
 Please bear in mind the following has been **only tested** on Docker Desktop 4.30.0 running on macOS 13.5.1: YMMV!
 
-#### Makefile to the rescue!
+#### Docker, docker, docker!
 We have added three targets (i.e. `docker-{start,shell,stop}`) taking care of automating the following discussion away. With this, the workflow
 boils down to:
 
@@ -88,12 +98,26 @@ boils down to:
     # Stop (and implicitly remove) the container
     $ make docker-stop
 
+Bear in mind you can explicitly request one of the other available container flavours by specifying a value for the `FLAVOUR` variable:
+
+    # By default, invoking 'make docker-start' with no other arguments would be the same as running
+    $ make FLAVOUR=dev
+
+    # You can also run the image used for testing in the CI
+    $ make FLAVOUR=test
+
+    # And you can also take the image used for releases on the CI for a spin
+    $ make FLAVOUR=release
+
+If in doubt, be sure to skim over `mk/docker.mk` to take a look at what's actually being run with the above targets. For more information
+on what each image flavour is trying to accomplish please check the [What's what? section](#whats-what) below.
+
 The following paragraphs explain a bit more in depth what's actually going on behind the scenes in case you'd rather set things up yourself.
 
 #### What if I despise Makefiles?
 Without further ado:
 
-    $ docker run -v $(pwd):/root/flowd-go --cap-add SYS_ADMIN --cap-add BPF --cap-add NET_ADMIN -it --rm --name flowd-go ghcr.io/scitags/flowd-go-cont:v1.0 bash
+    $ docker run -v $(pwd):/root/flowd-go --cap-add SYS_ADMIN --cap-add BPF --cap-add NET_ADMIN -it --rm --name flowd-go ghcr.io/scitags/flowd-go:dev-v2.0 bash
 
 To get an idea of what each option accomplishes be sure to taje a look at `mk/docker.mk`.
 

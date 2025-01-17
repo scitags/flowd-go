@@ -1,21 +1,23 @@
-package firefly
+package fireflyb
 
 import (
 	"log/slog"
 
-	glowd "github.com/scitags/flowd-go"
+	glowdTypes "github.com/scitags/flowd-go/types"
 )
 
 var (
 	Defaults = map[string]interface{}{
 		"fireflyDestinationPort": 10514,
-		"prependSyslog":          false,
+		"prependSyslog":          true,
+		"addNetlinkContext":      true,
 	}
 )
 
 type FireflyBackend struct {
 	FireflyDestinationPort uint16 `json:"fireflyDestinationPort"`
 	PrependSyslog          bool   `json:"prependSyslog"`
+	AddNetlinkContext      bool   `json:"addNetlinkContext"`
 }
 
 func (b *FireflyBackend) String() string {
@@ -28,7 +30,7 @@ func (b *FireflyBackend) Init() error {
 	return nil
 }
 
-func (b *FireflyBackend) Run(done <-chan struct{}, inChan <-chan glowd.FlowID) {
+func (b *FireflyBackend) Run(done <-chan struct{}, inChan <-chan glowdTypes.FlowID) {
 	slog.Debug("running the firefly backend")
 	for {
 		select {

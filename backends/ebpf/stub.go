@@ -3,7 +3,7 @@
 package ebpf
 
 import (
-	glowd "github.com/scitags/flowd-go"
+	glowdTypes "github.com/scitags/flowd-go/types"
 )
 
 var Defaults = map[string]interface{}{}
@@ -23,7 +23,7 @@ func (b *EbpfBackend) Init() error {
 	return nil
 }
 
-func (b *EbpfBackend) Run(<-chan struct{}, <-chan glowd.FlowID) {
+func (b *EbpfBackend) Run(<-chan struct{}, <-chan glowdTypes.FlowID) {
 }
 
 func (b *EbpfBackend) Cleanup() error {
