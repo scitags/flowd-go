@@ -70,7 +70,7 @@ var (
 
 	familyMap = map[string]Family{
 		"IPV4": IPv4,
-		"IPV6": IPv4,
+		"IPV6": IPv6,
 	}
 
 	ylimafMap = map[Family]string{
