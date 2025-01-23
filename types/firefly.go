@@ -76,7 +76,7 @@ type AuxFirefly struct {
 func (f *AuxFirefly) UnmarshalJSON(in []byte) error {
 	jsonIndex := strings.Index(string(in), "{")
 	if jsonIndex == -1 {
-		return fmt.Errorf("couldn't find the JSON start token '{'...")
+		return fmt.Errorf("couldn't find the JSON start token '{'")
 	}
 
 	rawFirefly := Firefly{}
@@ -94,7 +94,7 @@ func (f *AuxFirefly) UnmarshalJSON(in []byte) error {
 	}
 	protocol, ok := ParseProtocol(rawFirefly.FlowID.Protocol)
 	if !ok {
-		fmt.Errorf("wrong protocol %s specified", rawFirefly.FlowID.Protocol)
+		return fmt.Errorf("wrong protocol %s specified", rawFirefly.FlowID.Protocol)
 	}
 
 	// Checking IP address parsing can be problematic given both families leverage
@@ -107,10 +107,10 @@ func (f *AuxFirefly) UnmarshalJSON(in []byte) error {
 			return nil, fmt.Errorf("address %s is not a valid IPv{4,6}", rawIP)
 		}
 		if family == IPv4 && strings.Contains(rawIP, ":") {
-			return nil, fmt.Errorf("IPv4 address expected, but it looks like an IPv6...")
+			return nil, fmt.Errorf("IPv4 address expected, but it looks like an IPv6")
 		}
 		if family == IPv6 && !strings.Contains(rawIP, ":") {
-			return nil, fmt.Errorf("IPv6 address expected, but it looks like an IPv4...")
+			return nil, fmt.Errorf("IPv6 address expected, but it looks like an IPv4")
 		}
 
 		return ipvX, nil
