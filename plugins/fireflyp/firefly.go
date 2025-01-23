@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"strings"
 	"time"
 
 	glowdTypes "github.com/scitags/flowd-go/types"
@@ -18,18 +19,20 @@ const (
 
 var (
 	Defaults = map[string]interface{}{
-		"bindAddress": "127.0.0.1",
-		"bindPort":    10514,
-		"bufferSize":  2 * minRecvBufferSize,
-		"deadline":    15,
+		"bindAddress":     "127.0.0.1",
+		"bindPort":        10514,
+		"bufferSize":      2 * minRecvBufferSize,
+		"deadline":        15,
+		"hasSyslogHeader": true,
 	}
 )
 
 type FireflyPlugin struct {
-	BindAddress string `json:"bindAddress"`
-	BindPort    uint16 `json:"bindPort"`
-	BufferSize  uint32 `json:"bufferSize"`
-	Deadline    uint32 `json:"deadline"`
+	BindAddress     string `json:"bindAddress"`
+	BindPort        uint16 `json:"bindPort"`
+	BufferSize      uint32 `json:"bufferSize"`
+	Deadline        uint32 `json:"deadline"`
+	HasSyslogHeader bool   `json:"hasSyslogHeader"`
 
 	listener *net.UDPConn
 }
@@ -93,10 +96,10 @@ func (p *FireflyPlugin) Run(done <-chan struct{}, outChan chan<- glowdTypes.Flow
 			go func(msg []byte) {
 				slog.Debug("serving an incoming UDP firefly")
 
-				auxFirefly := glowdTypes.AuxFirefly{}
-				if err := json.Unmarshal(msg, &auxFirefly); err != nil {
-					slog.Error("couldn't unmarshal incoming firefly", "err", err)
-					return
+				auxFirefly, err := parseFirefly(msg, p.HasSyslogHeader)
+				if err != nil {
+					slog.Error("couldn't parse the incoming firefly", "err", err,
+						"hasSyslogHeader", p.HasSyslogHeader)
 				}
 
 				outChan <- auxFirefly.FlowID
@@ -109,7 +112,25 @@ func (p *FireflyPlugin) Run(done <-chan struct{}, outChan chan<- glowdTypes.Flow
 func (p *FireflyPlugin) Cleanup() error {
 	slog.Debug("cleaning up the firefly plugin")
 	if err := p.listener.Close(); err != nil {
-		slog.Error("error closing the UDP listener: %w", err)
+		slog.Error("error closing the UDP listener", "err", err)
 	}
 	return nil
+}
+
+func parseFirefly(msg []byte, hasSyslogHeader bool) (glowdTypes.AuxFirefly, error) {
+	auxFirefly := glowdTypes.AuxFirefly{}
+	jsonIndex := 0
+
+	if hasSyslogHeader {
+		jsonIndex = strings.Index(string(msg), "{")
+		if jsonIndex == -1 {
+			return auxFirefly, fmt.Errorf("couldn't find the beginning of the JSON")
+		}
+	}
+
+	if err := json.Unmarshal(msg[jsonIndex:], &auxFirefly); err != nil {
+		return auxFirefly, fmt.Errorf("couldn't unmarhsal incoming firefly: %w", err)
+	}
+
+	return auxFirefly, nil
 }
