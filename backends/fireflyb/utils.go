@@ -12,15 +12,13 @@ import (
 )
 
 func (b *FireflyBackend) sendFirefly(flowID glowdTypes.FlowID) error {
-	dialNet := "udp6"
 	addressFmt := "[%s]:%d"
 	if flowID.Family == glowdTypes.IPv4 {
-		dialNet = "udp4"
 		addressFmt = "%s:%d"
 	}
 
 	var err error
-	conn, err := net.Dial(dialNet, fmt.Sprintf(addressFmt, flowID.Dst.IP.String(), b.FireflyDestinationPort))
+	conn, err := net.Dial("udp", fmt.Sprintf(addressFmt, flowID.Dst.IP, b.FireflyDestinationPort))
 	if err != nil {
 		return fmt.Errorf("couldn't initialize UDP socket: %w", err)
 	}
@@ -75,9 +73,15 @@ func (b *FireflyBackend) sendFirefly(flowID glowdTypes.FlowID) error {
 	}
 
 	slog.Debug("sending firefly", "dst", flowID.Dst.IP)
-	_, err = conn.Write(payload)
-	if err != nil {
-		return fmt.Errorf("couldn't send the firefly: %w", err)
+	if _, err = conn.Write(payload); err != nil {
+		return fmt.Errorf("couldn't send the firefly to the destination: %w", err)
+	}
+
+	if b.SendToCollector {
+		if _, err := b.collectorConn.Write(payload); err != nil {
+			return fmt.Errorf("couldn't send the firefly to the collector: %w", err)
+		}
+
 	}
 
 	return nil
