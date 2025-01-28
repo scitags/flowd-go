@@ -13,12 +13,14 @@ import (
 
 func (b *FireflyBackend) sendFirefly(flowID glowdTypes.FlowID) error {
 	dialNet := "udp6"
+	addressFmt := "[%s]:%d"
 	if flowID.Family == glowdTypes.IPv4 {
 		dialNet = "udp4"
+		addressFmt = "%s:%d"
 	}
 
 	var err error
-	conn, err := net.Dial(dialNet, fmt.Sprintf("%s:%d", flowID.Dst.IP, b.FireflyDestinationPort))
+	conn, err := net.Dial(dialNet, fmt.Sprintf(addressFmt, flowID.Dst.IP.String(), b.FireflyDestinationPort))
 	if err != nil {
 		return fmt.Errorf("couldn't initialize UDP socket: %w", err)
 	}
@@ -89,7 +91,7 @@ func (b *FireflyBackend) addNetlinkContext(family uint8, srcPort, dstPort uint16
 
 	switch len(nlReplies) {
 	case 0:
-		return nil, fmt.Errorf("got no information from netlink...")
+		return nil, fmt.Errorf("got no information from netlink")
 	case 1:
 		return nlReplies[0], nil
 	default:
