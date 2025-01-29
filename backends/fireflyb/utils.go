@@ -13,6 +13,15 @@ import (
 	glowdTypes "github.com/scitags/flowd-go/types"
 )
 
+// TODO: Sending with the vanilla API's great, but we might need to look into
+// TODO: some lower level handling of the sockets. Options include leveraging
+// TODO: the AF_PACKET (packet(7)) family or even the AF_XDP [0,1,2] family.
+// TODO: the latter might be a bit too much though given how no two fireflies
+// TODO: will ever be the same. We might look at concurrency by then :P
+// TODO: Refs:
+// TODO:   0: https://github.com/asavie/xdp/blob/master/examples/sendudp/sendudp.go
+// TODO:   1: https://lwn.net/Articles/750845/
+// TODO:   2: https://www.kernel.org/doc/html/latest/networking/af_xdp.html
 func (b *FireflyBackend) sendFirefly(flowID glowdTypes.FlowID) error {
 	var err error
 	var nlInfo *netlink.InetDiagTCPInfoResp
