@@ -51,7 +51,7 @@ var (
 	}
 )
 
-type flowFourTuple struct {
+type FlowFourTuple struct {
 	IPv6Hi  uint64
 	IPv6Lo  uint64
 	DstPort uint16
@@ -168,15 +168,12 @@ func (b *EbpfBackend) Run(done <-chan struct{}, inChan <-chan glowdTypes.FlowID)
 			slog.Debug("got a flowID", "flowID", flowID)
 
 			rawDstIPHi, rawDstIPLo := extractHalves(flowID.Dst.IP)
-			flowHash := flowFourTuple{
+			flowHash := FlowFourTuple{
 				IPv6Hi:  rawDstIPHi,
 				IPv6Lo:  rawDstIPLo,
 				DstPort: flowID.Dst.Port,
 				SrcPort: flowID.Src.Port,
 			}
-
-			slog.Debug("flowID.Dst.IP", "rawDstIP", fmt.Sprintf("%+v", []byte(flowID.Dst.IP)),
-				"rawDstIPHi", rawDstIPHi, "rawDstIPLo", rawDstIPLo)
 
 			switch flowID.State {
 			case glowdTypes.START:
