@@ -2,9 +2,11 @@ package fireflyb
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
+	"syscall"
 	"time"
 
 	"github.com/scitags/flowd-go/netlink"
@@ -12,22 +14,7 @@ import (
 )
 
 func (b *FireflyBackend) sendFirefly(flowID glowdTypes.FlowID) error {
-	addressFmt := "[%s]:%d"
-	if flowID.Family == glowdTypes.IPv4 {
-		addressFmt = "%s:%d"
-	}
-
 	var err error
-	conn, err := net.Dial("udp", fmt.Sprintf(addressFmt, flowID.Dst.IP, b.FireflyDestinationPort))
-	if err != nil {
-		return fmt.Errorf("couldn't initialize UDP socket: %w", err)
-	}
-	defer func() {
-		if err := conn.Close(); err != nil {
-			slog.Warn("error closing UDP socket", "err", err)
-		}
-	}()
-
 	var nlInfo *netlink.InetDiagTCPInfoResp
 	if b.AddNetlinkContext {
 		nlInfo, err = b.addNetlinkContext(uint8(flowID.Family), flowID.Src.Port, flowID.Dst.Port)
@@ -72,16 +59,58 @@ func (b *FireflyBackend) sendFirefly(flowID glowdTypes.FlowID) error {
 		payload = append(syslogHeader, payload...)
 	}
 
-	slog.Debug("sending firefly", "dst", flowID.Dst.IP)
-	if _, err = conn.Write(payload); err != nil {
-		return fmt.Errorf("couldn't send the firefly to the destination: %w", err)
+	sendErrors := []error{}
+	if err := b.sendToDestination(flowID.Family, flowID.Dst.IP, payload); err != nil {
+		sendErrors = append(sendErrors, err)
+		slog.Error("couldn't send the firefly to the destination", "err", err)
 	}
 
 	if b.SendToCollector {
-		if _, err := b.collectorConn.Write(payload); err != nil {
-			return fmt.Errorf("couldn't send the firefly to the collector: %w", err)
+		if err := b.sendToCollector(payload); err != nil {
+			sendErrors = append(sendErrors, err)
 		}
+	}
 
+	// errors.Join will return nil if all the errors are nil!
+	return errors.Join(sendErrors...)
+}
+
+func (b *FireflyBackend) sendToCollector(payload []byte) error {
+	slog.Debug("sending firefly to the collector")
+
+	if _, err := b.collectorConn.Write(payload); err != nil {
+		// Be sure to check udp(7)
+		if errors.Is(err, syscall.ECONNREFUSED) {
+			slog.Warn("got ECONNREFUSED when sending, retrying once...")
+			if _, err := b.collectorConn.Write(payload); err != nil {
+				return fmt.Errorf("error sending the firefly to the collector: %w", err)
+			}
+		} else {
+			return fmt.Errorf("error sending the firefly to the collector: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (b *FireflyBackend) sendToDestination(family glowdTypes.Family, destIP net.IP, payload []byte) error {
+	addressFmt := "[%s]:%d"
+	if family == glowdTypes.IPv4 {
+		addressFmt = "%s:%d"
+	}
+	conn, err := net.Dial("udp", fmt.Sprintf(addressFmt, destIP, b.FireflyDestinationPort))
+	if err != nil {
+		return fmt.Errorf("couldn't initialize UDP socket: %w", err)
+	}
+	defer func() {
+		if err := conn.Close(); err != nil {
+			slog.Warn("error closing UDP socket", "err", err)
+		}
+	}()
+
+	slog.Debug("sending firefly", "dst", destIP)
+	if _, err = conn.Write(payload); err != nil {
+		return fmt.Errorf("couldn't send the firefly to the destination: %w", err)
 	}
 
 	return nil
