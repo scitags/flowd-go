@@ -45,7 +45,8 @@ jobs:
               shell: bash
               working-directory: ./flowd-go
               # Note we cannot create the RPM build tree when building the container
-              # as GitHub's CI implementation will mangle the HOME directory...
+              # as GitHub's CI implementation will mangle the HOME directory... See
+              # https://github.com/actions/runner/issues/863 for more details!
               run: |
                 rpmdev-setuptree
                 make rpm

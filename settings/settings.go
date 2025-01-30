@@ -5,11 +5,12 @@ import (
 	"log/slog"
 	"strings"
 
-	glowd "github.com/scitags/flowd-go"
+	glowdTypes "github.com/scitags/flowd-go/types"
 
 	"github.com/scitags/flowd-go/backends/ebpf"
-	"github.com/scitags/flowd-go/backends/firefly"
+	"github.com/scitags/flowd-go/backends/fireflyb"
 	"github.com/scitags/flowd-go/plugins/api"
+	"github.com/scitags/flowd-go/plugins/fireflyp"
 	"github.com/scitags/flowd-go/plugins/np"
 
 	"github.com/spf13/viper"
@@ -18,17 +19,18 @@ import (
 type PluginConfigurations struct {
 	NamedPipe np.NamedPipePlugin
 	Api       api.ApiPlugin
+	Firefly   fireflyp.FireflyPlugin
 }
 
 type BackendConfigurations struct {
 	Ebpf    ebpf.EbpfBackend
-	Firefly firefly.FireflyBackend
+	Firefly fireflyb.FireflyBackend
 }
 
 type Configuration struct {
 	General  GeneralConfiguration
-	Plugins  []glowd.Plugin
-	Backends []glowd.Backend
+	Plugins  []glowdTypes.Plugin
+	Backends []glowdTypes.Backend
 }
 
 type defaultConfiguration map[string]interface{}
@@ -45,11 +47,12 @@ var (
 	pluginDefaults = map[string]defaultConfiguration{
 		"namedPipe": np.Defaults,
 		"api":       api.Defaults,
+		"firefly":   fireflyp.Defaults,
 	}
 
 	backendDefaults = map[string]defaultConfiguration{
 		"ebpf":    ebpf.Defaults,
-		"firefly": firefly.Defaults,
+		"firefly": fireflyb.Defaults,
 	}
 )
 
@@ -114,14 +117,16 @@ func populateBP(conf *viper.Viper, path string, defaults map[string]defaultConfi
 	return configuredKeys, nil
 }
 
-func populatePluginSlice(pConf PluginConfigurations, configured []string) ([]glowd.Plugin, error) {
-	plugins := []glowd.Plugin{}
+func populatePluginSlice(pConf PluginConfigurations, configured []string) ([]glowdTypes.Plugin, error) {
+	plugins := []glowdTypes.Plugin{}
 	for _, c := range configured {
 		switch strings.ToLower(c) {
 		case strings.ToLower("namedPipe"):
 			plugins = append(plugins, &pConf.NamedPipe)
 		case strings.ToLower("api"):
 			plugins = append(plugins, &pConf.Api)
+		case strings.ToLower("firefly"):
+			plugins = append(plugins, &pConf.Firefly)
 		default:
 			return nil, fmt.Errorf("plugin type %q is not recognized", c)
 		}
@@ -129,8 +134,8 @@ func populatePluginSlice(pConf PluginConfigurations, configured []string) ([]glo
 	return plugins, nil
 }
 
-func populateBackendSlice(bConf BackendConfigurations, configured []string) ([]glowd.Backend, error) {
-	backends := []glowd.Backend{}
+func populateBackendSlice(bConf BackendConfigurations, configured []string) ([]glowdTypes.Backend, error) {
+	backends := []glowdTypes.Backend{}
 	for _, c := range configured {
 		switch strings.ToLower(c) {
 		case strings.ToLower("ebpf"):

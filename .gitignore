@@ -30,3 +30,6 @@ vmlinux.h
 
 # Ignore files created at runtime
 *.pid
+
+# Ignore configurations commonly used when testing
+confs/
