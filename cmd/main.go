@@ -1,15 +1,15 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 
-	glowd "github.com/scitags/flowd-go"
 	"github.com/scitags/flowd-go/settings"
+	glowdTypes "github.com/scitags/flowd-go/types"
 
 	"github.com/spf13/cobra"
 )
@@ -35,20 +35,9 @@ var (
 			}
 
 			logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
-				AddSource: true,
-				Level:     logLevel,
-				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-					// Remove time.
-					if a.Key == slog.TimeKey && len(groups) == 0 {
-						return slog.Attr{}
-					}
-					// Remove the directory from the source's filename.
-					if a.Key == slog.SourceKey {
-						source := a.Value.Any().(*slog.Source)
-						source.File = filepath.Base(source.File)
-					}
-					return a
-				},
+				AddSource:   true,
+				Level:       logLevel,
+				ReplaceAttr: logReplacements,
 			}))
 			slog.SetDefault(logger)
 		},
@@ -59,6 +48,23 @@ var (
 		Short: "Get the built version.",
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Printf("built commit: %s\nbase version: %s\n", builtCommit, baseVersion)
+		},
+	}
+
+	confCmd = &cobra.Command{
+		Use:   "conf",
+		Short: "Dump the configuration we're running with.",
+		Run: func(cmd *cobra.Command, args []string) {
+			conf, err := settings.ReadConf(confPath)
+			if err != nil {
+				slog.Error("couldn't read the configuration", "err", err)
+				return
+			}
+			jsonConf, err := json.MarshalIndent(conf, "", "    ")
+			if err != nil {
+				fmt.Printf("couldn't marshall the configuration: %v", err)
+			}
+			fmt.Printf("%s\n", jsonConf)
 		},
 	}
 
@@ -91,30 +97,30 @@ var (
 			defer cleanupBackends(conf.Backends)
 
 			// Set up the necessary channels, one per plugin and per backend
-			pluginChans := make([]chan glowd.FlowID, 0, len(conf.Plugins))
-			backendChans := make([]chan glowd.FlowID, 0, len(conf.Backends))
+			pluginChans := make([]chan glowdTypes.FlowID, 0, len(conf.Plugins))
+			backendChans := make([]chan glowdTypes.FlowID, 0, len(conf.Backends))
 
 			// Set up the broadcast channel for exiting cleanly
 			doneChan := make(chan struct{})
 
 			// Dispatch the producers (i.e. plugins)
 			for i, plugin := range conf.Plugins {
-				pluginChans = append(pluginChans, make(chan glowd.FlowID))
+				pluginChans = append(pluginChans, make(chan glowdTypes.FlowID))
 				go plugin.Run(doneChan, pluginChans[i])
 			}
 
 			// Dispatch the consumers (i.e. backends)
 			for i, backend := range conf.Backends {
-				backendChans = append(backendChans, make(chan glowd.FlowID))
+				backendChans = append(backendChans, make(chan glowdTypes.FlowID))
 				go backend.Run(doneChan, backendChans[i])
 			}
 
 			// Funnel plugin flowIDs into an aggregate channel.
 			// Buffer the channel so that consumers (i.e. backends)
 			// can have some wiggle room if under pressuer.
-			agg := make(chan glowd.FlowID)
+			agg := make(chan glowdTypes.FlowID)
 			for i, ch := range pluginChans {
-				go func(c chan glowd.FlowID, i int) {
+				go func(c chan glowdTypes.FlowID, i int) {
 					slog.Debug("began listening for plugin flowIDs", "i", i)
 					for flowID := range c {
 						slog.Debug("funneling flowID", "i", i)
@@ -171,6 +177,7 @@ func init() {
 
 	// Add the different sub-commands
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(confCmd)
 	rootCmd.AddCommand(runCmd)
 }
 

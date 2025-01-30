@@ -11,12 +11,12 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 		return TC_ACT_OK;
 
 	#ifdef GLOWD_DEBUG
-		bpf_printk("flowd-go:      TCP source port: %x", bpf_htons(l4->source));
-		bpf_printk("flowd-go: TCP destination port: %x", bpf_htons(l4->dest));
+		bpf_printk("flowd-go:      TCP source port: %d", bpf_htons(l4->source));
+		bpf_printk("flowd-go: TCP destination port: %d", bpf_htons(l4->dest));
 	#endif
 
 	__u64 ipv6DaddrLo = ipv6AddrLo(l3->daddr);
-	__u64 ipv6DaddrHi = ipv6AddrLo(l3->daddr);
+	__u64 ipv6DaddrHi = ipv6AddrHi(l3->daddr);
 
 	// Declare the struct we'll use to index the map
 	struct fourTuple flowHash;
@@ -28,8 +28,8 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 	// Hardcode the port numbers we'll 'look for': there are none in ICMP!
 	flowHash.ip6Hi = ipv6DaddrHi;
 	flowHash.ip6Lo = ipv6DaddrLo;
-	flowHash.dPort = l4->dest;
-	flowHash.sPort = l4->source;
+	flowHash.dPort = bpf_htons(l4->dest);
+	flowHash.sPort = bpf_htons(l4->source);
 
 	// Check if a flow with the above criteria has been defined by flowd-go
 	__u32 *flowTag = bpf_map_lookup_elem(&flowLabels, &flowHash);
@@ -37,9 +37,12 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 	// If there's a flow configured, mark the packet
 	if (flowTag) {
 		#ifdef GLOWD_FLOW_LABEL
-			l3->flow_lbl[0] = (*flowTag & ( 0xF << 16)) >> 16;
-			l3->flow_lbl[1] = (*flowTag & (0xFF <<  8)) >>  8;
-			l3->flow_lbl[2] =  *flowTag &  0xFF;
+
+			#ifdef GLOWD_DEBUG
+				bpf_printk("flowd-go: retrieved flowTag: %x", *flowTag);
+			#endif
+
+			populateFlowLbl(l3->flow_lbl, *flowTag);
 		#endif
 
 		#ifdef GLOWD_HBH_HEADER
