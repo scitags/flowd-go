@@ -16,11 +16,12 @@ const (
 
 var (
 	Defaults = map[string]interface{}{
-		"targetInterface": "lo",
-		"RemoveQdisc":     true,
-		"programPath":     "",
-		"markingStrategy": FlowLabelMarking,
-		"debugMode":       false,
+		"targetInterface":  "lo",
+		"RemoveQdisc":      true,
+		"ForceHookRemoval": true,
+		"programPath":      "",
+		"markingStrategy":  FlowLabelMarking,
+		"debugMode":        false,
 	}
 
 	markingStrategyMap = map[string]MarkingStrategy{
