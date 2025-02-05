@@ -53,6 +53,16 @@ The implementation can be found at https://github.com/scitags/flowd-go.
 
 :   Run the flowd-go daemon.
 
+`ebpf`
+
+:   A command hosing several eBPF-related subcommands.
+
+## eBPF SUBCOMMANDS
+`clean`
+
+:   Clean up the backing eBPF infrastructure including qdisc, hooks and programs. This is particularly useful
+    if flowd-go terminates abruptly, even though it should be able to handle leftover hooks and qdiscs.
+
 # PLUGINS
 This section lists the configuration options available for each of the provided plugins. For a deeper explanation please
 refer to the documentation accompanying the implementation, which can be found on the URL provided in the DESCRIPTION. The
@@ -115,6 +125,12 @@ hooked on a *clsact qdisc* which only deals with egress datagrams. The loading a
         $ tc qdisc del dev <targetInterface> clsact
 
   Where `targetInterface` is the one configured with the previous option.
+
+- **forceHookRemoval [bool] {true}**: The TC hook we attach the eBPF program to might exist before flowd-go starts up, especially if flowd-go
+  terminated abruptly last time it ran. This setting controls whether this hook should be removed regardless of whether flowd-go created it
+  or not. In cases where other processes running on the system are leveraging eBPF this setting could cause an exiting flowd-go to remove the
+  TC hooks from under them if they are attached to the same interface. In these (hopefully rare) cases this setting should be set to `false`
+  so that flowd-go doesn't conflict with any other program's backing eBPF infrastructure.
 
 - **programPath [string] {""}**: The path to an eBPF program to load instead of the one embedded into flowd-go. This program should have been compiled
   in a particular way as the loading into the kernel won't work otherwise. Please refer to the eBPF documentation bundled with the implementation
