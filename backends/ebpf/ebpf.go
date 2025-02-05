@@ -24,6 +24,12 @@ import (
 const (
 	PROG_NAME string = "marker"
 	MAP_NAME  string = "flowLabels"
+
+	// These two parameters are tc(8)-related. In libbpf's implementation they're mostly used when interacting
+	// with netlink to create/place hooks and so on. As far as I can tell, these values only make sense in the
+	// context of a given interface and or qdisc.
+	TC_HANDLE   uint = 1
+	TC_PRIORITY uint = 1
 )
 
 var (
@@ -86,7 +92,7 @@ func (b *EbpfBackend) Init() error {
 	slog.Debug("initialising the eBPF backend")
 
 	// Setup the logging from libbpf
-	b.SetupLogging()
+	b.setupLogging()
 
 	// Create the BPF module
 	slog.Debug("creating the eBPF module")
@@ -128,10 +134,12 @@ func (b *EbpfBackend) Init() error {
 
 	// Prepare the options for the hook
 	// https://elixir.bootlin.com/linux/v6.8.4/source/tools/testing/selftests/bpf/prog_tests/tc_bpf.c#L26
-	var tcOpts bpf.TcOpts
-	tcOpts.ProgFd = int(tcProg.FileDescriptor())
-	tcOpts.Handle = 1
-	tcOpts.Priority = 1
+	tcOpts := bpf.TcOpts{
+		ProgFd:   int(tcProg.FileDescriptor()),
+		Handle:   TC_HANDLE,
+		Priority: TC_PRIORITY,
+		Flags:    bpf.BpfTcFReplace, // Let's replace the hooked program no matter what!
+	}
 
 	// Attach the program!
 	slog.Debug("attaching the TC hook")
@@ -163,9 +171,12 @@ func (b *EbpfBackend) Init() error {
 	slog.Debug("preflight eBPF checks")
 	tcOpts.ProgFd = 0
 	tcOpts.ProgId = 0
+	tcOpts.Flags = 0
+	slog.Debug("tcOpts before querying", "tcOpts", tcOpts)
 	if err := b.hook.Query(&tcOpts); err != nil {
 		return fmt.Errorf("error querying for the ebpf program: %w", err)
 	}
+	slog.Debug("tcOpts after querying", "tcOpts", tcOpts)
 	if tcOpts.Handle != 1 {
 		return fmt.Errorf("recovered handle %d is different than expected (i.e. 1)", tcOpts.Handle)
 	}
