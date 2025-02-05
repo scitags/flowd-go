@@ -85,24 +85,32 @@ settings are:
 The **API** plugin will create an HTTP server providing a REST API through which one can send flow events. Please refer to the
 documentation provided with the implementation for information on how to interact with the provided API endpoints.
 
-- **bindAddress [string] {"127.0.0.1"}**: The address to bind the server to in the format. As usual `"0.0.0.0"` will make the server listen on
+- **bindAddress [string] {"127.0.0.1"}**: The address to bind the server to. As usual `"0.0.0.0"` will make the server listen on
   every available interface configured with an IPv4 address. You can also provide an IPv6 address.
 
 - **bindPort [int] {7777}**: The port to bind the server to. Bear in mind this value **MUST** be equal to o lower than `65535` as ports are
   represented with 16-bit unsigned integers.
 
-## netlink
-The **netlink** plugin will leverage the `sock_diag(7)` `netlink(7)` subsystem to find information on TCP{4,6} sockets with an
-established connections. Given netlink's design, this information must be polled at a regular interval. Connection closures
-will be implicitly inferred from the disappearance of established connections. Flows with either source or destination addresses
-belonging to private networks won't be taken into account. Please refer to the implementation for a list of these so-called
-private address ranges.
+## firefly
+The **Firefly** backend expects to receive UDP fireflies to parse them and generate flow events based on its contents. A typical use case
+for this plugin is the enrichment of fireflies with information from the `netlink(7)` subsystem where flowd-go behaves as a firefly
+relay. Be sure to check the documentation on the firelfy backend for more information.
 
-- **pollIntervalSeconds [int] {5}**: How long to wait to poll netlink for information again, in seconds.
+- **bindAddress [string] {"127.0.0.1"}**: The address to bind the UDP socket to. As usual `"0.0.0.0"` will make the server listen on
+  every available interface configured with an IPv4 address. You can also provide an IPv6 address.
 
-- **experimentID [int] {55}**: The Experiment ID to embed in all netlink-discovered flows.
+- **bindPort [int] {10514}**: The port to bind the UDP socket to. Bear in mind this value **MUST** be equal to o lower than `65535` as ports are
+  represented with 16-bit unsigned integers.
 
-- **activityID [int] {55}**: The Activity ID to embed in all netlink-discovered flows.
+- **bufferSize [int] {4096}**: The size of the buffer data arriving on the UDP socket will be written into in bytes. If you're expecting large
+  fireflies you should consider increasing this number. Bear in mind that this value **MUST** be larger than `2048` or else flowd-go will refuse
+  to start after printing an error.
+
+- **deadline [int] {0}**: The deadline (in seconds) to apply to the UDP socket. If set to `0` then no deadline is applied. Please bear in mind this
+  is a fine-tuning parameter that shouldn't usually be tampered with. Configure a different value at your own risk!
+
+- **hasSyslogHeader [bool] {true}**: Whether the incoming firefly is expected to contain a `syslog(2)` header or not. This mainly controls how the
+  UDP payload is parsed.
 
 # BACKENDS
 This section lists the configuration options available for each of the provided backends. For a deeper explanation please
@@ -156,6 +164,18 @@ payload including flow information.
 - **prependSyslog [bool] {false}**: The technical specification states that an initial bit of information containing syslog-parsable information should
   be prepended to the JSON payload. When developing and debugging these payloads the header 'gets in the way' and so one can turn it off. However,
   in a production scenario this setting should be `true`.
+
+- **addNetlinkContext [bool] {true}**: The firefly backend has the capability of leveraging the `sock_diag(7)` `netlink(7)` subsystem to find information
+  on TCP{4,6} sockets with an established connections. If set to `true`, this option causes this information to be embedded into the outgoing fireflies.
+
+- **sendToCollector [bool] {false}**: Fireflies are sent to a transfer's destination address by default. In some scenarios it might be worthwhile to also
+  send them to a so called *collector* (usually deployed by National Research and Education Networks) for backbone-level information gathering. It set to
+  `true`, this option causes the firefly backend to also send the generated fireflies to the collector specified by the following two settings.
+
+- **collectorAddress [string] {"127.0.0.1"}**: The address of the collector to send fireflies to. At the moment a single address might be specified, but
+  in future implementations this option may turn into an array of strings.
+
+- **collectorPort [int] {10514}**: The port the collector is listening on for incoming fireflies.
 
 # CONFIGURATION
 Flowd-go's configuration is defined through a JSON file which by default will be `/etc/flowd-go/conf.json`. A different
