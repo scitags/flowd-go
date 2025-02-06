@@ -2,6 +2,7 @@ package fireflyb
 
 import (
 	"fmt"
+	"hash/maphash"
 	"log/slog"
 	"net"
 
@@ -16,6 +17,8 @@ var (
 		"sendToCollector":        false,
 		"collectorAddress":       "127.0.0.1",
 		"collectorPort":          10514,
+		"pollNetlink":            false,
+		"netlinkPollingInterval": 5,
 	}
 )
 
@@ -26,8 +29,14 @@ type FireflyBackend struct {
 	SendToCollector        bool   `json:"sendToCollector"`
 	CollectorAddress       string `json:"collectorAddress"`
 	CollectorPort          int    `json:"collectorPort"`
+	PollNetlink            bool   `json:"pollNetlink"`
+	NetlinkPollingInterval int    `json:"netlinkPollingInterval"`
 
 	collectorConn net.Conn
+
+	hashGen maphash.Hash
+
+	ongoingConnections *connectionCache
 }
 
 func (b *FireflyBackend) String() string {
@@ -57,6 +66,12 @@ func (b *FireflyBackend) Init() error {
 
 		b.collectorConn = conn
 	}
+
+	slog.Debug("initialising the ongoing connections map")
+	b.ongoingConnections = NewConnectionCache(100)
+
+	slog.Debug("initialising the hash generator")
+	b.hashGen = maphash.Hash{}
 
 	return nil
 }

@@ -35,6 +35,29 @@ func (b *FireflyBackend) sendFirefly(flowID glowdTypes.FlowID) error {
 		}
 	}
 
+	if b.PollNetlink {
+		if flowID.State == glowdTypes.START {
+			doneChan, ok := b.ongoingConnections.Insert(b.hashFlowID(flowID))
+			if !ok {
+				go b.pollNetlinkStatus(doneChan, flowID)
+			} else {
+				slog.Warn("an entry for this flowID already existed", "flowID", flowID)
+			}
+		} else if flowID.State == glowdTypes.END {
+			flowHash := b.hashFlowID(flowID)
+
+			doneChan, ok := b.ongoingConnections.Get(flowHash)
+			if !ok {
+				slog.Warn("found no entry in connection cache for this flowID", "flowID", flowID)
+			}
+
+			slog.Debug("dispatching end signal on done channel", "flowID", flowID)
+			doneChan <- true
+
+			b.ongoingConnections.Remove(flowHash)
+		}
+	}
+
 	var localFirefly glowdTypes.Firefly
 	localFirefly.Version = glowdTypes.FIREFLY_VERSION
 
@@ -141,5 +164,45 @@ func (b *FireflyBackend) addNetlinkContext(family uint8, srcPort, dstPort uint16
 
 		// TODO: Filter replies from netlink based on IPv{4,6} addresses
 		return nlReplies[0], nil
+	}
+}
+
+func (b *FireflyBackend) hashFlowID(flowID glowdTypes.FlowID) uint64 {
+	// Encoding a flowID will never fail!
+	enc, _ := flowID.MarshalBinary()
+
+	b.hashGen.Reset()
+	b.hashGen.Write(enc)
+
+	hash := b.hashGen.Sum64()
+
+	slog.Debug("hashed flowID", "hash", hash)
+
+	return hash
+}
+
+func (b *FireflyBackend) pollNetlinkStatus(done <-chan bool, flowID glowdTypes.FlowID) {
+	slog.Debug("entering netlink polling goroutine", "flowID", flowID)
+	for {
+		select {
+		case <-done:
+			slog.Debug("quitting netlink polling goroutine", "flowID", flowID)
+			return
+		case <-time.Tick(time.Second * time.Duration(b.NetlinkPollingInterval)):
+			nlInfo, err := b.addNetlinkContext(uint8(flowID.Family), flowID.Src.Port, flowID.Dst.Port)
+			if err != nil {
+				slog.Warn("error getting polling netlink...", "err", err)
+				continue
+			}
+			slog.Debug("partial netlink info", "family",
+				flowID.Family, "srcPort", flowID.Src.Port, "dstPort", flowID.Dst.Port,
+				"congestionAlgorithm", nlInfo.Cong.Algorithm,
+				"state", nlInfo.TCPInfo.State,
+				"bytesSent", nlInfo.TCPInfo.Bytes_sent,
+				"bytesReceived", nlInfo.TCPInfo.Bytes_received,
+				"bytesACKd", int(nlInfo.TCPInfo.Bytes_acked),
+				"bytesRetrans", nlInfo.TCPInfo.Bytes_retrans,
+			)
+		}
 	}
 }
