@@ -177,6 +177,11 @@ payload including flow information.
 
 - **collectorPort [int] {10514}**: The port the collector is listening on for incoming fireflies.
 
+- **pollNetlink [bool] {false}**: Whether to periodically poll `netlink(7)` to acquire information regarding the flow ID that triggered this firefly.
+  This information will be logged with a `debug` log level.
+
+- **netlinkPollingInterval [int] {5}**: The period, in seconds, with which to poll netlink to acquire information as explained in the previous setting.
+
 # CONFIGURATION
 Flowd-go's configuration is defined through a JSON file which by default will be `/etc/flowd-go/conf.json`. A different
 path can be specified through the `--conf` option.
