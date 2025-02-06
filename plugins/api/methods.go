@@ -11,6 +11,7 @@ import (
 
 var dummyFlowID = glowdTypes.FlowID{
 	// State:    glowd.START,
+	Family:   glowdTypes.IPv6,
 	Protocol: glowdTypes.TCP,
 	Src: glowdTypes.IPPort{
 		IP:   net.ParseIP("::1"),
@@ -52,4 +53,17 @@ func handleDummyEndFlow(c echo.Context) error {
 
 	cc.flowChannel <- tmp
 	return c.JSONPretty(http.StatusOK, &tmp, JSON_PRETTY_INDENT)
+}
+
+func handleFlow(c echo.Context) error {
+	cc := c.(*extendedContext)
+
+	flowID := glowdTypes.FlowID{}
+	if err := cc.Bind(&flowID); err != nil {
+		return c.JSONPretty(http.StatusBadRequest, err, JSON_PRETTY_INDENT)
+	}
+
+	cc.flowChannel <- flowID
+
+	return c.JSONPretty(http.StatusOK, &flowID, JSON_PRETTY_INDENT)
 }
