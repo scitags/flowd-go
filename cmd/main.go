@@ -18,6 +18,7 @@ import (
 func init() {
 	rootCmd.PersistentFlags().StringVar(&confPath, "conf", "/etc/glowd/conf.json", "path of the JSON configuration file")
 	rootCmd.PersistentFlags().StringVar(&logLevelFlag, "log-level", "info", "log level: one of debug, info, warn, error")
+	rootCmd.PersistentFlags().BoolVar(&logTimeFlag, "log-time", false, "whether to include timestamps in the log")
 }
 
 var (
@@ -166,6 +167,7 @@ var (
 
 	confPath     string
 	logLevelFlag string
+	logTimeFlag  bool
 	builtCommit  string
 	baseVersion  string
 
