@@ -113,7 +113,7 @@ func NewTCPDiagRequest(family uint8, srcPort uint16, dstPort uint16) *TCPDiagReq
 			// DiagSrc:   DiagIPT(srcIP),
 			// DiagDst:   [16]byte{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 			DiagSPort: [2]byte{byte(srcPort >> 8), byte(srcPort & 0xFF)},
-			DiagDPort: [2]byte{0, 0},
+			DiagDPort: [2]byte{byte(dstPort >> 8), byte(dstPort & 0xFF)},
 		},
 	}
 
