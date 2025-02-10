@@ -191,7 +191,7 @@ func (b *FireflyBackend) pollNetlinkStatus(done <-chan bool, flowID glowdTypes.F
 		case <-time.Tick(time.Second * time.Duration(b.NetlinkPollingInterval)):
 			nlInfo, err := b.addNetlinkContext(uint8(flowID.Family), flowID.Src.Port, flowID.Dst.Port)
 			if err != nil {
-				slog.Warn("error getting polling netlink...", "err", err)
+				slog.Warn("error polling netlink...", "err", err)
 				continue
 			}
 			slog.Debug("partial netlink info", "family",
