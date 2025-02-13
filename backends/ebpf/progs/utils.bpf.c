@@ -39,6 +39,7 @@ static __always_inline void populateExtensionHdr(struct extensionHdr_t *extHdr, 
 	//    00: skip the option if it's type is not recognized.
 	//     0: option data doesn't change en-route.
 	// 11110: experimental option type. See RFC 4727: https://www.rfc-editor.org/rfc/rfc4727.html
+	// Check the IANA IPv6 assignments too at https://www.iana.org/assignments/ipv6-parameters/ipv6-parameters.xhtml
 	extHdr->opts[0] = 0x1E;
 
 	// Check RFC 2460 Section 4.2: https://www.rfc-editor.org/rfc/rfc2460.html#section-4.2
