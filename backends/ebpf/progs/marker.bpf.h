@@ -49,19 +49,27 @@ struct {
 	__type(value, __u32);
 } flowLabels SEC(".maps");
 
-// Hop-by-Hop Extension Header in IPv6. See RFC 2460 Section 4.3
-// https://www.rfc-editor.org/rfc/rfc2460.html#section-4.3
-struct hopByHopHdr_t {
+/*
+ * Note how despite having different names, the structure and layout of the
+ * Hop-by-Hop and Destination Options Extension Headers are exactly the
+ * same. In an effort to reduce code duplication we'll use a generic type
+ * representing the two. For more info, refer to:
+ *   Hop-by-Hop Extension Header in IPv6. See RFC 2460 Section 4.3
+ *     https://www.rfc-editor.org/rfc/rfc2460.html#section-4.3
+ *   Destination Options Extension Header in IPv6. See RFC 2460 Section 4.6
+ *     https://www.rfc-editor.org/rfc/rfc2460.html#section-4.6
+ */
+struct extensionHdr_t {
 	__u8 nextHdr;
 	__u8 hdrLen;
 	__u8 opts[6];
 };
 
-struct hopByHopDestOptsHdr_t {
-	struct hopByHopHdr_t hbhHdr;
-	__u8 nextHdr;
-	__u8 hdrLen;
-	__u8 opts[6];
+// To avoid two allocations when including two headers we'll instead populate
+// a wrapper containing both extension headers.
+struct compExtensionHdr_t {
+	struct extensionHdr_t hopByHopHdr;
+	struct extensionHdr_t destOptsHdr;
 };
 
 /*
