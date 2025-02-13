@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/scitags/flowd-go/netlink"
+	"github.com/scitags/flowd-go/enrichment/netlink"
 	glowdTypes "github.com/scitags/flowd-go/types"
 )
 

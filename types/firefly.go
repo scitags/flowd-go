@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/scitags/flowd-go/netlink"
+	"github.com/scitags/flowd-go/enrichment/netlink"
 )
 
 const (
