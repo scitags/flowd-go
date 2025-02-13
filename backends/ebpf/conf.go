@@ -12,6 +12,7 @@ const (
 	FlowLabelMarking           MarkingStrategy = "flowLabel"
 	FlowLabelMatchAll          MarkingStrategy = "flowLabelMatchAll"
 	HopByHopHeaderMarking      MarkingStrategy = "hopByHop"
+	DestinationHeaderMarking   MarkingStrategy = "destination"
 	HopByHopDestHeadersMarking MarkingStrategy = "hopByHopAndDestination"
 )
 
@@ -29,6 +30,7 @@ var (
 	markingStrategyMap = map[string]MarkingStrategy{
 		strings.ToLower("flowLabel"):           FlowLabelMarking,
 		strings.ToLower("hopByHopHeader"):      HopByHopHeaderMarking,
+		strings.ToLower("destinationHeader"):   DestinationHeaderMarking,
 		strings.ToLower("hopByHopDestHeaders"): HopByHopDestHeadersMarking,
 	}
 )
