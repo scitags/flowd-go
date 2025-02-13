@@ -19,3 +19,7 @@ tc-clean:
 .PHONY: ebpf-trace
 ebpf-trace:
 	@sudo cat /sys/kernel/debug/tracing/trace_pipe
+
+.PHONY: prog-list
+prog-list:
+	@sudo bpftool prog list name marker

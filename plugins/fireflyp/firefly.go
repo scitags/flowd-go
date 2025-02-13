@@ -22,7 +22,7 @@ var (
 		"bindAddress":     "127.0.0.1",
 		"bindPort":        10514,
 		"bufferSize":      2 * minRecvBufferSize,
-		"deadline":        15,
+		"deadline":        0,
 		"hasSyslogHeader": true,
 	}
 )
