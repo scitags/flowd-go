@@ -33,3 +33,12 @@ vmlinux.h
 
 # Ignore configurations commonly used when testing
 confs/
+
+# Ignore test binaries
+test
+
+# Ignore temporary stuff
+*foo*
+*tmp*
+*fii*
+*fee*
