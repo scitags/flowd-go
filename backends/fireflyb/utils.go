@@ -167,7 +167,8 @@ func (b *FireflyBackend) addNetlinkContext(family uint8, srcPort, dstPort uint16
 		// 'multiplexed' on IPv6 sockets and their addresses are 4-in-6 (i.e. IPv4 addresses with
 		// some leaading 0s and 0xFFs). Within the Linux kernel these sockets belong to the IPv6
 		// 'realm'... Note we are safe when recursively calling addNetlinkContext given we force
-		// the value of the family!
+		// the value of the family! By the way, be sure to check ipv6(7), specially the section
+		// on IPV6_V6ONLY and the last paragraphs of the description.
 		if family == uint8(glowdTypes.IPv4) {
 			return b.addNetlinkContext(uint8(glowdTypes.IPv6), srcPort, dstPort)
 		}
