@@ -44,6 +44,11 @@ func (b *EbpfBackend) chooseBPFProgram() []byte {
 			return hopByHopHeaderDebugBPFProg
 		}
 		return hopByHopHeaderBPFProg
+	case DestinationHeaderMarking:
+		if b.DebugMode {
+			return destinationHeaderDebugBPFProg
+		}
+		return destinationHeaderBPFProg
 	case HopByHopDestHeadersMarking:
 		if b.DebugMode {
 			return hopByHopDestHeaderDebugBPFProg
