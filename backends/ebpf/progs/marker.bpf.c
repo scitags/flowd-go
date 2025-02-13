@@ -16,13 +16,13 @@
  *   5: https://docs.ebpf.io/linux/program-type/BPF_PROG_TYPE_SCHED_CLS/
  */
 
-// You'll need to install libbpf-devel (or the equivalent one) to get these headers!
+// You'll need to install libbpf-devel (or the equivalent one on non-RHEL systems) to get these headers!
 #include "vmlinux.h"
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_endian.h>
 #include <bpf/bpf_tracing.h>
 
-// Include all the constants we've defined
+// Include all the constants and types we've defined
 #include "marker.bpf.h"
 
 // Include useful functions we defined ourselves. Note these must be
