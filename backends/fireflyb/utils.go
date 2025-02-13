@@ -52,7 +52,14 @@ func (b *FireflyBackend) sendFirefly(flowID glowdTypes.FlowID) error {
 			}
 
 			slog.Debug("dispatching end signal on done channel", "flowID", flowID)
-			doneChan <- true
+			doneChan <- nil
+
+			slog.Debug("reading back the last netlink snapshot")
+			nlSnapshot := <-doneChan
+
+			if b.AddNetlinkContext {
+				nlInfo = nlSnapshot
+			}
 
 			b.ongoingConnections.Remove(flowHash)
 		}
@@ -156,6 +163,15 @@ func (b *FireflyBackend) addNetlinkContext(family uint8, srcPort, dstPort uint16
 
 	switch len(nlReplies) {
 	case 0:
+		// Depending on how sockets are opened, we can find a case where IPv4 sockets are actually
+		// 'multiplexed' on IPv6 sockets and their addresses are 4-in-6 (i.e. IPv4 addresses with
+		// some leaading 0s and 0xFFs). Within the Linux kernel these sockets belong to the IPv6
+		// 'realm'... Note we are safe when recursively calling addNetlinkContext given we force
+		// the value of the family!
+		if family == uint8(glowdTypes.IPv4) {
+			return b.addNetlinkContext(uint8(glowdTypes.IPv6), srcPort, dstPort)
+		}
+
 		return nil, fmt.Errorf("got no information from netlink")
 	case 1:
 		return nlReplies[0], nil
@@ -181,12 +197,14 @@ func (b *FireflyBackend) hashFlowID(flowID glowdTypes.FlowID) uint64 {
 	return hash
 }
 
-func (b *FireflyBackend) pollNetlinkStatus(done <-chan bool, flowID glowdTypes.FlowID) {
+func (b *FireflyBackend) pollNetlinkStatus(done chan *netlink.InetDiagTCPInfoResp, flowID glowdTypes.FlowID) {
 	slog.Debug("entering netlink polling goroutine", "flowID", flowID)
+	var lastNetlinkReply *netlink.InetDiagTCPInfoResp
 	for {
 		select {
 		case <-done:
 			slog.Debug("quitting netlink polling goroutine", "flowID", flowID)
+			done <- lastNetlinkReply
 			return
 		case <-time.Tick(time.Second * time.Duration(b.NetlinkPollingInterval)):
 			nlInfo, err := b.addNetlinkContext(uint8(flowID.Family), flowID.Src.Port, flowID.Dst.Port)
@@ -203,6 +221,9 @@ func (b *FireflyBackend) pollNetlinkStatus(done <-chan bool, flowID glowdTypes.F
 				"bytesACKd", int(nlInfo.TCPInfo.Bytes_acked),
 				"bytesRetrans", nlInfo.TCPInfo.Bytes_retrans,
 			)
+
+			// Get a hold of the last piece of info we acquired
+			lastNetlinkReply = nlInfo
 		}
 	}
 }

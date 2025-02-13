@@ -2,26 +2,28 @@ package fireflyb
 
 import (
 	"sync"
+
+	"github.com/scitags/flowd-go/netlink"
 )
 
 type connectionCache struct {
 	sync.Mutex
-	cache map[uint64]chan bool
+	cache map[uint64]chan *netlink.InetDiagTCPInfoResp
 }
 
 func NewConnectionCache(cap int) *connectionCache {
-	return &connectionCache{cache: make(map[uint64]chan bool, cap)}
+	return &connectionCache{cache: make(map[uint64]chan *netlink.InetDiagTCPInfoResp, cap)}
 }
 
-func (cc *connectionCache) Get(key uint64) (chan bool, bool) {
+func (cc *connectionCache) Get(key uint64) (chan *netlink.InetDiagTCPInfoResp, bool) {
 	cc.Lock()
 	doneChan, ok := cc.cache[key]
 	cc.Unlock()
 	return doneChan, ok
 }
 
-func (cc *connectionCache) Insert(key uint64) (chan bool, bool) {
-	doneChan := make(chan bool)
+func (cc *connectionCache) Insert(key uint64) (chan *netlink.InetDiagTCPInfoResp, bool) {
+	doneChan := make(chan *netlink.InetDiagTCPInfoResp)
 
 	cc.Lock()
 	_, ok := cc.cache[key]
