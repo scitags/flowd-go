@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/scitags/flowd-go/cmd/subcmd"
 	"github.com/scitags/flowd-go/settings"
 	glowdTypes "github.com/scitags/flowd-go/types"
 
@@ -66,6 +67,11 @@ var (
 			}
 			fmt.Printf("%s\n", jsonConf)
 		},
+	}
+
+	ebpfCmd = &cobra.Command{
+		Use:   "ebpf",
+		Short: "Handle several eBPF-related thingies.",
 	}
 
 	runCmd = &cobra.Command{
@@ -175,10 +181,14 @@ func init() {
 	// Disable completion please!
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 
+	// Add sub2-commands
+	ebpfCmd.AddCommand(subcmd.EbpfClean)
+
 	// Add the different sub-commands
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(confCmd)
 	rootCmd.AddCommand(runCmd)
+	rootCmd.AddCommand(ebpfCmd)
 }
 
 func main() {

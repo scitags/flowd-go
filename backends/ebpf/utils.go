@@ -49,7 +49,7 @@ func (b *EbpfBackend) chooseBPFProgram() []byte {
 	}
 }
 
-func (b *EbpfBackend) SetupLogging() {
+func (b *EbpfBackend) setupLogging() {
 	slog.Debug("setting up logging")
 	libbpfLogLevel := bpf.LibbpfWarnLevel
 	if slog.Default().Handler().Enabled(context.TODO(), slog.LevelDebug) {
@@ -110,4 +110,46 @@ func (b *EbpfBackend) genFlowTag(experimentId, activityId uint32) uint32 {
 		"activityId", fmt.Sprintf("%b", activityId), "flowTag", fmt.Sprintf("%b", flowTag))
 
 	return flowTag
+}
+
+func RemoveTCHook(targetInterface string, removeQdisc bool) error {
+	// Create an empty module: we need it to call TcHookInit through it...
+	dummyModule := bpf.Module{}
+
+	// Create the TC Hook on which to place the eBPF program
+	slog.Debug("initialising the hook")
+	hook := dummyModule.TcHookInit()
+	if err := hook.SetInterfaceByName(targetInterface); err != nil {
+		return fmt.Errorf("failed to set TC hook on interface %s: %w", targetInterface, err)
+	}
+	hook.SetAttachPoint(bpf.BPFTcEgress)
+
+	// Prepare the options for the hook
+	// See __bpf_tc_detach on https://github.com/libbpf/libbpf/blob/master/src/netlink.c
+	var tcOpts bpf.TcOpts = bpf.TcOpts{
+		ProgFd:   0, // This member should be 0, otherwise libbpf will complain!
+		ProgId:   0, // This member should be 0, otherwise libbpf will complain!
+		Flags:    0, // This member should be 0, otherwise libbpf will complain!
+		Handle:   1,
+		Priority: 1,
+	}
+
+	slog.Debug("detaching the tc hook")
+	if err := hook.Detach(&tcOpts); err != nil {
+		slog.Error("error detaching the ebpf hook", "err", err)
+	}
+
+	if removeQdisc {
+		slog.Debug("removing the backing qdisc")
+		// Explicitly ask for the backing QDisc to be destroyed.
+		// See https://patchwork.kernel.org/project/netdevbpf/patch/20210428162553.719588-3-memxor@gmail.com/
+		hook.SetAttachPoint(bpf.BPFTcEgress | bpf.BPFTcIngress)
+	}
+
+	slog.Debug("destroying the tc hook")
+	if err := hook.Destroy(); err != nil {
+		slog.Warn("error destroying the hook", "err", err)
+	}
+
+	return nil
 }
