@@ -90,7 +90,7 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 			// Be sure to check available flags (i.e. BPF_F_{RECOMPUTE_CSUM,NVALIDATE_HASH}) on bpf-helpers(7).
 			if (bpf_skb_store_bytes(ctx, sizeof(struct ethhdr) + sizeof(struct ipv6hdr), &extensionHdr, sizeof(struct extensionHdr_t), BPF_F_RECOMPUTE_CSUM)) {
 				#ifdef GLOWD_DEBUG
-					bpf_printk("flowd-go: error making room for the extension header");
+					bpf_printk("flowd-go: error storing the extension header");
 				#endif
 
 				return TC_ACT_SHOT;
@@ -122,7 +122,7 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 
 			if (bpf_skb_store_bytes(ctx, sizeof(struct ethhdr) + sizeof(struct ipv6hdr), &compExtensionHdr, sizeof(struct compExtensionHdr_t), BPF_F_RECOMPUTE_CSUM)) {
 				#ifdef GLOWD_DEBUG
-					bpf_printk("flowd-go: error making room for the extension header");
+					bpf_printk("flowd-go: error storing the extension header");
 				#endif
 
 				return TC_ACT_SHOT;

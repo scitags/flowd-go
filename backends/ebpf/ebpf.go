@@ -49,10 +49,16 @@ var (
 	//go:embed progs/marker-hbh-header-dbg.bpf.o
 	hopByHopHeaderDebugBPFProg []byte
 
-	//go:embed progs/marker-hbh-do-headers.bpf.o
+	//go:embed progs/marker-do-header.bpf.o
+	destinationHeaderBPFProg []byte
+
+	//go:embed progs/marker-do-header-dbg.bpf.o
+	destinationHeaderDebugBPFProg []byte
+
+	//go:embed progs/marker-hbhdo-header.bpf.o
 	hopByHopDestHeaderBPFProg []byte
 
-	//go:embed progs/marker-hbh-do-headers-dbg.bpf.o
+	//go:embed progs/marker-hbhdo-header-dbg.bpf.o
 	hopByHopDestHeaderDebugBPFProg []byte
 
 	logLevelTranslation = map[slog.Level]int{
