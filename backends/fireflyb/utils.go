@@ -170,6 +170,7 @@ func (b *FireflyBackend) addNetlinkContext(family uint8, srcPort, dstPort uint16
 		// the value of the family! By the way, be sure to check ipv6(7), specially the section
 		// on IPV6_V6ONLY and the last paragraphs of the description.
 		if family == uint8(glowdTypes.IPv4) {
+			slog.Debug("trying to get info from the IPv6 realm on an IPv4 flow...")
 			return b.addNetlinkContext(uint8(glowdTypes.IPv6), srcPort, dstPort)
 		}
 
