@@ -187,7 +187,7 @@ payload including flow information.
 - **pollNetlink [bool] {false}**: Whether to periodically poll `netlink(7)` to acquire information regarding the flow ID that triggered this firefly.
   This information will be logged with a `debug` log level.
 
-- **netlinkPollingInterval [int] {5}**: The period, in seconds, with which to poll netlink to acquire information as explained in the previous setting.
+- **netlinkPollingInterval [int] {5000}**: The period, in milliseconds, with which to poll netlink to acquire information as explained in the previous setting.
 
 # CONFIGURATION
 Flowd-go's configuration is defined through a JSON file which by default will be `/etc/flowd-go/conf.json`. A different

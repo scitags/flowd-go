@@ -207,7 +207,7 @@ func (b *FireflyBackend) pollNetlinkStatus(done chan *netlink.InetDiagTCPInfoRes
 			slog.Debug("quitting netlink polling goroutine", "flowID", flowID)
 			done <- lastNetlinkReply
 			return
-		case <-time.Tick(time.Second * time.Duration(b.NetlinkPollingInterval)):
+		case <-time.Tick(time.Millisecond * time.Duration(b.NetlinkPollingInterval)):
 			nlInfo, err := b.addNetlinkContext(uint8(flowID.Family), flowID.Src.Port, flowID.Dst.Port)
 			if err != nil {
 				slog.Warn("error polling netlink...", "err", err)
