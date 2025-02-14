@@ -40,8 +40,8 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 		bpf_printk("flowd-go: IPv6                 destination address: %pI6", &l3->daddr);
 		bpf_printk("flowd-go:     IPv6 destination address Hi [127:64]: %x", flowHash.ip6Hi);
 		bpf_printk("flowd-go:     IPv6 destination address Lo   [63:0]: %x", flowHash.ip6Lo);
-		bpf_printk("flowd-go: TCP                          source port: %d", flowHash.dPort);
-		bpf_printk("flowd-go: TCP                     destination port: %d", flowHash.sPort);
+		bpf_printk("flowd-go: TCP                     destination port: %d", flowHash.dPort);
+		bpf_printk("flowd-go: TCP                          source port: %d", flowHash.sPort);
 	#endif
 
 	// Check if a flow with the above criteria has been defined by flowd-go
@@ -60,6 +60,24 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 
 		#if defined(GLOWD_HBH_HEADER) || defined(GLOWD_DO_HEADER)
 			struct extensionHdr_t extensionHdr;
+
+			// Check we won't go overboard and overwhelm the MTU!
+			// In order to check individual GSO/GRO segments in an sk_buff use the
+			// BPF_MTU_CHK_SEGS as seen on 0:
+			//   0: see https://github.com/xdp-project/bpf-examples/blob/main/MTU-tests/tc_mtu_enforce.c
+			__u32 mtuLen = 0;
+			if(bpf_check_mtu(ctx, 0, &mtuLen, sizeof(extensionHdr), 0)) {
+				#ifdef GLOWD_DEBUG
+					bpf_printk("flowd-go: adding extension headers would overflow the MTU, skipping...");
+				#endif
+
+				return TC_ACT_OK;
+			}
+
+			#ifdef GLOWD_DEBUG
+				bpf_printk("flowd-go: IPv6 header size increase: %d bytes", sizeof(extensionHdr));
+				bpf_printk("flowd-go: detected MTU: %d bytes", mtuLen);
+			#endif
 
 			// Initialise the header
 			__builtin_memset(&extensionHdr, 0, sizeof(extensionHdr));
@@ -99,6 +117,20 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 
 		#ifdef GLOWD_HBHDO_HEADER
 			struct compExtensionHdr_t compExtensionHdr;
+
+			__u32 mtuLen = 0;
+			if(bpf_check_mtu(ctx, 0, &mtuLen, sizeof(compExtensionHdr), 0)) {
+				#ifdef GLOWD_DEBUG
+					bpf_printk("flowd-go: adding extension headers would overflow the MTU, skipping...");
+				#endif
+
+				return TC_ACT_OK;
+			}
+
+			#ifdef GLOWD_DEBUG
+				bpf_printk("flowd-go: IPv6 header size increase: %d bytes", sizeof(compExtensionHdr));
+				bpf_printk("flowd-go: detected MTU: %d bytes", mtuLen);
+			#endif
 
 			// Initialise the header
 			__builtin_memset(&compExtensionHdr, 0, sizeof(compExtensionHdr));
