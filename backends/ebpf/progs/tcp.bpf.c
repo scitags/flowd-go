@@ -118,6 +118,20 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 		#ifdef GLOWD_HBHDO_HEADER
 			struct compExtensionHdr_t compExtensionHdr;
 
+			__u32 mtuLen = 0;
+			if(bpf_check_mtu(ctx, 0, &mtuLen, sizeof(compExtensionHdr), 0)) {
+				#ifdef GLOWD_DEBUG
+					bpf_printk("flowd-go: adding extension headers would overflow the MTU, skipping...");
+				#endif
+
+				return TC_ACT_OK;
+			}
+
+			#ifdef GLOWD_DEBUG
+				bpf_printk("flowd-go: IPv6 header size increase: %d bytes", sizeof(compExtensionHdr));
+				bpf_printk("flowd-go: detected MTU: %d bytes", mtuLen);
+			#endif
+
 			// Initialise the header
 			__builtin_memset(&compExtensionHdr, 0, sizeof(compExtensionHdr));
 
