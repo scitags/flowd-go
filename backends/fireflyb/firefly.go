@@ -18,7 +18,7 @@ var (
 		"collectorAddress":       "127.0.0.1",
 		"collectorPort":          10514,
 		"pollNetlink":            false,
-		"netlinkPollingInterval": 5,
+		"netlinkPollingInterval": 5000,
 	}
 )
 
