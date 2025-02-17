@@ -36,6 +36,7 @@ func (p *ApiPlugin) Init() error {
 	p.server.GET("/", handleRoot)
 	p.server.GET("/dummy/start", handleDummyStartFlow)
 	p.server.GET("/dummy/end", handleDummyEndFlow)
+	p.server.POST("/flow", handleFlow)
 
 	// Prevent the banner from showing up in the log
 	p.server.HideBanner = true

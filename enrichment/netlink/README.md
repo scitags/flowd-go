@@ -116,3 +116,34 @@ An example of the information gathered for socket would be:
     "dctcpInfo": null
 }
 ```
+
+## How does ss(8) do it?
+We looked into how `ss(8)` interacts with `netlink(7)` and how it filters the responses. It turns out
+the port filtering is done in user space! We have prepared a `gdb(1)` script looking into all this
+that you can run with:
+
+    $ gdb -x ss.gdb
+
+Bear in mind you **must** change the `file` argument in the script to point to a locally compiled version
+of `ss` in which you include debugging information. This can be done by:
+
+    # Cloning the iproute2 mirror
+    $ git clone git@github.com:iproute2/iproute2.git; cd iproute2
+
+    # Checking out the commit we're working with
+    $ git checkout 41710ace5e8fadff354f3dba67bf27ed3a3c5ae7
+
+    # Generating the config.mk file
+    $ ./configure
+
+    # Adding the -g option (check gcc(1)) to config.mk
+    $ sed -i '45i CFLAGS += -g' config.mk
+
+    # Compiling everything: you might need to install bison, flex...
+    $ make -j$(nproc)
+
+When done, simply point the GDB script to
+
+    .../iproute2/misc/ss
+
+It's as easy as that!

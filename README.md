@@ -208,6 +208,7 @@ a bit overwhelming for people not familiar with Go's ecosystem. The following sh
 - `cmd`: The `flowd-go` binary itself. It pulls dependencies from all over the repo.
 - `backends`: The implementations of the available backends. Each of them is an independent Go module.
 - `plugins`: The implementations of the available plugins. Each of them is an independent Go module.
+- `enrichment`: Implementation of several Linux interfaces allowing us to gather low-level information on ongoing connections.
 
 Other than that, we also have pother couple of directories with auxiliary files:
 
