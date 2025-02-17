@@ -47,7 +47,7 @@ func cleanupBackends(backends []glowdTypes.Backend) {
 
 func logReplacements(groups []string, a slog.Attr) slog.Attr {
 	// Remove time.
-	if a.Key == slog.TimeKey && len(groups) == 0 {
+	if a.Key == slog.TimeKey && len(groups) == 0 && !logTimeFlag {
 		return slog.Attr{}
 	}
 

@@ -101,7 +101,9 @@ func NewTCPDiagRequest(family uint8, srcPort uint16, dstPort uint16) *TCPDiagReq
 		// 	(1 << uint(TCP_TIME_WAIT)) |
 		// 	(1 << uint(TCP_CLOSE)) |
 		// 	(1 << uint(TCP_LISTEN))),
-		States: TCP_ALL_FLAGS,
+
+		// Ignore listening sockets!
+		States: TCP_ALL_FLAGS & ^(1 << uint(TCP_LISTEN)),
 
 		ID: InetDiagSockID{
 			// As seen on [0], there are no mentions to r->id.idiag_src or r->id.idiag_dst so it looks like
@@ -113,7 +115,7 @@ func NewTCPDiagRequest(family uint8, srcPort uint16, dstPort uint16) *TCPDiagReq
 			// DiagSrc:   DiagIPT(srcIP),
 			// DiagDst:   [16]byte{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 			DiagSPort: [2]byte{byte(srcPort >> 8), byte(srcPort & 0xFF)},
-			DiagDPort: [2]byte{0, 0},
+			DiagDPort: [2]byte{byte(dstPort >> 8), byte(dstPort & 0xFF)},
 		},
 	}
 

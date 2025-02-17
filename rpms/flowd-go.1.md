@@ -4,7 +4,7 @@
 flowd-go - SciTags Flowd-go Daemon
 
 # SYNOPSIS
-`flowd-go [-h | --help] [--conf CONFIG_FILE_PATH] [--log-level=info] [run | version | help]`
+`flowd-go [-h | --help] [--conf CONFIG_FILE_PATH] [--log-level=info] [--log-time] [run | version | help]`
 
 # DESCRIPTION
 The flowd-go daemon will listen for flow events through its various plugins and exert the actions as defined in its several
@@ -39,6 +39,13 @@ The implementation can be found at https://github.com/scitags/flowd-go.
 :   Controls the logging verbosity. By default only messages with a verbosity of `info` and higher will be printed.
     This option must be one of `debug`, `info`, `warn` or `error`. If a wrong level is specified the default of
     `info` will be used.
+
+`--log-time`
+
+:   Controls whether timestamps are included in the log entries or not. If this option is set, the first entry in
+    each log line will be a timestamp. Otherwise, this timestamp will not be shown. This option is useful when
+    running flowd-go standalone as other facilities such as SystemD's `systemd-journald(8)` include their own
+    timestamps by default.
 
 # COMMANDS
 `help`
@@ -176,6 +183,11 @@ payload including flow information.
   in future implementations this option may turn into an array of strings.
 
 - **collectorPort [int] {10514}**: The port the collector is listening on for incoming fireflies.
+
+- **pollNetlink [bool] {false}**: Whether to periodically poll `netlink(7)` to acquire information regarding the flow ID that triggered this firefly.
+  This information will be logged with a `debug` log level.
+
+- **netlinkPollingInterval [int] {5000}**: The period, in milliseconds, with which to poll netlink to acquire information as explained in the previous setting.
 
 # CONFIGURATION
 Flowd-go's configuration is defined through a JSON file which by default will be `/etc/flowd-go/conf.json`. A different

@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/scitags/flowd-go/netlink"
+	"github.com/scitags/flowd-go/enrichment/netlink"
 	glowdTypes "github.com/scitags/flowd-go/types"
 )
 
@@ -32,6 +32,36 @@ func (b *FireflyBackend) sendFirefly(flowID glowdTypes.FlowID) error {
 
 			// Even though this should already be the case, be explicit!
 			nlInfo = nil
+		}
+	}
+
+	if b.PollNetlink {
+		if flowID.State == glowdTypes.START {
+			doneChan, ok := b.ongoingConnections.Insert(b.hashFlowID(flowID))
+			if !ok {
+				go b.pollNetlinkStatus(doneChan, flowID)
+			} else {
+				slog.Warn("an entry for this flowID already existed", "flowID", flowID)
+			}
+		} else if flowID.State == glowdTypes.END {
+			flowHash := b.hashFlowID(flowID)
+
+			doneChan, ok := b.ongoingConnections.Get(flowHash)
+			if !ok {
+				slog.Warn("found no entry in connection cache for this flowID", "flowID", flowID)
+			}
+
+			slog.Debug("dispatching end signal on done channel", "flowID", flowID)
+			doneChan <- nil
+
+			slog.Debug("reading back the last netlink snapshot")
+			nlSnapshot := <-doneChan
+
+			if b.AddNetlinkContext {
+				nlInfo = nlSnapshot
+			}
+
+			b.ongoingConnections.Remove(flowHash)
 		}
 	}
 
@@ -133,6 +163,17 @@ func (b *FireflyBackend) addNetlinkContext(family uint8, srcPort, dstPort uint16
 
 	switch len(nlReplies) {
 	case 0:
+		// Depending on how sockets are opened, we can find a case where IPv4 sockets are actually
+		// 'multiplexed' on IPv6 sockets and their addresses are 4-in-6 (i.e. IPv4 addresses with
+		// some leaading 0s and 0xFFs). Within the Linux kernel these sockets belong to the IPv6
+		// 'realm'... Note we are safe when recursively calling addNetlinkContext given we force
+		// the value of the family! By the way, be sure to check ipv6(7), specially the section
+		// on IPV6_V6ONLY and the last paragraphs of the description.
+		if family == uint8(glowdTypes.IPv4) {
+			slog.Debug("trying to get info from the IPv6 realm on an IPv4 flow...")
+			return b.addNetlinkContext(uint8(glowdTypes.IPv6), srcPort, dstPort)
+		}
+
 		return nil, fmt.Errorf("got no information from netlink")
 	case 1:
 		return nlReplies[0], nil
@@ -141,5 +182,50 @@ func (b *FireflyBackend) addNetlinkContext(family uint8, srcPort, dstPort uint16
 
 		// TODO: Filter replies from netlink based on IPv{4,6} addresses
 		return nlReplies[0], nil
+	}
+}
+
+func (b *FireflyBackend) hashFlowID(flowID glowdTypes.FlowID) uint64 {
+	// Encoding a flowID will never fail!
+	enc, _ := flowID.MarshalBinary()
+
+	b.hashGen.Reset()
+	b.hashGen.Write(enc)
+
+	hash := b.hashGen.Sum64()
+
+	slog.Debug("hashed flowID", "hash", hash)
+
+	return hash
+}
+
+func (b *FireflyBackend) pollNetlinkStatus(done chan *netlink.InetDiagTCPInfoResp, flowID glowdTypes.FlowID) {
+	slog.Debug("entering netlink polling goroutine", "flowID", flowID)
+	var lastNetlinkReply *netlink.InetDiagTCPInfoResp
+	for {
+		select {
+		case <-done:
+			slog.Debug("quitting netlink polling goroutine", "flowID", flowID)
+			done <- lastNetlinkReply
+			return
+		case <-time.Tick(time.Millisecond * time.Duration(b.NetlinkPollingInterval)):
+			nlInfo, err := b.addNetlinkContext(uint8(flowID.Family), flowID.Src.Port, flowID.Dst.Port)
+			if err != nil {
+				slog.Warn("error polling netlink...", "err", err)
+				continue
+			}
+			slog.Debug("partial netlink info", "family",
+				flowID.Family, "srcPort", flowID.Src.Port, "dstPort", flowID.Dst.Port,
+				"congestionAlgorithm", nlInfo.Cong.Algorithm,
+				"state", nlInfo.TCPInfo.State,
+				"bytesSent", nlInfo.TCPInfo.Bytes_sent,
+				"bytesReceived", nlInfo.TCPInfo.Bytes_received,
+				"bytesACKd", int(nlInfo.TCPInfo.Bytes_acked),
+				"bytesRetrans", nlInfo.TCPInfo.Bytes_retrans,
+			)
+
+			// Get a hold of the last piece of info we acquired
+			lastNetlinkReply = nlInfo
+		}
 	}
 }
