@@ -41,6 +41,8 @@ func (np *NamedPipePlugin) Init() error {
 		return nil
 	}
 
+	oldmask := syscall.Umask(0o000)
+	defer syscall.Umask(oldmask)
 	// Consider using the unix package...
 	if err := syscall.Mkfifo(np.PipePath, 0666); err != nil {
 		return fmt.Errorf("couldn't create the named pipe: %w", err)
