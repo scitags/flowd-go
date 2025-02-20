@@ -72,6 +72,12 @@
  *   - https://elixir.bootlin.com/linux/v6.12.4/source/net/ipv4/tcp.c#L4055
  *   - https://netdevconf.info/2.2/papers/brakmo-tcpbpf-talk.pdf
  *   - https://github.com/bytedance/Elkeid
+ *   - https://nakryiko.com/posts/libbpf-bootstrap/
+ *   - https://nakryiko.com/posts/bcc-to-libbpf-howto-guide/#detecting-bcc-vs-libbpf-modes
+ *   - https://nakryiko.com/posts/bpf-portability-and-co-re/
+ *   - https://brendangregg.com/blog/2020-11-04/bpf-co-re-btf-libbpf.html
+ *   - https://thegraynode.io/posts/portable_bpf_programs
+ *   - https://mozillazg.com/2022/06/ebpf-libbpf-btf-powered-enabled-raw-tracepoint-common-questions-en.html
  */
 
 SEC("sockops")
