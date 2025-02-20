@@ -44,7 +44,7 @@ options. The following replicates the default configuration:
 ```json
 {
     "plugins": {
-        "np": {
+        "namedPipe": {
             "maxReaders": 5,
             "buffSize": 1000,
             "pipePath": "np"
