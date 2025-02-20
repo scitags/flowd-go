@@ -42,3 +42,6 @@ test
 *tmp*
 *fii*
 *fee*
+
+# Ignore clangd configuration files
+compile_commands.json
