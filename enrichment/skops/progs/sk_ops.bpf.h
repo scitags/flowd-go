@@ -1,3 +1,6 @@
+#include "vmlinux.h"
+#include <bpf/bpf_helpers.h>
+
 // The keys for our hash maps. Should we maybe combine the ports into a __u32?
 struct fourTuple {
 	__u64 ip6Hi;
