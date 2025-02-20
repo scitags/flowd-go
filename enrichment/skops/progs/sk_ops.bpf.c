@@ -76,9 +76,8 @@
 
 SEC("sockops")
 int connTracker(struct bpf_sock_ops *ctx) {
-	struct bpf_tcp_sock *bpf_tcp_sk;
-	struct tcp_sock *tp_sk;
 	struct bpf_sock *sk;
+	struct tcp_sock *tp_sk;
 
 	switch (ctx->op) {
 		// When the connection starts up make sure this program is notified about
@@ -90,10 +89,10 @@ int connTracker(struct bpf_sock_ops *ctx) {
 			return 1;
 
 		case BPF_SOCK_OPS_STATE_CB:
-			bpf_printk("state change from %d to %d (%d) [%d]\n", ctx->args[0], ctx->args[1], ctx->is_fullsock, ctx->state);
+			bpf_printk("state change from %d to %d (%d) [%d]", ctx->args[0], ctx->args[1], ctx->is_fullsock, ctx->state);
 
 			if (!ctx->is_fullsock) {
-				bpf_printk("we don't have a 'full' socket...\n");
+				bpf_printk("we don't have a 'full' socket...");
 				return 1;
 			}
 
@@ -101,24 +100,16 @@ int connTracker(struct bpf_sock_ops *ctx) {
 			if (!sk)
 				return 1;
 
-			bpf_tcp_sk = bpf_tcp_sock(sk);
-			if (!bpf_tcp_sk)
-				return 1;
-
-			bpf_printk("dsack_dups=%u delivered=%u\n",
-				bpf_tcp_sk->dsack_dups, bpf_tcp_sk->delivered);
-			bpf_printk("delivered_ce=%u icsk_retransmits=%u\n",
-				bpf_tcp_sk->delivered_ce, bpf_tcp_sk->icsk_retransmits);
-
 			tp_sk = bpf_skc_to_tcp_sock(sk);
 			if (!tp_sk)
 				return 1;
 
-			bpf_printk("mss_cache=%d\n", tp_sk->mss_cache);
-			bpf_printk("icsk_rto_min=%d\n", tp_sk->inet_conn.icsk_rto_min);
-			bpf_printk("name=%s\n", tp_sk->inet_conn.icsk_ca_ops->name);
-			bpf_printk("rmem_alloc=%d\n", tp_sk->inet_conn.icsk_inet.sk.sk_backlog.rmem_alloc);
-			bpf_printk("rcv_buff=%d\n", tp_sk->inet_conn.icsk_inet.sk.sk_rcvbuf);
+			struct tcp_info tcpi;
+
+			tcp_get_info(tp_sk, ctx->state, &tcpi);
+
+
+			print_tcp_info(&tcpi);
 
 			return 1;
 			// break;
