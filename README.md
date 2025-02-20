@@ -48,8 +48,11 @@ AlmaLinux 9.4, where the following installs all needed dependencies:
     # Install libbpf together with headers and the static library (i.e. *.a), llvm, clang and the auxiliary bpftool
     $ yum install libbpf-devel libbpf-static clang llvm bpftool
 
-If you want to create the manpage you'll also need to install [`go-md2man`](https://github.com/cpuguy83/go-md2man), which will convert the Markdown-formatted
-manpage into a Roff-formatted one:
+    # If you want to leverage clangd and bear(1) to enable the LSP server for eBPF programs you can also install
+    $ yum install clang-tools-extra bear
+
+If you want to create the manpage you'll also need to install [`go-md2man`](https://github.com/cpuguy83/go-md2man), which will convert the
+Markdown-formatted manpage into a Roff-formatted one:
 
     # We can install the tool like any other one. Just bear in mind you should
     # include Go's binary installation directory in your PATH. You can also

@@ -14,6 +14,10 @@ sk_ops.bpf.o: *.bpf.c vmlinux.h
 vmlinux.h:
 	bpftool btf dump file /sys/kernel/btf/vmlinux format c > vmlinux.h
 
+# Generate a correct compile_commands.json for clangd
+compile_commands.json:
+	@bear -- make
+
 # Let us remember how to inspect an object in a week's time!
 .PHONY: objdump
 objdump: sk_ops.bpf.o
