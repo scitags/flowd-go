@@ -12,7 +12,7 @@
 #define TCPI_OPT_USEC_TS	64 /* usec timestamps */
 
 // From tcp.h
-#define	TCP_ECN_OK		1
+#define	TCP_ECN_OK			1
 #define	TCP_ECN_QUEUE_CWR	2
 #define	TCP_ECN_DEMAND_CWR	4
 #define	TCP_ECN_SEEN		8
@@ -50,9 +50,12 @@ static __always_inline void print_tcp_info(struct tcp_info* tcpi) {
 /*
  * This function is a reimplementation of the kernel's own tcp_get_info. Be sure to
  * check https://elixir.bootlin.com/linux/v5.14/source/net/ipv4/tcp.c#L4056 for
- * the actual implementation. Be sure to also take a look at
- * https://github.com/iovisor/bcc/blob/db3234f07679cd8f7632576966a82874ff2a7d21/libbpf-tools/tcplife.bpf.c
- * Also, be sure to check the CORE reference at https://nakryiko.com/posts/bpf-core-reference-guide
+ * the actual implementation. Be sure to also take a look at [0] for a great example
+ * based on libbpf and [1] for the CO:RE reference guide. On [2] there are many more
+ * libbpf-based examples containing troves of valuable examples:
+ *   0: https://github.com/iovisor/bcc/blob/db3234f07679cd8f7632576966a82874ff2a7d21/libbpf-tools/tcplife.bpf.c
+ *   1: https://nakryiko.com/posts/bpf-core-reference-guide
+ *   2: https://github.com/iovisor/bcc/tree/master/libbpf-tools
  */
 static __always_inline void tcp_get_info(struct tcp_sock *tp, __u32 state, struct tcp_info *info) {
 	// We can perform these casts given the layout of 'struct tcp_sock': the first memory
@@ -119,4 +122,26 @@ static __always_inline void tcp_get_info(struct tcp_sock *tp, __u32 state, struc
 		info->tcpi_options |= TCPI_OPT_ECN_SEEN;
 	if (BPF_CORE_READ_BITFIELD_PROBED(tp, syn_data_acked))
 		info->tcpi_options |= TCPI_OPT_SYN_DATA;
+
+	/*
+	 * Note: jiffies are the internal ticks in the Linux kernel whose frequency is
+	 * determined by the HZ constant in the kernel's source. This constant is
+	 * usually specified as a kernel configuration parameter. Even though it's by
+	 * no means an authoritative answer, one can get the current kernel's HZ value
+	 * with:
+	 *   $ grep 'CONFIG_HZ=' /boot/config-$(uname -r)
+	 *   CONFIG_HZ=1000
+	 * A value of 1000 is fairly common nowadays (the above was executed on a 5.14
+	 * kernel). As seen in functions such as jiffies_to_msec [0], this value is used
+	 * as a conversion factor for transforming these kernel-specific jiffies into
+	 * actual time values. The tcp_sock structure has several timers expressed in
+	 * jiffies, and so it becomes necessary to leverage all this to convert them
+	 * to meaningful figures. Bear in mind the bpf_jiffies64() BPF helper allows
+	 * a BPF program to access the current jiffies on a running kernel, thus
+	 * enabling us to compute jiffy differences as is done in the tcp_get_info()
+	 * implementation in the kernel. The HZ value is chosen based on the kernel's
+	 * configuration as explained in [1].
+	 *   0: https://elixir.bootlin.com/linux/v5.14/source/kernel/time/time.c#L374
+	 *   1: https://elixir.bootlin.com/linux/v5.14/source/kernel/Kconfig.hz
+	 */
 }
