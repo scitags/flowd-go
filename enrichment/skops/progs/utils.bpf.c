@@ -2,35 +2,7 @@
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_core_read.h>
 
-// For TCP_INFO socket option, from tcp.h
-#define TCPI_OPT_TIMESTAMPS	1
-#define TCPI_OPT_SACK		2
-#define TCPI_OPT_WSCALE		4
-#define TCPI_OPT_ECN		8 /* ECN was negociated at TCP session init */
-#define TCPI_OPT_ECN_SEEN	16 /* we received at least one packet with ECT */
-#define TCPI_OPT_SYN_DATA	32 /* SYN-ACK acked data in SYN sent or rcvd */
-#define TCPI_OPT_USEC_TS	64 /* usec timestamps */
-
-// From tcp.h
-#define	TCP_ECN_OK			1
-#define	TCP_ECN_QUEUE_CWR	2
-#define	TCP_ECN_DEMAND_CWR	4
-#define	TCP_ECN_SEEN		8
-
-static __always_inline void print_tcp_info(struct tcp_info* tcpi) {
-	bpf_printk("state=%d",              tcpi->tcpi_state);
-	bpf_printk("sk_pacing_rate=%d",     tcpi->tcpi_pacing_rate);
-	bpf_printk("sk_max_pacing_rate=%d", tcpi->tcpi_max_pacing_rate);
-	bpf_printk("reordering=%d",         tcpi->tcpi_reordering);
-	bpf_printk("snd_cwnd=%d",           tcpi->tcpi_snd_cwnd);
-	bpf_printk("ca_state=%x",           tcpi->tcpi_ca_state);
-	bpf_printk("retransmits=%d",        tcpi->tcpi_retransmits);
-	bpf_printk("probes_out=%d",         tcpi->tcpi_probes);
-	bpf_printk("backoff=%d",            tcpi->tcpi_backoff);
-	bpf_printk("options=%x",            tcpi->tcpi_options);
-	bpf_printk("snd_wscale=%d",         tcpi->tcpi_snd_wscale);
-	bpf_printk("rcv_wscale=%d\n",       tcpi->tcpi_rcv_wscale);
-}
+#include "sk_ops.bpf.h"
 
 /* These functions determine how the current flow behaves in respect of SACK
  * handling. SACK is negotiated with the peer, and therefore it can vary
@@ -48,8 +20,20 @@ static __always_inline void print_tcp_info(struct tcp_info* tcpi) {
 // }
 
 /*
+ * A crude reimplementation of jiffies_to_msecs [0].
+ *   0: https://elixir.bootlin.com/linux/v5.14/source/kernel/time/time.c#L374
+ */
+static __always_inline __u64 jiffies_to_msecs(__u64 j) {
+	// If we didn't manage to read the value of CONFIG_HZ from Kconfig
+	// variables (i.e. it's a 0) assume HZ is 1000 which it'll likely be.
+	if (!CONFIG_HZ)
+		return (MSEC_PER_SEC / 1000L) * j;
+	return (MSEC_PER_SEC / CONFIG_HZ) * j;
+}
+
+/*
  * This function is a reimplementation of the kernel's own tcp_get_info. Be sure to
- * check https://elixir.bootlin.com/linux/v5.14/source/net/ipv4/tcp.c#L4056 for
+ * check https://elixir.bootlin.com/linux/v5.14/source/net/ipv4/tcp.c#L3683 for
  * the actual implementation. Be sure to also take a look at [0] for a great example
  * based on libbpf and [1] for the CO:RE reference guide. On [2] there are many more
  * libbpf-based examples containing troves of valuable examples:
@@ -66,6 +50,9 @@ static __always_inline void tcp_get_info(struct tcp_sock *tp, __u32 state, struc
 	struct inet_connection_sock *icsk = (struct inet_connection_sock*)tp;
 
 	int err;
+
+	// Zero out the struct before populating it!
+	__builtin_memset(info, 0, sizeof(*info));
 
 	info->tcpi_state = state;
 
@@ -144,4 +131,5 @@ static __always_inline void tcp_get_info(struct tcp_sock *tp, __u32 state, struc
 	 *   0: https://elixir.bootlin.com/linux/v5.14/source/kernel/time/time.c#L374
 	 *   1: https://elixir.bootlin.com/linux/v5.14/source/kernel/Kconfig.hz
 	 */
+	// info->tcpi_rto = BPF_CORE_READ(icsk, icsk_rto) / 
 }
