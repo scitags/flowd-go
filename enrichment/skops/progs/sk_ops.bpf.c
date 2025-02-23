@@ -7,9 +7,8 @@
 #include <bpf/bpf_endian.h>
 #include <bpf/bpf_tracing.h>
 
-#include "sk_ops.bpf.h"
-
 #include "utils.bpf.c"
+#include "dbg.bpf.c"
 
 // static __always_inline int handleDatagram(struct __sk_buff *ctx, struct ipv6hdr *l3, void *data_end) {
 // 	// If running in debug mode we'll handle ICMP messages as well
@@ -115,6 +114,7 @@ int connTracker(struct bpf_sock_ops *ctx) {
 			tcp_get_info(tp_sk, ctx->state, &tcpi);
 
 
+			print_kconfig_variables();
 			print_tcp_info(&tcpi);
 
 			return 1;

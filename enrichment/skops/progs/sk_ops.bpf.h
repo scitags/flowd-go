@@ -1,3 +1,6 @@
+#ifndef __SKOPS_INC__
+#define __SKOPS_INC__
+
 #include "vmlinux.h"
 #include <bpf/bpf_helpers.h>
 
@@ -22,6 +25,27 @@ struct fourTuple {
 // 	__type(value, int);
 // } trackedConnections SEC(".maps");
 
+// For TCP_INFO socket option, from tcp.h
+#define TCPI_OPT_TIMESTAMPS	1
+#define TCPI_OPT_SACK		2
+#define TCPI_OPT_WSCALE		4
+#define TCPI_OPT_ECN		8 /* ECN was negociated at TCP session init */
+#define TCPI_OPT_ECN_SEEN	16 /* we received at least one packet with ECT */
+#define TCPI_OPT_SYN_DATA	32 /* SYN-ACK acked data in SYN sent or rcvd */
+#define TCPI_OPT_USEC_TS	64 /* usec timestamps */
+
+// From tcp.h
+#define	TCP_ECN_OK			1
+#define	TCP_ECN_QUEUE_CWR	2
+#define	TCP_ECN_DEMAND_CWR	4
+#define	TCP_ECN_SEEN		8
+
+// See https://nakryiko.com/posts/bpf-core-reference-guide/#kconfig-extern-variables
+extern int CONFIG_HZ __kconfig __weak;
+
+// See https://elixir.bootlin.com/linux/v5.14/source/tools/include/linux/time64.h#L5
+#define MSEC_PER_SEC	1000L
+
 struct {
 	__uint(type, BPF_MAP_TYPE_SK_STORAGE);
 	__uint(map_flags, BPF_F_NO_PREALLOC);
@@ -35,3 +59,5 @@ struct {
 	__type(key, struct fourTuple);
 	__type(value, struct bpf_tcp_sock);
 } trackedConnections SEC(".maps");
+
+#endif
