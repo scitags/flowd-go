@@ -109,10 +109,9 @@ int connTracker(struct bpf_sock_ops *ctx) {
 			if (!tp_sk)
 				return 1;
 
-			struct tcp_info tcpi;
+			struct flowd_tcp_info tcpi;
 
 			tcp_get_info(tp_sk, ctx->state, &tcpi);
-
 
 			print_kconfig_variables();
 			print_tcp_info(&tcpi);
