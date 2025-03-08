@@ -16,7 +16,8 @@ import (
 )
 
 const PROG_NAME string = "connTracker"
-const MAP_NAME string = "trackedConnections"
+const RINGBUFF_NAME string = "tcpStats"
+const POLL_INTERVAL_MS int = 300
 
 var (
 	//go:embed progs/sk_ops.bpf.o
@@ -94,15 +95,38 @@ func Init() error {
 	}
 	defer link.Destroy()
 
+	eventChan := make(chan []byte)
+	rb, err := bpfModule.InitRingBuf(RINGBUFF_NAME, eventChan)
+	if err != nil {
+		return fmt.Errorf("error initializing the ring buffer: %w", err)
+	}
+	defer rb.Close()
+
+	rb.Poll(POLL_INTERVAL_MS)
+
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-	<-sigChan
+	go func() {
+		slog.Debug("waiting to receive SIGTERM")
+		<-sigChan
+		slog.Debug("received SIGTERM: stopping polling")
+		rb.Stop()
+	}()
 
-	// // Get a reference to the map so that we're ready when running
-	// bpfMap, err := b.module.GetMap(MAP_NAME)
-	// if err != nil {
-	// 	return fmt.Errorf("error getting the ebpf map: %w", err)
-	// }
+	slog.Debug("begin reading the ring buffer")
+	tcpInfo := TcpInfo{}
+	for event := range eventChan {
+		// slog.Debug("event", "raw", event)
+		if err := tcpInfo.UnmarshalBinary(event); err != nil {
+			slog.Warn("error unmarshaling event", "err", err)
+		}
+		// for i := 0; i < len(event); i++ {
+		// 	fmt.Printf("event[%d] = %d\n", i, event[i])
+		// }
+		// fmt.Printf("tcpInfo: %s\n", tcpInfo)
+		slog.Debug("tcpInfo", "state", tcpInfo.State, "caAlg", tcpInfo.CaAlg, "caState", tcpInfo.CaState)
+	}
+	slog.Debug("bye!")
 
 	return nil
 }
