@@ -4,21 +4,6 @@
 
 #include "sk_ops.bpf.h"
 
-/* These functions determine how the current flow behaves in respect of SACK
- * handling. SACK is negotiated with the peer, and therefore it can vary
- * between different flows. Pulled from https://elixir.bootlin.com/linux/v6.13.3/source/include/net/tcp.h#L1269
- *
- * tcp_is_sack - SACK enabled
- * tcp_is_reno - No SACK
- */
-// static __always_inline int tcp_is_sack(const struct tcp_sock *tp) {
-// 	return BPF_CORE_READ_BITFIELD_PROBED(tp, rx_opt.sack_ok);
-// }
-
-// static __always_inline bool tcp_is_reno(const struct tcp_sock *tp) {
-// 	return !tcp_is_sack(tp);
-// }
-
 /*
  * A crude reimplementation of jiffies_to_msecs [0].
  *   0: https://elixir.bootlin.com/linux/v5.14/source/kernel/time/time.c#L374
@@ -88,7 +73,7 @@ static __always_inline void tcp_get_info_chrono_stats(const struct tcp_sock *tp,
 
 	for (i = TCP_CHRONO_BUSY; i < __TCP_CHRONO_MAX; ++i) {
 		stats[i] = BPF_CORE_READ(tp, chrono_stat[i - 1]);
-		if (i == BPF_CORE_READ_BITFIELD(tp, chrono_type))
+		if (i == BPF_CORE_READ_BITFIELD_PROBED(tp, chrono_type))
 			stats[i] += bpf_jiffies64() - BPF_CORE_READ(tp, chrono_start);
 		stats[i] *= USEC_PER_SEC / hz;
 		total += stats[i];
@@ -207,6 +192,9 @@ static __always_inline void tcp_get_info(struct tcp_sock *tp, __u32 state, struc
 	 *   1: https://elixir.bootlin.com/linux/v5.14/source/kernel/Kconfig.hz
 	 *   2: https://www.man7.org/linux/man-pages/man5/proc_config.gz.5.html
 	 */
+	bpf_printk("rto: %llu", jiffies_to_usecs(BPF_CORE_READ(icsk, icsk_rto)));
+	bpf_printk("ato: %llu", jiffies_to_usecs(BPF_CORE_READ(icsk, icsk_ack.ato)));
+
 	info->tcpi_rto = jiffies_to_usecs(BPF_CORE_READ(icsk, icsk_rto));
 	info->tcpi_ato = jiffies_to_usecs(BPF_CORE_READ(icsk, icsk_ack.ato));
 	err = BPF_CORE_READ_INTO(&info->tcpi_snd_mss, tp, mss_cache);
@@ -319,7 +307,7 @@ static __always_inline void tcp_get_info(struct tcp_sock *tp, __u32 state, struc
 		bpf_printk("error performing CORE read of data_segs_out: %d", err);
 	}
 
-	info->tcpi_delivery_rate_app_limited = BPF_CORE_READ_BITFIELD(tp, rate_app_limited) ? 1 : 0;
+	info->tcpi_delivery_rate_app_limited = BPF_CORE_READ_BITFIELD_PROBED(tp, rate_app_limited) ? 1 : 0;
 	__u64 rate64 = tcp_compute_delivery_rate(tp);
 	if (rate64)
 		info->tcpi_delivery_rate = rate64;
