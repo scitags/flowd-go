@@ -13,14 +13,13 @@ static __always_inline void print_kconfig_variables() {
 	bpf_printk("\tCONFIG_HZ=%d", CONFIG_HZ);
 }
 
-static __always_inline void print_tcp_info(struct flowd_tcp_info* tcpi) {
+static __always_inline void print_flowd_tcp_info(struct flowd_tcp_info* tcpi) {
 	bpf_printk("TCP INFO STRUCT:");
 	bpf_printk("\tstate=%u",                     tcpi->tcpi_state);
 	bpf_printk("\tsk_pacing_rate=%llu",          tcpi->tcpi_pacing_rate);
 	bpf_printk("\tsk_max_pacing_rate=%llu",      tcpi->tcpi_max_pacing_rate);
 	bpf_printk("\treordering=%u",                tcpi->tcpi_reordering);
 	bpf_printk("\tsnd_cwnd=%u",                  tcpi->tcpi_snd_cwnd);
-	bpf_printk("\tca_state=%u",                  tcpi->tcpi_ca_state);
 	bpf_printk("\tretransmits=%u",               tcpi->tcpi_retransmits);
 	bpf_printk("\tprobes_out=%u",                tcpi->tcpi_probes);
 	bpf_printk("\tbackoff=%u",                   tcpi->tcpi_backoff);
@@ -65,4 +64,22 @@ static __always_inline void print_tcp_info(struct flowd_tcp_info* tcpi) {
 	bpf_printk("\trcv_ooopack=%u",               tcpi->tcpi_rcv_ooopack);
 	bpf_printk("\tsnd_wnd=%u",                   tcpi->tcpi_snd_wnd);
 	bpf_printk("\tfastopen_client_fail=%u",      tcpi->tcpi_fastopen_client_fail);
+
+	bpf_printk("\tca_alg=%u",                    tcpi->tcpi_ca_alg);
+	bpf_printk("\tca_state=%u",                  tcpi->tcpi_ca_state);
+	bpf_printk("\tca_flags=%u",                  tcpi->tcpi_ca_flags);
+	bpf_printk("\tca_key=%u",                    tcpi->tcpi_ca_key);
+
+	bpf_printk("\tca_priv:");
+	for (__u8 i = 0; i < FLOWD_TCPI_CA_PRIV_SIZE; i++) {
+		bpf_printk("\t\tca_priv[%u]=%u", i, tcpi->tcpi_ca_priv[i]);
+	}
+}
+
+static __always_inline void print_flowd_tcp_info_bytes(struct flowd_tcp_info* tcpi) {
+	__u8 *bPtr = (__u8*) tcpi;
+	// for (__u32 i = 0; i < sizeof(struct flowd_tcp_info); i++) {
+	for (__u32 i = 0; i < 48; i++) {
+		bpf_printk("\ttcp_info[%d] = %u", i, bPtr[i]);
+	}
 }

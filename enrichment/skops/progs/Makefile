@@ -2,7 +2,7 @@
 CC := clang
 
 # Compiler flgas we'll use no matter what
-CFLAGS := -g -O2 -target bpf -D__TARGET_ARCH_x86_64 -I . -c
+CFLAGS := -g -O2 -target bpf -D__TARGET_ARCH_x86_64 -I . -c -DFLOWD_DEBUG
 
 # The files to eliminate when cleaning up
 TRASH := *.o vmlinux.h .cache
