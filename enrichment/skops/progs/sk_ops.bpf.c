@@ -7,53 +7,9 @@
 #include <bpf/bpf_endian.h>
 #include <bpf/bpf_tracing.h>
 
-#include "utils.bpf.c"
+#include "info.bpf.c"
+#include "cong.bpf.c"
 #include "dbg.bpf.c"
-
-// static __always_inline int handleDatagram(struct __sk_buff *ctx, struct ipv6hdr *l3, void *data_end) {
-// 	// If running in debug mode we'll handle ICMP messages as well
-// 	// as TCP segments. That way we can leverage ping(8) to easily
-// 	// generate traffic...
-// 	#ifdef GLOWD_DEBUG
-// 		if (l3->nexthdr == PROTO_IPV6_ICMP)
-// 			return handleICMP(ctx, l3);
-// 	#endif
-
-// 	// We'll only handle TCP traffic flows
-// 	if (l3->nexthdr == PROTO_TCP) {
-// 		return handleTCP(ctx, l3, data_end);
-// 	}
-
-// 	// Simply signal that the packet should proceed!
-// 	return TC_ACT_OK;
-
-// 	flowHash.ip6Hi = ipv6DaddrHi;
-// 	flowHash.ip6Lo = ipv6DaddrLo;
-// 	flowHash.dPort = bpf_htons(l4->dest);
-// 	flowHash.sPort = bpf_htons(l4->source);
-
-// 	// Check if a flow with the above criteria has been defined by flowd-go
-// 	__u32 *flowTag = bpf_map_lookup_elem(&flowLabels, &flowHash);
-// }
-
-// static __always_inline void handleClosingConnection() {
-// 	// Declare the struct we'll use to index the map
-// 	struct fourTuple flowHash;
-
-// 	// Initialise the struct with 0s. This is necessary for some reason to do
-// 	// with compiler padding. Check that's the case...
-// 	__builtin_memset(&flowHash, 0, sizeof(flowHash));
-
-// 	__u64 ipv6DaddrLo = ipv6AddrLo(l3->daddr);
-// 	__u64 ipv6DaddrHi = ipv6AddrHi(l3->daddr);
-// 	flowHash.ip6Hi = ipv6DaddrHi;
-// 	flowHash.ip6Lo = ipv6DaddrLo;
-// 	flowHash.dPort = bpf_htons(l4->dest);
-// 	flowHash.sPort = bpf_htons(l4->source);
-
-// 	key = 1, value = 5678;
-// 	result = bpf_map_update_elem(&my_map, &key, &value, BPF_NOEXIST);
-// }
 
 /*
  * Indispensable refs:
@@ -79,50 +35,120 @@
  *   - https://mozillazg.com/2022/06/ebpf-libbpf-btf-powered-enabled-raw-tracepoint-common-questions-en.html
  */
 
+static __always_inline int handleOp(struct bpf_sock_ops *ctx) {
+	struct bpf_sock *sk;
+	struct tcp_sock *tp;
+	struct flowd_tcp_info *tcpi;
+
+	#ifdef FLOWD_POLL
+		__u64 *next_dump;
+		__u64 now;
+	#endif
+
+	sk = ctx->sk;
+	if (!sk || !ctx->is_fullsock) {
+		#ifdef FLOWD_DEBUG
+			bpf_printk("bailing: no sk or it's not full: %p - %u", sk, ctx->is_fullsock);
+		#endif
+		return 1;
+	}
+
+	#ifdef FLOWD_POLL
+		/*
+		* Grab the last timestamp and create one if it doesn't exist! That's
+		* what the BPF_SK_STORAGE_GET_F_CREATE flag is for :P Note the socket
+		* must be a full sock (i.e. ctx->is_fullsock != 0) for this to work!
+		*/
+		next_dump = bpf_sk_storage_get(&pollAcc, sk, 0, BPF_SK_STORAGE_GET_F_CREATE);
+		if (!next_dump)
+			return 1;
+
+		now = bpf_ktime_get_ns();
+		if (now < *next_dump)
+			return 1;
+		*next_dump = now + INTERVAL;
+	#endif
+
+	tp = bpf_skc_to_tcp_sock(sk);
+	if (!tp) {
+		#ifdef FLOWD_DEBUG
+			bpf_printk("couldn't cast the bpf_sock pointer top a tcp_sock pointer");
+		#endif
+		return 1;
+	}
+
+	/*
+	 * Reserve memory for a sample in the ring buffer. If we didn't manage to make
+	 * the reservation we'll simply bail and avoid gathering all the info!
+	 */
+	tcpi = bpf_ringbuf_reserve(&tcpStats, sizeof(*tcpi), 0);
+	if (!tcpi)
+		return 1;
+
+	tcp_get_info(tp, ctx->state, tcpi);
+	tcp_get_cong_info(tp, tcpi);
+
+	#ifdef FLOWD_DEBUG
+		print_flowd_tcp_info(tcpi);
+		print_flowd_tcp_info_bytes(tcpi);
+	#endif
+
+	/*
+	 * Use an adaptative wakeup mechanism, we could also use BPF_RB_FORCE_WAKEUP or
+	 * BPF_RB_NO_WAKEUP instead to control notifications to userspace. Bear in mind
+	 * handling these manually is a sensitive and subtlety-riddled affair...
+	 */
+	bpf_ringbuf_submit(tcpi, 0);
+
+	return 1;
+}
+
 SEC("sockops")
 int connTracker(struct bpf_sock_ops *ctx) {
-	struct bpf_sock *sk;
-	struct tcp_sock *tp_sk;
-
 	switch (ctx->op) {
-		// When the connection starts up make sure this program is notified about
-		// TCP state changes.
+		/*
+		 * Hook notifications for each TCP state change.
+		 */
 		case BPF_SOCK_OPS_ACTIVE_ESTABLISHED_CB:
 		case BPF_SOCK_OPS_PASSIVE_ESTABLISHED_CB:
 		case BPF_SOCK_OPS_TCP_CONNECT_CB:
-			bpf_sock_ops_cb_flags_set(ctx, BPF_SOCK_OPS_STATE_CB_FLAG);
+			#ifdef FLOWD_POLL
+				bpf_sock_ops_cb_flags_set(ctx, BPF_SOCK_OPS_STATE_CB_FLAG | BPF_SOCK_OPS_RTT_CB_FLAG);
+			#else
+				bpf_sock_ops_cb_flags_set(ctx, BPF_SOCK_OPS_STATE_CB_FLAG);
+			#endif
+
+			#if FLOWD_DEBUG
+				print_kconfig_variables();
+			#endif
+
 			return 1;
 
+		/*
+		 * Let's look at the socket's statistics on state changes.
+		 */
 		case BPF_SOCK_OPS_STATE_CB:
-			bpf_printk("state change from %d to %d (%d) [%d]", ctx->args[0], ctx->args[1], ctx->is_fullsock, ctx->state);
+			#ifdef FLOWD_DEBUG
+				bpf_printk("state change from %d to %d (%d) [%d]", ctx->args[0], ctx->args[1], ctx->is_fullsock, ctx->state);
+			#endif
+			return handleOp(ctx);
 
-			if (!ctx->is_fullsock) {
-				bpf_printk("we don't have a 'full' socket...");
-				return 1;
-			}
+		/*
+		 * Let's look at socket statistics every RTT
+		 */
+		case BPF_SOCK_OPS_RTT_CB:
+			#ifdef FLOWD_POLL
+				#ifdef FLOWD_DEBUG
+					bpf_printk("new RTT");
+				#endif
 
-			sk = ctx->sk;
-			if (!sk)
-				return 1;
-
-			tp_sk = bpf_skc_to_tcp_sock(sk);
-			if (!tp_sk)
-				return 1;
-
-			struct flowd_tcp_info tcpi;
-
-			tcp_get_info(tp_sk, ctx->state, &tcpi);
-
-			print_kconfig_variables();
-			print_tcp_info(&tcpi);
+				return handleOp(ctx);
+			#endif
 
 			return 1;
-			// break;
 		default:
 			return 1;
 	}
-
-	return 1;
 }
 
 int _version SEC("version") = 1;
