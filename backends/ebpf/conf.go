@@ -10,6 +10,7 @@ type MarkingStrategy string
 
 const (
 	FlowLabelMarking           MarkingStrategy = "flowLabel"
+	FlowLabelMatchAll          MarkingStrategy = "flowLabelMatchAll"
 	HopByHopHeaderMarking      MarkingStrategy = "hopByHop"
 	HopByHopDestHeadersMarking MarkingStrategy = "hopByHopAndDestination"
 )
