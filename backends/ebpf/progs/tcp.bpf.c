@@ -28,16 +28,7 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 	// with compiler padding. Check that's the case...
 	__builtin_memset(&flowHash, 0, sizeof(flowHash));
 
-	#ifdef GLOWD_FLOW_LABEL_MATCH_ALL
-		#ifdef GLOWD_DEBUG
-			bpf_printk("flowd-go: zeroing out the flowhash");
-		#endif
-
-		flowHash.ip6Hi = 0;
-		flowHash.ip6Lo = 0;
-		flowHash.dPort = 0;
-		flowHash.sPort = 0;
-	#else
+	#ifndef GLOWD_FLOW_LABEL_MATCH_ALL
 		// Populate the lookup based on the incoming datagram's data
 		flowHash.ip6Hi = ipv6AddrLo(l3->daddr);
 		flowHash.ip6Lo = ipv6AddrHi(l3->daddr);
