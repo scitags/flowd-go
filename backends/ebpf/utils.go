@@ -32,6 +32,11 @@ func (b *EbpfBackend) chooseBPFProgram() []byte {
 			return flowLabelDebugBPFProg
 		}
 		return flowLabelBPFProg
+	case FlowLabelMatchAll:
+		if b.DebugMode {
+			return flowLabelMatchAllDebugBPFProg
+		}
+		return flowLabelMatchAllBPFProg
 	case HopByHopHeaderMarking:
 		if b.DebugMode {
 			return hopByHopHeaderDebugBPFProg

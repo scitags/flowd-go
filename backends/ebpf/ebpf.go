@@ -39,6 +39,12 @@ var (
 	//go:embed progs/marker-flow-label-dbg.bpf.o
 	flowLabelDebugBPFProg []byte
 
+	//go:embed progs/marker-flow-label-match-all.bpf.o
+	flowLabelMatchAllBPFProg []byte
+
+	//go:embed progs/marker-flow-label-match-all-dbg.bpf.o
+	flowLabelMatchAllDebugBPFProg []byte
+
 	//go:embed progs/marker-hbh-header.bpf.o
 	hopByHopHeaderBPFProg []byte
 
@@ -118,7 +124,7 @@ func (b *EbpfBackend) Init() error {
 
 	// Place the hook in the packet egress chain
 	slog.Debug("creating the hook")
-	b.hook.SetAttachPoint(bpf.BPFTcEgress)
+	b.hook.SetAttachPoint(bpf.BPFTcIngress)
 	if err := b.hook.Create(); err != nil {
 		if errno, ok := err.(syscall.Errno); ok && errno != syscall.EEXIST {
 			slog.Debug("error creating the tc hook", "err", err)
