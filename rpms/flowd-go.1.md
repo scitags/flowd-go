@@ -119,6 +119,10 @@ relay. Be sure to check the documentation on the firelfy backend for more inform
 - **hasSyslogHeader [bool] {true}**: Whether the incoming firefly is expected to contain a `syslog(2)` header or not. This mainly controls how the
   UDP payload is parsed.
 
+## perfsonar
+The **perfSONAR** plugin will simply mark **all outgoing traffic** with the provided activity and experiment IDs. This plugin will override the
+chosen eBPF marking strategy if it's not set to `"
+
 # BACKENDS
 This section lists the configuration options available for each of the provided backends. For a deeper explanation please
 refer to the documentation accompanying the implementation, which can be found on the URL provided in the DESCRIPTION. The
