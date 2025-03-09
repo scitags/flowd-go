@@ -1,5 +1,10 @@
 // +build ignore
 
+#include "vmlinux.h"
+#include <bpf/bpf_helpers.h>
+
+#include "marker.bpf.h"
+
 // When calling function we'll just let the compiler know we **really** want it to 'inline' the functions.
 // Technicalities aside, this boils down to 'copy-pasting' the function's body wherever the function is
 // called. Given the usual workflow in eBPF programs this actually makes a lot of sense! We're also declaring
@@ -25,6 +30,9 @@ static __always_inline int handleICMP(struct __sk_buff *ctx, struct ipv6hdr *l3)
 	bpf_printk("flowd-go: IPv6 flow label: %x --- %x --- %x",
 		(__u8)l3->flow_lbl[0], (__u8)l3->flow_lbl[1], (__u8)l3->flow_lbl[2]);
 
+	bpf_printk("flowd-go: ingress_ifindex is %d", ctx->ingress_ifindex);
+	bpf_printk("flowd-go: pkt_type is %d", ctx->pkt_type);
+
 	// Declare the struct we'll use to index the map
 	struct fourTuple flowHash;
 
@@ -32,11 +40,22 @@ static __always_inline int handleICMP(struct __sk_buff *ctx, struct ipv6hdr *l3)
 	// with compiler padding. Check that's the case...
 	__builtin_memset(&flowHash, 0, sizeof(flowHash));
 
-	// Hardcode the port numbers we'll 'look for': there are none in ICMP!
-	flowHash.ip6Hi = ipv6DaddrHi;
-	flowHash.ip6Lo = ipv6DaddrLo;
-	flowHash.dPort = 5777;
-	flowHash.sPort = 2345;
+	#ifdef GLOWD_FLOW_LABEL_MATCH_ALL
+		#ifdef GLOWD_DEBUG
+			bpf_printk("flowd-go: zeroing out the flowhash");
+		#endif
+
+		flowHash.ip6Hi = 0;
+		flowHash.ip6Lo = 0;
+		flowHash.dPort = 0;
+		flowHash.sPort = 0;
+	#else
+		// Hardcode the port numbers we'll 'look for': there are none in ICMP!
+		flowHash.ip6Hi = ipv6DaddrHi;
+		flowHash.ip6Lo = ipv6DaddrLo;
+		flowHash.dPort = 5777;
+		flowHash.sPort = 2345;
+	#endif
 
 	// Check if a flow with the above criteria has been defined by flowd-go
 	__u32 *flowTag = bpf_map_lookup_elem(&flowLabels, &flowHash);
@@ -45,7 +64,7 @@ static __always_inline int handleICMP(struct __sk_buff *ctx, struct ipv6hdr *l3)
 	if (flowTag) {
 		bpf_printk("flowd-go: retrieved flowTag: %u", *flowTag);
 
-		#ifdef GLOWD_FLOW_LABEL
+		#if defined(GLOWD_FLOW_LABEL) || defined(GLOWD_FLOW_LABEL_MATCH_ALL)
 			// Embed the configured flowTag into the IPv6 header.
 			populateFlowLbl(l3->flow_lbl, *flowTag);
 		#endif
