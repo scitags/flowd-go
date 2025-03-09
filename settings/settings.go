@@ -12,6 +12,7 @@ import (
 	"github.com/scitags/flowd-go/plugins/api"
 	"github.com/scitags/flowd-go/plugins/fireflyp"
 	"github.com/scitags/flowd-go/plugins/np"
+	"github.com/scitags/flowd-go/plugins/perfsonar"
 
 	"github.com/spf13/viper"
 )
@@ -20,6 +21,7 @@ type PluginConfigurations struct {
 	NamedPipe np.NamedPipePlugin
 	Api       api.ApiPlugin
 	Firefly   fireflyp.FireflyPlugin
+	Perfsonar perfsonar.PerfsonarPlugin
 }
 
 type BackendConfigurations struct {
@@ -48,6 +50,7 @@ var (
 		"namedPipe": np.Defaults,
 		"api":       api.Defaults,
 		"firefly":   fireflyp.Defaults,
+		"perfsonar": perfsonar.Defaults,
 	}
 
 	backendDefaults = map[string]defaultConfiguration{
@@ -127,6 +130,8 @@ func populatePluginSlice(pConf PluginConfigurations, configured []string) ([]glo
 			plugins = append(plugins, &pConf.Api)
 		case strings.ToLower("firefly"):
 			plugins = append(plugins, &pConf.Firefly)
+		case strings.ToLower("perfsonar"):
+			plugins = append(plugins, &pConf.Perfsonar)
 		default:
 			return nil, fmt.Errorf("plugin type %q is not recognized", c)
 		}
