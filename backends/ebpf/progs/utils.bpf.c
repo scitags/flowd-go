@@ -1,5 +1,11 @@
 // +build ignore
 
+#include "vmlinux.h"
+#include <bpf/bpf_helpers.h>
+#include <bpf/bpf_endian.h>
+
+#include "marker.bpf.h"
+
 // Extract the lower 64 bits of an IPv6 address
 static __always_inline __u64 ipv6AddrLo(struct in6_addr addr) {
 	__u64 lo = bpf_htonl(addr.in6_u.u6_addr32[2]);

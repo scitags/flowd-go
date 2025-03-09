@@ -11,7 +11,7 @@ TRASH := *.o vmlinux.h
 # This is the only variable we have to modify when adding new targets.
 # Note each item will be appended to 'marker-' so as to generate the
 # output programs.
-PROG_NAMES := flow-label hbh-header hbh-do-headers
+PROG_NAMES := flow-label flow-label-match-all hbh-header hbh-do-headers
 
 # Derive the contants the program depends on for conditionally compilating
 # it. We simple add the GLOWD_ prefix and translate each element of PROG_NAMES
@@ -57,6 +57,9 @@ $(foreach i,$(INDICES),$(eval $(call targetTemplate,$(word $(i),$(PROG_NAMES)),$
 # Generate the kernel headers
 vmlinux.h:
 	bpftool btf dump file /sys/kernel/btf/vmlinux format c > vmlinux.h
+
+compile_commands.json:
+	@bear -- make marker-flow-label.bpf.o
 
 # Let us remember how to inspect an object in a week's time!
 .PHONY: objdump
