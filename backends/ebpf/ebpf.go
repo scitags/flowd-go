@@ -124,7 +124,7 @@ func (b *EbpfBackend) Init() error {
 
 	// Place the hook in the packet egress chain
 	slog.Debug("creating the hook")
-	b.hook.SetAttachPoint(bpf.BPFTcIngress)
+	b.hook.SetAttachPoint(bpf.BPFTcEgress)
 	if err := b.hook.Create(); err != nil {
 		if errno, ok := err.(syscall.Errno); ok && errno != syscall.EEXIST {
 			slog.Debug("error creating the tc hook", "err", err)
