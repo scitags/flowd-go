@@ -121,7 +121,11 @@ relay. Be sure to check the documentation on the firelfy backend for more inform
 
 ## perfsonar
 The **perfSONAR** plugin will simply mark **all outgoing traffic** with the provided activity and experiment IDs. This plugin will override the
-chosen eBPF marking strategy if it's not set to `"
+chosen eBPF marking strategy if it's not set to `"flowLabelMatchAll"` and emit a warning message stating the fact.
+
+- **activityId [int] {0}**: The activity ID to leverage for marking traffic.
+
+- **experimentId [int] {0}**: The experiment ID to leverage for marking traffic.
 
 # BACKENDS
 This section lists the configuration options available for each of the provided backends. For a deeper explanation please
