@@ -17,7 +17,7 @@ const (
 
 var (
 	Defaults = map[string]interface{}{
-		"targetInterface":  "lo",
+		"targetInterfaces": []string{"lo"},
 		"RemoveQdisc":      true,
 		"ForceHookRemoval": true,
 		"programPath":      "",

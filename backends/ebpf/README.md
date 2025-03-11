@@ -27,7 +27,7 @@ options. The following replicates the default configuration:
 {
     "backends": {
         "ebpf": {
-            "targetInterface": "lo",
+            "targetInterfaces": ["lo"],
             "removeQdisc": true,
             "programPath": "",
             "markingStrategy": "flowLabel",
