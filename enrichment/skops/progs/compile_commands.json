@@ -1,0 +1,23 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-g",
+      "-O2",
+      "-target",
+      "bpf",
+      "-D__TARGET_ARCH_x86_64",
+      "-DFLOWD_DEBUG",
+      "-DFLOWD_POLL",
+      "-I",
+      ".",
+      "-c",
+      "-o",
+      "sk_ops.bpf.o",
+      "sk_ops.bpf.c"
+    ],
+    "directory": "/home/collado/Repos/flowd-go/enrichment/skops/progs",
+    "file": "/home/collado/Repos/flowd-go/enrichment/skops/progs/sk_ops.bpf.c",
+    "output": "/home/collado/Repos/flowd-go/enrichment/skops/progs/sk_ops.bpf.o"
+  }
+]
