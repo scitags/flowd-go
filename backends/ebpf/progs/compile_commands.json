@@ -1,0 +1,23 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/clang",
+      "-g",
+      "-O2",
+      "-target",
+      "bpf",
+      "-D__TARGET_ARCH_x86_64",
+      "-I",
+      ".",
+      "-c",
+      "-D",
+      "GLOWD_FLOW_LABEL",
+      "-o",
+      "marker-flow-label.bpf.o",
+      "marker.bpf.c"
+    ],
+    "directory": "/home/collado/Repos/flowd-go/backends/ebpf/progs",
+    "file": "/home/collado/Repos/flowd-go/backends/ebpf/progs/marker.bpf.c",
+    "output": "/home/collado/Repos/flowd-go/backends/ebpf/progs/marker-flow-label.bpf.o"
+  }
+]

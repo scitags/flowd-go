@@ -51,18 +51,22 @@ func (b *EbpfBackend) chooseBPFProgram() []byte {
 		return hopByHopDestHeaderBPFProg
 	default:
 		slog.Warn("wrong marking strategy, defaulting to flowLabel-based (non-debug) marking",
-			"markingStrategy", b.MarkingStrategy)
+			"originalMarkingStrategy", b.MarkingStrategy)
 		return flowLabelBPFProg
 	}
 }
 
 func (b *EbpfBackend) setupLogging() {
-	slog.Debug("setting up logging")
+	slog.Debug("setting up libbpf's logging")
+
+	logFunc := slog.Warn
 	libbpfLogLevel := bpf.LibbpfWarnLevel
 	if slog.Default().Handler().Enabled(context.TODO(), slog.LevelDebug) {
 		libbpfLogLevel = logLevelTranslation[slog.LevelDebug]
+		logFunc = slog.Debug
 	} else if slog.Default().Handler().Enabled(context.TODO(), slog.LevelInfo) {
 		libbpfLogLevel = logLevelTranslation[slog.LevelInfo]
+		logFunc = slog.Info
 	}
 
 	bpf.SetLoggerCbs(bpf.Callbacks{
@@ -71,7 +75,7 @@ func (b *EbpfBackend) setupLogging() {
 				// Remove the trailing newline coming from C-land...
 				for _, line := range strings.Split(msg, "\n") {
 					if line != "" {
-						slog.Info(line)
+						logFunc(line)
 					}
 				}
 
