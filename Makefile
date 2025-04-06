@@ -10,8 +10,13 @@ GOC = go
 # The compiler to use for the BPF side of things
 CC = clang
 
+# Please note this environment variable will only be defined when running
+# the %build scriptlet of a SPEC file during the building of RPM packages.
+# Given the context in which those builds run IS NOT that of a full-fledged
+# repository we do need to make some (slight) changes.
 ifdef RPM_PACKAGE_NAME
 $(info running in an RPM context!)
+BUILDING_RPM := 1
 endif
 
 # Get the current tag to embed it into the Go binary. We'll drop the
@@ -20,7 +25,7 @@ endif
 # working on tagged branches... We do need to figure out a better way
 # to propagate all this to the SPEC file and so on...
 # VERSION = $(shell git describe --tags --abbrev=0 | tr -d v)
-ifdef RPM_PACKAGE_NAME
+ifdef BUILDING_RPM
 VERSION := $(RPM_PACKAGE_VERSION)
 else
 VERSION = 2.0
@@ -32,7 +37,7 @@ DOCKER_IMG_VERSION := v2.0
 export DOCKER_IMG_VERSION
 
 # Get the current commit to embed it into the Go binary.
-ifdef RPM_PACKAGE_NAME
+ifdef BUILDING_RPM
 COMMIT = $(shell cat commit)
 else
 COMMIT = $(shell git rev-parse --short HEAD)
@@ -161,7 +166,7 @@ endif
 
 # Include Makefiles with additional targets automating stuff.
 # Check https://www.gnu.org/software/make/manual/html_node/Include.html
-ifndef RPM_PACKAGE_NAME
+ifndef BUILDING_RPM
 include mk/*.mk
 endif
 
