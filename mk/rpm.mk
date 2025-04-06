@@ -44,13 +44,17 @@ RPM_FILES := backends cmd enrichment plugins settings rpm stun types const.go go
 # the SRPM on: these might be CI/CD workers where access to the /sys directory might be forbidden...
 # We'll also get rid of any other unnecessary stuff and include a file containing the current commit
 # so that we can fetch it when building the RPM, something completely independent of the git repo (we
-# are actually deleting the .git directory!).
-.PHONY: rpm-dist
-rpm-dist: rpm-clean
+# are actually deleting the .git directory!). Please note the target name MUST be sources as this is
+# what CERN's koji instance expects!
+.PHONY: sources
+sources: rpm-clean
+	ls -la
+	env
+
 	mkdir -p $(PWD)/dist/${SPECFILE_NAME}-${SPECFILE_VERSION} $(PWD)/build
 
 	cp -pr ${RPM_FILES} dist/${SPECFILE_NAME}-${SPECFILE_VERSION}/.
-	git rev-parse --short HEAD > dist/${SPECFILE_NAME}-${SPECFILE_VERSION}/commit
+	cat .git/$(shell cut -d ' ' -f 2 .git/HEAD) > dist/${SPECFILE_NAME}-${SPECFILE_VERSION}/commit
 
 	bpftool btf dump file /sys/kernel/btf/vmlinux format c > dist/${SPECFILE_NAME}-${SPECFILE_VERSION}/backends/ebpf/progs/vmlinux.h
 	bpftool btf dump file /sys/kernel/btf/vmlinux format c > dist/${SPECFILE_NAME}-${SPECFILE_VERSION}/enrichment/skops/progs/vmlinux.h
@@ -64,19 +68,21 @@ rpm-dist: rpm-clean
 
 	cd dist; tar cfz ${SPECFILE_NAME}-${SPECFILE_VERSION}.tar.gz ${SPECFILE_NAME}-${SPECFILE_VERSION}
 
-# Simply build a SRPM after bundling the sources.
-.PHONY: rpm-src
-rpm-src: rpm-dist
+# Simply build a SRPM after bundling the sources. Please note the target name MUST be srpm as this is what CERN's koji
+# instance expects.
+.PHONY: srpm
+srpm: sources
 	rpmbuild -bs --define "dist $(DIST)" --define "_topdir $(PWD)/build" --define '_sourcedir $(PWD)/dist' $(SPECFILE)
 
-# Build the binary (i.e. carrying teh compiled binary) RPM.
-.PHONY: rpm-bin
-rpm-bin: rpm-dist
+# Build the binary (i.e. carrying teh compiled binary) RPM. Please note the target name MUST be srpm as this is what
+# CERN's koji instance expects.
+.PHONY: rpm
+rpm: sources
 	rpmbuild -bb --define "dist $(DIST)" --define "_topdir $(PWD)/build" --define '_sourcedir $(PWD)/dist' $(SPECFILE)
 
 # Note how we need network access so that Go can pull its dependencies!
 .PHONY: rpm-mock
-rpm-mock: rpm-src
+rpm-mock: srpm
 	mock -r alma+epel-9-x86_64 --enable-network build/SRPMS/flowd-go-$(SPECFILE_VERSION)-$(SPECFILE_RELEASE).src.rpm
 
 .PHONY: rpm-clean
