@@ -54,6 +54,7 @@ sources: rpm-clean
 	mkdir -p $(PWD)/dist/${SPECFILE_NAME}-${SPECFILE_VERSION} $(PWD)/build
 
 	cp -pr ${RPM_FILES} dist/${SPECFILE_NAME}-${SPECFILE_VERSION}/.
+	@cat .git/HEAD
 	cat .git/$(shell cut -d ' ' -f 2 .git/HEAD) > dist/${SPECFILE_NAME}-${SPECFILE_VERSION}/commit
 
 	find dist -type d -name .git       | xargs -i rm -rf {}
@@ -65,7 +66,10 @@ sources: rpm-clean
 
 	cd dist; tar cfz ${SPECFILE_NAME}-${SPECFILE_VERSION}.tar.gz ${SPECFILE_NAME}-${SPECFILE_VERSION}
 
+	cp dist/${SPECFILE_NAME}-${SPECFILE_VERSION}.tar.gz .
+
 	ls -la
+	ls -la ..
 
 # Simply build a SRPM after bundling the sources. Please note the target name MUST be srpm as this is what CERN's koji
 # instance expects.
