@@ -49,6 +49,7 @@ RPM_FILES := backends cmd enrichment plugins settings rpm stun types const.go go
 .PHONY: sources
 sources: rpm-clean
 	ls -l
+	env
 
 	mkdir -p $(PWD)/dist/${SPECFILE_NAME}-${SPECFILE_VERSION} $(PWD)/build
 
