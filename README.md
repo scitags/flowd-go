@@ -212,12 +212,13 @@ a bit overwhelming for people not familiar with Go's ecosystem. The following sh
 
 Other than that, we also have pother couple of directories with auxiliary files:
 
-- `rpms`: This directory contains all the goodies for bundling up RPM packages for distribution, including:
+- `rpm`: This directory contains all the goodies for bundling up RPM packages for distribution, including:
     - `flowd-go.1.md`: The Markdown-formatted manpage for `flowd-go`. It's converted into a normal Roff-formatted manpage by `pandoc`.
     - `flowd-go.service`: The SystemD Unit file for running `flowd-go` as a regular SystemD service.
-    - `flowd-go.spec`: The RPM spec file used to build RPMs to make `flowd-go` easily available on RHEL-like systems.
     - `conf.json`: A configuration file meant for deployment on real machines. For development the configuration one should use
       is located on `cmd/conf.json`.
+
+- `flowd-go.spec`: The RPM spec file used to build RPMs to make `flowd-go` easily available on RHEL-like systems.
 
 - `mk`: Several auxiliary `Makefiles` which are included from the main `Makefile` that provide convenient automations for several
   interactions we usually carry out with `flowd-go` when developing it.
@@ -249,6 +250,22 @@ type Plugin interface {
 ```
 
 These are more documented on the source code.
+
+## On building RPM packages
+Building RPM packages is an adventure full of twists and turns. We've documented the main references once should become acquainted
+with on `mk/rpm.mk`. For WLCG-compliant distribution we need to leverage CERN's Koji instance. [Koji](https://docs.pagure.org/koji/)
+is a system for building RPMs which leverages [mock](https://rpm-software-management.github.io/mock/) under the hood for all the
+heavy lifting.
+
+The use of the aforementioned tools implies one needs to closely comply with the standard procedures for building RPMs as set forth
+in the official RPM documentation as well as in Fedora's documentation. All these sites are linked in the aforementioned `rpm.mk`.
+
+All in all, one should be able to build an RPM bundling flowd-go locally by running the following after having installed `mock` and
+`rpmbuild`:
+
+    $ make rpm-mock
+
+If the command fails be sure to study its output: it's verbosy and a bit hard to read but extremely helpful and informative.
 
 ## Kudos
 The logo is a composition of a couple of images:
