@@ -48,13 +48,13 @@ RPM_FILES := backends cmd enrichment plugins settings rpm stun types const.go go
 # what CERN's koji instance expects!
 .PHONY: sources
 sources: rpm-clean
-	ls -l
+	ls -la
 	env
 
 	mkdir -p $(PWD)/dist/${SPECFILE_NAME}-${SPECFILE_VERSION} $(PWD)/build
 
 	cp -pr ${RPM_FILES} dist/${SPECFILE_NAME}-${SPECFILE_VERSION}/.
-	git rev-parse --short HEAD > dist/${SPECFILE_NAME}-${SPECFILE_VERSION}/commit
+	cat .git/$(shell cut -d ' ' -f 2 .git/HEAD) > dist/${SPECFILE_NAME}-${SPECFILE_VERSION}/commit
 
 	bpftool btf dump file /sys/kernel/btf/vmlinux format c > dist/${SPECFILE_NAME}-${SPECFILE_VERSION}/backends/ebpf/progs/vmlinux.h
 	bpftool btf dump file /sys/kernel/btf/vmlinux format c > dist/${SPECFILE_NAME}-${SPECFILE_VERSION}/enrichment/skops/progs/vmlinux.h
