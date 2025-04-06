@@ -1,6 +1,6 @@
 module github.com/scitags/flowd-go
 
-go 1.23.0
+go 1.22.9
 
 require (
 	github.com/aquasecurity/libbpfgo v0.7.0-libbpf-1.4.0.20240729111821-61d531acf4ca
