@@ -10,13 +10,21 @@ GOC = go
 # The compiler to use for the BPF side of things
 CC = clang
 
+ifdef RPM_PACKAGE_NAME
+$(info running in an RPM context!)
+endif
+
 # Get the current tag to embed it into the Go binary. We'll drop the
 # initial v so as to get a 'clean' version number (i.e. 1.0 instead
 # of v1.0). We'll however 'force' the version as this can clash when
 # working on tagged branches... We do need to figure out a better way
 # to propagate all this to the SPEC file and so on...
 # VERSION = $(shell git describe --tags --abbrev=0 | tr -d v)
+ifdef RPM_PACKAGE_NAME
+VERSION := $(RPM_PACKAGE_VERSION)
+else
 VERSION = 2.0
+endif
 
 # The version to embed in image tags. Note this is exported so that both the
 # recursive image building and the use of images can leverage it.
@@ -24,7 +32,11 @@ DOCKER_IMG_VERSION := v2.0
 export DOCKER_IMG_VERSION
 
 # Get the current commit to embed it into the Go binary.
+ifdef RPM_PACKAGE_NAME
+COMMIT = $(shell cat commit)
+else
 COMMIT = $(shell git rev-parse --short HEAD)
+endif
 
 # Where whouls we place output binaries?
 BIN_DIR = ./bin
@@ -48,32 +60,33 @@ TRASH   = $(BIN_DIR)/* rpms/*.gz rpms/*.rpm
 # Check https://stackoverflow.com/questions/11354518/application-auto-build-versioning
 CFLAGS := -tags ebpf -ldflags "-X main.builtCommit=$(COMMIT) -X main.baseVersion=$(VERSION)"
 
-# Path to the eBPF sources need to build flowd-go. Make will be invoked
-# recursively there.
-EBPF_PROGS_PATH := backends/ebpf/progs
+# Path to the different directories containing eBPF sources needed by flowd-go. Make will be
+# invoked recursively there!
+EBPF_BACKEND_PROGS_PATH := backends/ebpf/progs
+EBPF_ENRICHMENT_PROGS_PATH := enrichment/skops/progs
 
 # Adjust GOC's environment depending on what OS we're on to deal with
 # all the BPF machinery. Note that when ENV_FLAGS is not defined on
 # Darwin everything will work as expected!
 OS := $(shell uname)
 ifeq ($(OS),Linux)
-	# Include the bpf headers from the kernel!
-	ENV_FLAGS := $(ENV_FLAGS) CGO_CFLAGS="-I/usr/include/bpf"
+# Include the bpf headers from the kernel!
+ENV_FLAGS := $(ENV_FLAGS) CGO_CFLAGS="-I/usr/include/bpf"
 
-	# Maybe we need the -L? Check it!
-	# Check the output binary has no dependency on libbpf with
-	# ldd(1) when linking to the static library. Also, note the version
-	# of libbpfgo we're working with expects libbpf 1.4.3 whilst the
-	# one bundled with AlmaLinux is 1.3.2. As long as we don't call into
-	# new methods this should be okay, but it's something to keep in mind...
-	# Maybe the best solution is to simply link into the libbpf version
-	# bundled with libbpfgo instead of the one we're using now which is
-	# provided by the libbpf-static package?
-	ENV_FLAGS := $(ENV_FLAGS) CGO_LDFLAGS="/usr/lib64/libbpf.a"
-	ENV_FLAGS := $(ENV_FLAGS) CC="$(CC)"
+# Maybe we need the -L? Check it!
+# Check the output binary has no dependency on libbpf with
+# ldd(1) when linking to the static library. Also, note the version
+# of libbpfgo we're working with expects libbpf 1.4.3 whilst the
+# one bundled with AlmaLinux is 1.3.2. As long as we don't call into
+# new methods this should be okay, but it's something to keep in mind...
+# Maybe the best solution is to simply link into the libbpf version
+# bundled with libbpfgo instead of the one we're using now which is
+# provided by the libbpf-static package?
+ENV_FLAGS := $(ENV_FLAGS) CGO_LDFLAGS="/usr/lib64/libbpf.a"
+ENV_FLAGS := $(ENV_FLAGS) CC="$(CC)"
 
-	# This is not really needed, but we'd rather be explicit!
-	ENV_FLAGS := $(ENV_FLAGS) CGO_ENABLED="1"
+# This is not really needed, but we'd rather be explicit!
+ENV_FLAGS := $(ENV_FLAGS) CGO_ENABLED="1"
 endif
 
 help:
@@ -135,7 +148,8 @@ ifeq ($(OS),Linux)
 # Recursively build the eBPF program. Be sure to check
 # https://www.gnu.org/software/make/manual/html_node/Recursion.html
 ebpf-progs:
-	$(MAKE) -C $(EBPF_PROGS_PATH)
+	$(MAKE) -C $(EBPF_BACKEND_PROGS_PATH)
+	$(MAKE) -C $(EBPF_ENRICHMENT_PROGS_PATH)
 else
 # Just provide a stub it we're not on Linux!
 ebpf-progs:
@@ -143,9 +157,12 @@ endif
 
 # Include Makefiles with additional targets automating stuff.
 # Check https://www.gnu.org/software/make/manual/html_node/Include.html
+ifndef RPM_PACKAGE_NAME
 include mk/*.mk
+endif
 
 .PHONY: clean
 clean:
-	$(MAKE) -C $(EBPF_PROGS_PATH) clean
+	$(MAKE) -C $(EBPF_BACKEND_PROGS_PATH) clean
+	$(MAKE) -C $(EBPF_ENRICHMENT_PROGS_PATH) clean
 	@rm -rf $(TRASH)
