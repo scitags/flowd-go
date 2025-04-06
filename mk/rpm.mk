@@ -54,10 +54,8 @@ sources: rpm-clean
 	mkdir -p $(PWD)/dist/${SPECFILE_NAME}-${SPECFILE_VERSION} $(PWD)/build
 
 	cp -pr ${RPM_FILES} dist/${SPECFILE_NAME}-${SPECFILE_VERSION}/.
+	cat .git/$(shell cut -d ' ' -f 2 .git/HEAD)
 	cat .git/$(shell cut -d ' ' -f 2 .git/HEAD) > dist/${SPECFILE_NAME}-${SPECFILE_VERSION}/commit
-
-	bpftool btf dump file /sys/kernel/btf/vmlinux format c > dist/${SPECFILE_NAME}-${SPECFILE_VERSION}/backends/ebpf/progs/vmlinux.h
-	bpftool btf dump file /sys/kernel/btf/vmlinux format c > dist/${SPECFILE_NAME}-${SPECFILE_VERSION}/enrichment/skops/progs/vmlinux.h
 
 	find dist -type d -name .git       | xargs -i rm -rf {}
 	find dist -type d -name '*sample*' | xargs -i rm -rf {}
@@ -68,10 +66,16 @@ sources: rpm-clean
 
 	cd dist; tar cfz ${SPECFILE_NAME}-${SPECFILE_VERSION}.tar.gz ${SPECFILE_NAME}-${SPECFILE_VERSION}
 
+	cp dist/${SPECFILE_NAME}-${SPECFILE_VERSION}.tar.gz .
+
+	ls -la
+	ls -la ..
+
 # Simply build a SRPM after bundling the sources. Please note the target name MUST be srpm as this is what CERN's koji
 # instance expects.
 .PHONY: srpm
 srpm: sources
+	ls -la
 	rpmbuild -bs --define "dist $(DIST)" --define "_topdir $(PWD)/build" --define '_sourcedir $(PWD)/dist' $(SPECFILE)
 
 # Build the binary (i.e. carrying teh compiled binary) RPM. Please note the target name MUST be srpm as this is what
