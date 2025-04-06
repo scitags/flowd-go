@@ -42,3 +42,7 @@ test
 *tmp*
 *fii*
 *fee*
+
+# Ignore artifacts generated when building RPMs
+dist/
+build/
