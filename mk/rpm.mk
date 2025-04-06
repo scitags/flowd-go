@@ -69,6 +69,7 @@ sources: rpm-clean
 # instance expects.
 .PHONY: srpm
 srpm: sources
+	ls -la
 	rpmbuild -bs --define "dist $(DIST)" --define "_topdir $(PWD)/build" --define '_sourcedir $(PWD)/dist' $(SPECFILE)
 
 # Build the binary (i.e. carrying teh compiled binary) RPM. Please note the target name MUST be srpm as this is what
