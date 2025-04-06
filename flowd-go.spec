@@ -47,6 +47,12 @@ Reimplementation of the flowd daemon in Go.
 The flowd-go daemon serves as the backbone for HEPiX's
 SciTags initiative as seen on https://www.scitags.org
 
+# For some reason (we're invoking clang?) the RPM package will want to build
+# a debuginfo package. As there's no information for that, it'll fail with
+# an error... The following overrides that behaviour so that no debuginfo
+# packages are built whatsoever.
+%define debug_package %{nil}
+
 %prep
 %setup
 
@@ -66,10 +72,10 @@ mkdir -p %{buildroot}%{_sysconfdir}/%{name}
 mkdir -p %{buildroot}%{_mandir}/man1
 
 # And install the necessary files
-install -m 0775 bin/%{name}     %{buildroot}%{_bindir}/%{name}
-install -m 0644 conf.json       %{buildroot}%{_sysconfdir}/%{name}/conf.json
-install -m 0664 %{name}.service %{buildroot}%{_unitdir}/%{name}.service
-install -m 0664 %{name}.1.gz    %{buildroot}%{_mandir}/man1/%{name}.1.gz
+install -m 0775 bin/%{name}         %{buildroot}%{_bindir}/%{name}
+install -m 0644 rpm/conf.json       %{buildroot}%{_sysconfdir}/%{name}/conf.json
+install -m 0664 rpm/%{name}.service %{buildroot}%{_unitdir}/%{name}.service
+install -m 0664 rpm/%{name}.1.gz    %{buildroot}%{_mandir}/man1/%{name}.1.gz
 
 %post
 %systemd_post %{name}.service
