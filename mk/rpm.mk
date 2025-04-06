@@ -56,9 +56,6 @@ sources: rpm-clean
 	cp -pr ${RPM_FILES} dist/${SPECFILE_NAME}-${SPECFILE_VERSION}/.
 	cat .git/$(shell cut -d ' ' -f 2 .git/HEAD) > dist/${SPECFILE_NAME}-${SPECFILE_VERSION}/commit
 
-	bpftool btf dump file /sys/kernel/btf/vmlinux format c > dist/${SPECFILE_NAME}-${SPECFILE_VERSION}/backends/ebpf/progs/vmlinux.h
-	bpftool btf dump file /sys/kernel/btf/vmlinux format c > dist/${SPECFILE_NAME}-${SPECFILE_VERSION}/enrichment/skops/progs/vmlinux.h
-
 	find dist -type d -name .git       | xargs -i rm -rf {}
 	find dist -type d -name '*sample*' | xargs -i rm -rf {}
 	find dist -type f -name '*.gdb'    | xargs -i rm -rf {}
