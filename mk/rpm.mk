@@ -65,6 +65,8 @@ sources: rpm-clean
 
 	cd dist; tar cfz ${SPECFILE_NAME}-${SPECFILE_VERSION}.tar.gz ${SPECFILE_NAME}-${SPECFILE_VERSION}
 
+	ls -la
+
 # Simply build a SRPM after bundling the sources. Please note the target name MUST be srpm as this is what CERN's koji
 # instance expects.
 .PHONY: srpm
