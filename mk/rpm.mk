@@ -54,7 +54,7 @@ sources: rpm-clean
 	mkdir -p $(PWD)/dist/${SPECFILE_NAME}-${SPECFILE_VERSION} $(PWD)/build
 
 	cp -pr ${RPM_FILES} dist/${SPECFILE_NAME}-${SPECFILE_VERSION}/.
-	@cat .git/HEAD
+	cat .git/$(shell cut -d ' ' -f 2 .git/HEAD)
 	cat .git/$(shell cut -d ' ' -f 2 .git/HEAD) > dist/${SPECFILE_NAME}-${SPECFILE_VERSION}/commit
 
 	find dist -type d -name .git       | xargs -i rm -rf {}
