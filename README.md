@@ -42,14 +42,16 @@ AlmaLinux 9.4, where the following installs all needed dependencies:
     # Install libbpf together with headers and the static library (i.e. *.a), llvm, clang and the auxiliary bpftool
     $ yum install libbpf-devel libbpf-static clang llvm bpftool
 
-If you want to create the manpage you'll also need to install [`pandoc`](https://pandoc.org), which will convert the Markdown-formatted
+If you want to create the manpage you'll also need to install [`go-md2man`](https://github.com/cpuguy83/go-md2man), which will convert the Markdown-formatted
 manpage into a Roff-formatted one:
 
-    # On Almalinux you can install pandoc from EPEL
-    $ yum install pandoc
+    # We can install the tool like any other one. Just bear in mind you should
+    # include Go's binary installation directory in your PATH. You can also
+    # specify the installation path through the GOBIN environment variable.
+    go install github.com/cpuguy83/go-md2man/v2@latest
 
-    # On macOS you can install it with Homebrew or an equivalent package manager
-    $ brew install pandoc
+Back in the day we leveraged [`pandoc`](https://pandoc.org), but given it's released only on EPEL we couldn't add it as a dependency on
+the Koji instance we have to build our packages on. This led us find an alternative solution.
 
 Also, if you want to build an RPM with all the necessary goodies be sure to install these additional dependencies:
 
@@ -213,7 +215,7 @@ a bit overwhelming for people not familiar with Go's ecosystem. The following sh
 Other than that, we also have pother couple of directories with auxiliary files:
 
 - `rpm`: This directory contains all the goodies for bundling up RPM packages for distribution, including:
-    - `flowd-go.1.md`: The Markdown-formatted manpage for `flowd-go`. It's converted into a normal Roff-formatted manpage by `pandoc`.
+    - `flowd-go.1.md`: The Markdown-formatted manpage for `flowd-go`. It's converted into a normal Roff-formatted manpage by `go-md2man`.
     - `flowd-go.service`: The SystemD Unit file for running `flowd-go` as a regular SystemD service.
     - `conf.json`: A configuration file meant for deployment on real machines. For development the configuration one should use
       is located on `cmd/conf.json`.

@@ -25,9 +25,6 @@ BuildRequires:	make >= 1:4.3-8.el9
 BuildRequires:	clang >= 18.1.8-3.el9
 BuildRequires:	llvm  >= 18.1.8-3.el9
 
-# Any (recent) version of pandoc should do
-BuildRequires:	pandoc >= 2.14.0.3-17.el9
-
 BuildRequires:	golang >= 1.22.9
 BuildRequires:	gzip >= 1.12
 
@@ -58,7 +55,9 @@ SciTags initiative as seen on https://www.scitags.org
 
 %build
 make build
-pandoc --standalone --to man ${RPM_PACKAGE_NAME}.1.md | gzip > ${RPM_PACKAGE_NAME}.1.gz
+
+GOBIN=$(pwd) go install github.com/cpuguy83/go-md2man/v2@latest
+$(pwd)/go-md2man -in rpm/${RPM_PACKAGE_NAME}.1.md | gzip > ${RPM_PACKAGE_NAME}.1.gz
 
 # Time to copy the binary file!
 %install
