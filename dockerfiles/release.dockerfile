@@ -21,7 +21,6 @@ RUN microdnf --refresh --enablerepo=crb --nodocs --setopt=install_weak_deps=0 -y
 # Add the additional dependencies needed for releasing. Note the dependency on systemd is
 # introduced by the fact that the resulting package carries a SystemD unit file.
 RUN microdnf --refresh --enablerepo=crb --nodocs --setopt=install_weak_deps=0 -y install \
-        pandoc      \
         rpm-build   \
         rpmdevtools \
         systemd     \

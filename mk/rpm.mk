@@ -78,7 +78,7 @@ srpm: sources
 	ls -la
 	rpmbuild -bs --define "dist $(DIST)" --define "_topdir $(PWD)/build" --define '_sourcedir $(PWD)/dist' $(SPECFILE)
 
-# Build the binary (i.e. carrying teh compiled binary) RPM. Please note the target name MUST be srpm as this is what
+# Build the binary (i.e. carrying teh compiled binary) RPM. Please note the target name MUST be rpm as this is what
 # CERN's koji instance expects.
 .PHONY: rpm
 rpm: sources
@@ -87,7 +87,7 @@ rpm: sources
 # Note how we need network access so that Go can pull its dependencies!
 .PHONY: rpm-mock
 rpm-mock: srpm
-	mock -r alma+epel-9-x86_64 --enable-network build/SRPMS/flowd-go-$(SPECFILE_VERSION)-$(SPECFILE_RELEASE).src.rpm
+	mock -r almalinux-9-x86_64 --enable-network build/SRPMS/flowd-go-$(SPECFILE_VERSION)-$(SPECFILE_RELEASE).src.rpm
 
 .PHONY: rpm-clean
 rpm-clean:
