@@ -1,4 +1,5 @@
-% flowd-go(1) | General Commands Manual
+flowd-go 1 "April 2025" flowd-go "General Commands Manual"
+==============================================================
 
 # NAME
 flowd-go - SciTags Flowd-go Daemon
