@@ -13,10 +13,12 @@ License:	ASL 2.0
 # Note libbpf-static already depends on the needed libbpf-devel
 BuildRequires:	libbpf-static = 2:1.4.0-1.el9
 
-# We would need bpftool to generate vmlinux.h when building. We'll
-# simply include it in the SRPM instead as we might face some
-# problems when trying to access /sys/kernel/btf/vmlinux...
-# BuildRequires:	bpftool >= 7.4.0
+# We would need bpftool to generate vmlinux.h when building. Including
+# vmlinux.h can be quite a headache given the file's size, but it might
+# be what we need to do in the end as we're now relying on the machine
+# building the RPMs to expose the correct types on /sys/kernel/btf/vmlinux,
+# which is quite an assumption...
+BuildRequires:	bpftool >= 7.4.0
 
 # Any version of Make should do, so don't ask for a particular one...
 BuildRequires:	make >= 1:4.3-8.el9
