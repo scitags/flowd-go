@@ -58,28 +58,31 @@ RPM_FILES := backends cmd enrichment plugins settings rpm stun types const.go go
 # are actually deleting the .git directory!). Please note the target name MUST be sources as this is
 # what CERN's koji instance expects! Be sure to check https://gitlab.cern.ch/linuxsupport/myrpm for
 # a great working example. The repo at https://gitlab.cern.ch/linuxsupport/rpmci is also a fundamental
-# source of information.
+# source of information. If we are to generate the SRPM and upload it as a GitHub release artifact we
+# can leverage the following:
+#     curl -L -o jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-$(DL_ARCH)
+#     chmod +x jq
+#     RELEASE_VER := $(shell curl -L -s -H 'Accept: application/json' https://github.com/scitags/flowd-go/releases/latest | jq -r .tag_name)
+#     curl -L -o build/SRPMS/flowd-go-$(SPECFILE_VERSION)-$(SPECFILE_RELEASE).src.rpm https://github.com/scitags/flowd-go/releases/download/$(RELEASE_VER)/flowd-go.src.rpm
+# An even better approach could be to simply download the *.tar.gz and call it a day with:
+#     curl -L -o jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-$(DL_ARCH)
+#     chmod +x jq
+#     RELEASE_VER := $(shell curl -L -s -H 'Accept: application/json' https://github.com/scitags/flowd-go/releases/latest | jq -r .tag_name)
+#     curl -L -o ${SPECFILE_NAME}-${SPECFILE_VERSION}.tar.gz https://github.com/scitags/flowd-go/releases/download/$(RELEASE_VER)/sources.tar.gz
 .PHONY: sources
 sources: rpm-clean
 	ls -la
-	env
 
 	mkdir -p $(PWD)/dist/${SPECFILE_NAME}-${SPECFILE_VERSION} $(PWD)/build
 
-	cat $(SPECFILE)
+	@# Only download Go if it's not present on the PATH
+	which go || curl -L -s -o go.tar.gz https://dl.google.com/go/go$(GO_VERSION).linux-$(DL_ARCH).tar.gz
+	which go || tar -C /tmp -xzf go.tar.gz
+	which go || /tmp/go/bin/go version
 
-	# curl -L -s -H 'Accept: application/json' https://github.com/scitags/flowd-go/releases/latest
-	# curl -L -o jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-$(DL_ARCH)
-	# chmod +x jq
-	# ./jq || true
-
-	curl -L -s -o go.tar.gz https://dl.google.com/go/go$(GO_VERSION).linux-$(DL_ARCH).tar.gz
-	cp go.tar.gz .. || true
-	tar -C /tmp -xzf go.tar.gz
-	/tmp/go/bin/go version
-	/tmp/go/bin/go mod vendor
-	/tmp/go/bin/go generate
-
+	@# Try to use a 'normally' installed Go release and, if not, use the one we should've already installed...
+	go mod vendor || /tmp/go/bin/go mod vendor
+	go generate   || /tmp/go/bin/go generate
 	gzip --force rpm/$(SPECFILE_NAME).1
 
 	cp -pr ${RPM_FILES} dist/${SPECFILE_NAME}-${SPECFILE_VERSION}/.
@@ -96,9 +99,6 @@ sources: rpm-clean
 	cd dist; tar -czvf ${SPECFILE_NAME}-${SPECFILE_VERSION}.tar.gz ${SPECFILE_NAME}-${SPECFILE_VERSION}
 
 	cp dist/${SPECFILE_NAME}-${SPECFILE_VERSION}.tar.gz .
-
-	ls -la
-	ls -la ..
 
 # Simply build a SRPM after bundling the sources. Please note the target name MUST be srpm as this is what CERN's koji
 # instance expects.
