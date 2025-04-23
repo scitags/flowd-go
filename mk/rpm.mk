@@ -20,11 +20,20 @@ SPECFILE_VERSION     = $(shell awk '$$1 == "Version:"  { print $$2 }' $(SPECFILE
 SPECFILE_RELEASE     = $(shell awk '$$1 == "Release:"  { print $$2 }' $(SPECFILE))
 DIST                ?= $(shell rpm --eval %{dist})
 
+GO_VERSION = $(shell awk '/^go[[:space:]]/ {print $$2}' go.mod)
+
 # Path of the buildroot created with rpmdev-setuptree. In order to create
 # it, install the necessary tools as explained on the main README.md and
 # then simply run rpmdev-setuptree. The build tree will be created by
 # default on ${HOME}/rpmbuild, hence the definition of this variable.
 RPM_BUILDROOT = $(shell echo ${HOME})/rpmbuild
+
+ARCH := $(shell uname -m)
+ifeq ($(ARCH),x86_64)
+DL_ARCH := amd64
+else
+DL_ARCH := arm64
+endif
 
 # Simply show the variables we'll use in the build
 .PHONY: rpm-dbg
@@ -35,6 +44,8 @@ rpm-dbg:
 	@echo "SPECFILE_RELEASE: $(SPECFILE_RELEASE)"
 	@echo "            DIST: $(DIST)"
 	@echo "         VERSION: $(VERSION)"
+	@echo "         DL_ARCH: $(DL_ARCH)"
+	@echo "      GO_VERSION: $(GO_VERSION)"
 
 # Files to include in the SRPM
 RPM_FILES := backends cmd enrichment plugins settings rpm stun types const.go go.mod go.sum vendor Makefile
@@ -58,6 +69,13 @@ sources: rpm-clean
 	cat $(SPECFILE)
 
 	curl -L -s -H 'Accept: application/json' https://github.com/scitags/flowd-go/releases/latest
+	curl -L -o jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-$(DL_ARCH)
+	chmod +x jq
+	./jq || true
+
+	curl -L -o go.tar.gz https://dl.google.com/go/go$(GO_VERSION).linux-$(DL_ARCH).tar.gz
+	tar -xzf go.tar.gz
+	./go/bin/go version
 
 	which yum || true
 	which dnf || true
