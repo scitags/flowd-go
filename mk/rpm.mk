@@ -59,8 +59,11 @@ sources: rpm-clean
 
 	curl -L -s -H 'Accept: application/json' https://github.com/scitags/flowd-go/releases/latest
 
-	which yum
-	which jq
+	which yum || true
+	which dnf || true
+	which jq || true
+	which sed || true
+	which awk || true
 
 	yum install -y golang
 
