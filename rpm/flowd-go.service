@@ -1,10 +1,13 @@
-# Be sure to check https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html!
+# Be sure to check the following for information on this file's contents:
+#   https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html
+#   https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html
 [Unit]
 Description=SciTags Flowd-go Service
 Documentation=man:flowd-go(1) https://github.com/scitags/flowd-go
 After=network.target
 
 [Service]
+RuntimeDirectory=flowd-go
 Type=simple
 ExecStart=/usr/bin/flowd-go --conf /etc/flowd-go/conf.json run
 Restart=always
