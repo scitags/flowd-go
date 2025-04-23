@@ -65,6 +65,11 @@ TRASH   = $(BIN_DIR)/* rpms/*.gz rpms/*.rpm
 # Check https://stackoverflow.com/questions/11354518/application-auto-build-versioning
 CFLAGS := -tags ebpf -ldflags "-X main.builtCommit=$(COMMIT) -X main.baseVersion=$(VERSION)"
 
+# Disable VCS stamping when building the RPMs: the .git directory won't be there!
+ifdef BUILDING_RPM
+CFLAGS := $(CFLAGS) -buildvcs=false
+endif
+
 # Path to the different directories containing eBPF sources needed by flowd-go. Make will be
 # invoked recursively there!
 EBPF_BACKEND_PROGS_PATH := backends/ebpf/progs
