@@ -57,7 +57,9 @@ sources: rpm-clean
 
 	cat $(SPECFILE)
 
-	dnf builddep -y $(SPECFILE)
+	curl -L -s -H 'Accept: application/json' https://github.com/scitags/flowd-go/releases/latest
+
+	yum-builddep -y --define "_sourcedir $(pwd)" *.spec
 
 	go mod vendor
 
