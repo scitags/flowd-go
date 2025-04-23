@@ -55,6 +55,8 @@ sources: rpm-clean
 
 	mkdir -p $(PWD)/dist/${SPECFILE_NAME}-${SPECFILE_VERSION} $(PWD)/build
 
+	yum-builddep -y $(SPECFILE)
+
 	go mod vendor
 
 	go generate
