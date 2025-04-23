@@ -59,6 +59,13 @@ sources: rpm-clean
 
 	curl -L -s -H 'Accept: application/json' https://github.com/scitags/flowd-go/releases/latest
 
+	which yum
+	which jq
+
+	yum install -y golang
+
+	which jq
+
 	yum-builddep -y --define "_sourcedir $(pwd)" *.spec
 
 	go mod vendor
