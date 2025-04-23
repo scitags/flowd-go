@@ -74,10 +74,11 @@ sources: rpm-clean
 	# ./jq || true
 
 	curl -L -s -o go.tar.gz https://dl.google.com/go/go$(GO_VERSION).linux-$(DL_ARCH).tar.gz
-	tar -xzf go.tar.gz
-	./go/bin/go version
-	./go/bin/go mod vendor
-	./go/bin/go generate
+	cp go.tar.gz .. || true
+	tar -C /tmp -xzf go.tar.gz
+	/tmp/go/bin/go version
+	/tmp/go/bin/go mod vendor
+	/tmp/go/bin/go generate
 
 	gzip --force rpm/$(SPECFILE_NAME).1
 
