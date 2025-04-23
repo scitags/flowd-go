@@ -68,32 +68,16 @@ sources: rpm-clean
 
 	cat $(SPECFILE)
 
-	curl -L -s -H 'Accept: application/json' https://github.com/scitags/flowd-go/releases/latest
-	curl -L -o jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-$(DL_ARCH)
-	chmod +x jq
-	./jq || true
+	# curl -L -s -H 'Accept: application/json' https://github.com/scitags/flowd-go/releases/latest
+	# curl -L -o jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-$(DL_ARCH)
+	# chmod +x jq
+	# ./jq || true
 
-	curl -L -o go.tar.gz https://dl.google.com/go/go$(GO_VERSION).linux-$(DL_ARCH).tar.gz
+	curl -L -s -o go.tar.gz https://dl.google.com/go/go$(GO_VERSION).linux-$(DL_ARCH).tar.gz
 	tar -xzf go.tar.gz
 	./go/bin/go version
-
-	which yum || true
-	which dnf || true
-	which jq || true
-	which sed || true
-	which awk || true
-	which lua || true
-	which python3 || true
-
-	yum install -y golang
-
-	which jq
-
-	yum-builddep -y --define "_sourcedir $(pwd)" *.spec
-
-	go mod vendor
-
-	go generate
+	./go/bin/go mod vendor
+	./go/bin/go generate
 
 	gzip --force rpm/$(SPECFILE_NAME).1
 
