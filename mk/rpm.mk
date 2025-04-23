@@ -64,6 +64,8 @@ sources: rpm-clean
 	which jq || true
 	which sed || true
 	which awk || true
+	which lua || true
+	which python3 || true
 
 	yum install -y golang
 
