@@ -58,9 +58,6 @@ SciTags initiative as seen on https://www.scitags.org
 %build
 make build
 
-GOBIN=$(pwd) go install github.com/cpuguy83/go-md2man/v2@latest
-$(pwd)/go-md2man -in rpm/${RPM_PACKAGE_NAME}.1.md | gzip > ${RPM_PACKAGE_NAME}.1.gz
-
 # Time to copy the binary file!
 %install
 # Delete the previos build root
