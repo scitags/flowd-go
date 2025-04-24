@@ -54,7 +54,9 @@ jobs:
               shell: bash
               working-directory: ./flowd-go
               run: |
+                ls -la
                 make rpm
+                ls -la
 
             - name: Release time!
               shell: bash
@@ -64,5 +66,4 @@ jobs:
                 GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                 ls -la
-                ls -la bin
                 gh release create --repo scitags/flowd-go --generate-notes $TAG_NAME ./bin/flowd-go sources.tar.gz ./build/SRPMS/*.rpm ./build/RPMS/x86_64/*.rpm
