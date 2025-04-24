@@ -28,6 +28,7 @@ vmlinux.h
 *.man
 *.rpm
 *.1
+commit
 
 # Ignore files created at runtime
 *.pid
