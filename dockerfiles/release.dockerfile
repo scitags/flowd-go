@@ -1,5 +1,5 @@
 # Version of the test image we'll use as base
-ARG BASE_VERSION=2.59.0
+ARG BASE_VERSION=v2.1
 
 # We'll simply add on to the CI image for testing
 FROM ghcr.io/scitags/flowd-go:test-${BASE_VERSION}

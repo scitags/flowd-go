@@ -1,6 +1,8 @@
 # Simply define the image version in case we're running standalone. Otherwise this
 # variable will be overridden by the one exported from the top-level Makefile.
-DOCKER_IMG_VERSION ?= v2.0
+DOCKER_IMG_VERSION ?= v2.1
+
+GO_VERSION = $(shell awk '/^go[[:space:]]/ {print $$2}' ../go.mod)
 
 # Just build the development image
 all: dev
@@ -10,8 +12,7 @@ all: dev
 # some devs might be working with ARM-based machines...
 .PHONY: dev
 dev: vault.repo
-	@docker buildx build --platform linux/amd64,linux/arm64/v8 \
-		--build-arg GO_VERSION=1.23.0 \
+	@docker buildx build --platform linux/amd64 \
 		--progress plain \
 		-t ghcr.io/scitags/flowd-go:dev-$(DOCKER_IMG_VERSION) -f dev.dockerfile .
 
@@ -28,16 +29,15 @@ dev: vault.repo
 #   https://llvm.org/docs/CMake.html#llvm-related-variables
 .PHONY: test
 test: vault.repo
-	@docker buildx build --platform linux/amd64 \
-		--build-arg GO_VERSION=1.23.0 \
+	docker buildx build --platform linux/amd64 \
 		--progress plain --no-cache \
 		-t ghcr.io/scitags/flowd-go:test-$(DOCKER_IMG_VERSION) -f test.dockerfile .
 
 # Build the CI image we'll be using when releasing the CI
 .PHONY: release
-release: test
-	@docker buildx build --platform linux/amd64 \
+release:
+	docker buildx build --platform linux/amd64 \
 		--build-arg BASE_VERSION=$(DOCKER_IMG_VERSION) \
-		--build-arg GH_CLI_VERSION=2.59.0   \
+		--build-arg GH_CLI_VERSION=2.59.0 \
 		--progress plain \
 		-t ghcr.io/scitags/flowd-go:release-$(DOCKER_IMG_VERSION) -f release.dockerfile .

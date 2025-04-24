@@ -17,11 +17,12 @@ COPY vault.repo /etc/yum.repos.d/
 
 # Get DNF dependencies
 RUN dnf --refresh --nodocs -y --setopt=install_weak_deps=False --enablerepo=crb install \
-        libbpf-devel-2:1.3.0  \
-        libbpf-static-2:1.3.0 \
-        clang-17.0.6          \
-        llvm-17.0.6           \
-        bpftool-7.3.0         \
+        libbpf-devel-2:1.4.0  \
+        libbpf-static-2:1.4.0 \
+        bpftool-7.4.0         \
+        clang-18.1.8          \
+        llvm-18.1.8           \
+        golang-1.22.9         \
         make-1:4.3            \
         git-2.43.5            \
         tcpdump-4.99.0        \
@@ -29,21 +30,9 @@ RUN dnf --refresh --nodocs -y --setopt=install_weak_deps=False --enablerepo=crb 
         iproute-tc-6.2.0      \
     && dnf clean all
 
-# Versions of manually-installed tools. Note the provided value is a default that
-# can be overridden when invoking the build procedure.
-ARG GO_VERSION=1.23.0
-
 # As we'll be using multi-arch images we'll need a reference telling us what our
 # architecture is! Check https://docs.docker.com/reference/dockerfile/#automatic-platform-args-in-the-global-scope
-ARG TARGETARCH
-
-# Get Go
-RUN curl -o go.tar.gz https://dl.google.com/go/go${GO_VERSION}.linux-${TARGETARCH}.tar.gz && \
-    tar -C /usr/local -xzf go.tar.gz && \
-    rm -rf go.tar.gz
-
-# Update the path so as to include Go
-ENV PATH="/usr/local/go/bin:${PATH}"
+# ARG TARGETARCH
 
 # TODO: Consider compiling a given version of libbpf to link against
 # TODO: a explained on https://github.com/libbpf/libbpf
