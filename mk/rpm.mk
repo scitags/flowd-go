@@ -13,6 +13,8 @@
 #   https://docs.fedoraproject.org/en-US/packaging-guidelines/Golang/
 #   https://rpm-software-management.github.io/mock/
 #   https://rpm-packaging-guide.github.io
+#   https://gitlab.cern.ch/linuxsupport/myrpm
+#   https://gitlab.cern.ch/linuxsupport/rpmci
 
 SPECFILE             = $(shell find . -type f -name *.spec)
 SPECFILE_NAME        = $(shell awk '$$1 == "Name:"     { print $$2 }' $(SPECFILE))
@@ -20,10 +22,19 @@ SPECFILE_VERSION     = $(shell awk '$$1 == "Version:"  { print $$2 }' $(SPECFILE
 SPECFILE_RELEASE     = $(shell awk '$$1 == "Release:"  { print $$2 }' $(SPECFILE))
 DIST                ?= $(shell rpm --eval %{dist})
 
+# How are we going to bundle the sources into a *.tar.gz? By default we'll leverage Go
+# to vendor and generate the Makefile, but we can also download a ready-made copy from
+# a preexisting GitHub release and call it a day... In order to use this second mode
+# one just needs to specify anything other than 'go' when invoking the sources
+# target, for instance: make SRC_GEN_MODE=curl
 SRC_GEN_MODE ?= go
 
+# Let's get the Go version we're currently using so that we can download it should we
+# need to.
 GO_VERSION = $(shell awk '/^go[[:space:]]/ {print $$2}' go.mod)
 
+# The name of the *.tar.gz with the bundled sources. Note this name MUST be the one specified
+# in the SPEC file on field Sources0.
 SOURCES_FILENAME := ${SPECFILE_NAME}-${SPECFILE_VERSION}.tar.gz
 
 # Path of the buildroot created with rpmdev-setuptree. In order to create
@@ -32,6 +43,10 @@ SOURCES_FILENAME := ${SPECFILE_NAME}-${SPECFILE_VERSION}.tar.gz
 # default on ${HOME}/rpmbuild, hence the definition of this variable.
 RPM_BUILDROOT = $(shell echo ${HOME})/rpmbuild
 
+# If we have to download either Go or jq we need to know the architecture we're running on.
+# The value returned by uname(1) is not the one used when distributing software, so we'll
+# just do a naive translation. We could even safely assume to always be running on amd64
+# though....
 ARCH := $(shell uname -m)
 ifeq ($(ARCH),x86_64)
 DL_ARCH := amd64
@@ -39,9 +54,11 @@ else
 DL_ARCH := arm64
 endif
 
+# Everything jq-related. This URL we'll be leveraged if running in the download-a-ready-made-file mode.
 JQ_VERSION      := 1.7.1
 JQ_DOWNLOAD_URL := https://github.com/jqlang/jq/releases/download/jq-$(JQ_VERSION)/jq-linux-$(DL_ARCH)
 
+# The URLs from GitHub's API allowing us to get the latest release and download the read-made sources.
 GH_LATEST_RELEASE_URL   := https://github.com/scitags/flowd-go/releases/latest
 GH_SOURCES_DOWNLOAD_URL := https://github.com/scitags/flowd-go/releases/download/$(RELEASE_VER)/sources.tar.gz
 
