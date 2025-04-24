@@ -104,7 +104,7 @@ ifeq ($(SRC_GEN_MODE),go)
 	gzip --force rpm/$(SPECFILE_NAME).1
 
 	@# Record the current commit so that it can be embedded in the resulting binary.
-	cat .git/$(shell cut -d ' ' -f 2 .git/HEAD) > commit
+	cat .git/$(shell cut -d ' ' -f 2 .git/HEAD) > commit || git rev-parse --short HEAD > commit
 
 	@# Simply append the needed prefix to every entry in the *.tar.gz instead of creating a tree.
 	tar -czvf $(SOURCES_FILENAME) --transform 's,^,${SPECFILE_NAME}-${SPECFILE_VERSION}/,' $(RPM_FILES)

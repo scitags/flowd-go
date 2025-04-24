@@ -63,4 +63,5 @@ jobs:
                 TAG_NAME: ${{ github.ref_name }}
                 GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
+                make build
                 gh release create --repo scitags/flowd-go --generate-notes $TAG_NAME ./bin/flowd-go sources.tar.gz ./build/SRPMS/*.rpm ./build/RPMS/x86_64/*.rpm
