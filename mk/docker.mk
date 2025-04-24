@@ -14,7 +14,7 @@ DOCKERFILES_PATH := dockerfiles
 PWD = $(shell pwd)
 
 # Unclutter the target recipes a bit by pulling information out.
-CONTAINER_IMAGE = ghcr.io/scitags/flowd-go:$(FLAVOUR)-v2.0
+CONTAINER_IMAGE = ghcr.io/scitags/flowd-go:$(FLAVOUR)-v2.1
 CONTAINER_NAME = flowd-go
 
 # Now, what do each of these flags do?
