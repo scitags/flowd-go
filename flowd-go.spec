@@ -1,12 +1,12 @@
 Name:		flowd-go
-Version:	2.0
+Version:	2.1
 Release:	1
 Summary:	SciTags flowd-go Daemon
 BuildArch:	x86_64
 
 URL: https://github.com/scitags/flowd-go
 
-Source0: flowd-go-2.0.tar.gz
+Source0: flowd-go-%{version}.tar.gz
 
 License:	ASL 2.0
 
@@ -60,7 +60,7 @@ make build
 
 # Time to copy the binary file!
 %install
-# Delete the previos build root
+# Delete the previous build root
 rm -rf %{buildroot}
 
 # Create the necessary directories
@@ -94,6 +94,10 @@ install -m 0664 rpm/%{name}.1.gz    %{buildroot}%{_mandir}/man1/%{name}.1.gz
 
 # Changes introducd with each version
 %changelog
+* Thu Apr 24 2025 Pablo Collado Soto <pablo.collado.soto@cern.ch> - 2.1-1
+- Revamp the RPM building logic
+- Enhance the eBPF-based enrichment logic
+
 * Thu Nov 14 2024 Pablo Collado Soto <pablo.collado.soto@cern.ch> - 2.0-1
 - Update to flowd-go-2.0
 

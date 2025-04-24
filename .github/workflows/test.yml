@@ -16,7 +16,7 @@ jobs:
         name: build
         runs-on: ubuntu-latest
         container:
-            image: ghcr.io/scitags/flowd-go:test-v2.0
+            image: ghcr.io/scitags/flowd-go:test-v2.1
             # credentials:
                 # username: ${{ github.actor }}
                 # password: ${{ secrets.SCITAGS_ORG_TOKEN }}

@@ -18,7 +18,7 @@ jobs:
         name: build
         runs-on: ubuntu-latest
         container:
-            image: ghcr.io/scitags/flowd-go:release-v2.0
+            image: ghcr.io/scitags/flowd-go:release-v2.1
         steps:
             - name: Show environment information
               env:
@@ -35,20 +35,23 @@ jobs:
                 echo $GITHUB_CONTEXT
                 echo "HOME contents"
                 ls -lh ${HOME}
+                uname -a
 
             - name: Clone the flowd-go repo
               shell: bash
               run: |
                 git clone https://github.com/scitags/flowd-go.git flowd-go
 
+            - name: Build the SRPM
+              shell: bash
+              working-directory: ./flowd-go
+              run: |
+                make srpm
+
             - name: Build the RPM
               shell: bash
               working-directory: ./flowd-go
-              # Note we cannot create the RPM build tree when building the container
-              # as GitHub's CI implementation will mangle the HOME directory... See
-              # https://github.com/actions/runner/issues/863 for more details!
               run: |
-                rpmdev-setuptree
                 make rpm
 
             - name: Release time!
@@ -58,4 +61,4 @@ jobs:
                 TAG_NAME: ${{ github.ref_name }}
                 GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
-                gh release create --repo scitags/flowd-go --generate-notes $TAG_NAME ./bin/flowd-go rpms/*.rpm
+                gh release create --repo scitags/flowd-go --generate-notes $TAG_NAME ./bin/flowd-go sources.tar.gz ./build/SRPMS/*.rpm ./build/RPMS/x86_64/*.rpm
