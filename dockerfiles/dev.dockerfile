@@ -28,6 +28,7 @@ RUN dnf --refresh --nodocs -y --setopt=install_weak_deps=False --enablerepo=crb 
         tcpdump-4.99.0        \
         iproute-6.2.0         \
         iproute-tc-6.2.0      \
+        iperf3                \
     && dnf clean all
 
 # As we'll be using multi-arch images we'll need a reference telling us what our
