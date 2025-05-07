@@ -66,7 +66,8 @@ type Firefly struct {
 		ActivityID   uint32 `json:"activity-id"`
 		Application  string `json:"application"`
 	} `json:"context"`
-	Netlink *netlink.InetDiagTCPInfoResp `json:"netlink,omitempty"`
+	Netlink     []*netlink.InetDiagTCPInfoResp `json:"netlink,omitempty"`
+	EbpfTcpInfo []*netlink.InetDiagTCPInfoResp `json:"ebpfTcpInfo,omitempty"`
 }
 
 type AuxFirefly struct {
