@@ -80,12 +80,13 @@ type EbpfBackend struct {
 
 	hooksCreated []bool
 
-	TargetInterfaces []string
-	RemoveQdisc      bool
-	ForceHookRemoval bool
-	ProgramPath      string
-	MarkingStrategy  MarkingStrategy
-	DebugMode        bool
+	TargetInterfaces   []string
+	DiscoverInterfaces bool
+	RemoveQdisc        bool
+	ForceHookRemoval   bool
+	ProgramPath        string
+	MarkingStrategy    MarkingStrategy
+	DebugMode          bool
 }
 
 func (b *EbpfBackend) String() string {
@@ -94,6 +95,20 @@ func (b *EbpfBackend) String() string {
 
 func (b *EbpfBackend) Init() error {
 	slog.Debug("initialising the eBPF backend")
+
+	// If we need to discover interfaces with public IPv6 addresses simply
+	// pull the rug form underneath the configuration.
+	if b.DiscoverInterfaces {
+		if len(b.TargetInterfaces) != 0 {
+			slog.Warn("specified target interfaces will be overridden", "originalTargetInterfaces", b.TargetInterfaces)
+		}
+
+		targetInterfaces, err := discoverInterfaces()
+		if err != nil {
+			return fmt.Errorf("couldn't discover target interfaces: %w", err)
+		}
+		b.TargetInterfaces = targetInterfaces
+	}
 
 	/*
 	 * Initialise the slices to avoid trouble!
