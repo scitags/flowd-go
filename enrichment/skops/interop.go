@@ -6,13 +6,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+
+	"github.com/scitags/flowd-go/enrichment/netlink"
 )
 
 type TcpState uint8
 
 // Check https://elixir.bootlin.com/linux/v5.14/source/include/net/tcp_states.h#L12
 const (
-	ESTABLISHED TcpState = iota + 1
+	UNSPECIFIED TcpState = iota
+	ESTABLISHED
 	SYN_SENT
 	SYN_RECV
 	FIN_WAIT1
@@ -28,6 +31,7 @@ const (
 
 func (s TcpState) String() string {
 	str, ok := map[TcpState]string{
+		UNSPECIFIED:  "UNSPECIFIED",
 		ESTABLISHED:  "ESTABLISHED",
 		SYN_SENT:     "SYN_SENT",
 		SYN_RECV:     "SYN_RECV",
@@ -124,10 +128,14 @@ func (s CaState) String() string {
 	return str
 }
 
-const TcpInfoSize = 360
+const TcpInfoSize = 368
 
 type TcpInfo struct {
+	SrcPort uint16
+	DstPort uint16
+
 	State                  TcpState
+	NewState               TcpState
 	Retransmits            uint8
 	Probes                 uint8
 	Backoff                uint8
@@ -190,10 +198,10 @@ type TcpInfo struct {
 	Delivered   uint32
 	DeliveredCe uint32
 
-	Bytes_sent    uint64 /* RFC4898 tcpEStatsPerfHCDataOctetsOut */
-	Bytes_retrans uint64 /* RFC4898 tcpEStatsPerfOctetsRetrans */
-	DsackDups     uint32 /* RFC4898 tcpEStatsStackDSACKDups */
-	ReordSeen     uint32 /* reordering events seen */
+	BytesSent    uint64 /* RFC4898 tcpEStatsPerfHCDataOctetsOut */
+	BytesRetrans uint64 /* RFC4898 tcpEStatsPerfOctetsRetrans */
+	DsackDups    uint32 /* RFC4898 tcpEStatsStackDSACKDups */
+	ReordSeen    uint32 /* reordering events seen */
 
 	RcvOoopack uint32 /* Out-of-order packets received */
 
@@ -206,6 +214,72 @@ type TcpInfo struct {
 	CaFlags uint32
 	Padding uint32
 	CaPriv  [13]uint64
+}
+
+func (i TcpInfo) ToTCPInfoResp() *netlink.InetDiagTCPInfoResp {
+	return &netlink.InetDiagTCPInfoResp{
+		TCPInfo: &netlink.TCPInfo{
+			State:                     uint8(i.State),
+			Ca_state:                  uint8(i.CaState),
+			Retransmits:               i.Retransmits,
+			Probes:                    i.Probes,
+			Backoff:                   i.Backoff,
+			Options:                   i.Options,
+			Snd_wscale:                i.SndWscale,
+			Rcv_wscale:                i.RcvWscale,
+			Delivery_rate_app_limited: i.DeliveryRateAppLimited,
+			Fastopen_client_fail:      uint8(i.FastopenClientFail),
+			Rto:                       i.Rto,
+			Ato:                       i.Ato,
+			Snd_mss:                   i.SndMss,
+			Rcv_mss:                   i.RcvMss,
+			Unacked:                   i.Unacked,
+			Lost:                      i.Lost,
+			Retrans:                   i.Retrans,
+			Fackets:                   i.Fackets,
+
+			Pmtu:            i.Pmtu,
+			Rcv_ssthresh:    i.RcvSsthresh,
+			Rtt:             i.Rtt,
+			Rttvar:          i.Rttvar,
+			Snd_ssthresh:    i.SndSsthresh,
+			Snd_cwnd:        i.SndCwnd,
+			Advmss:          i.Advmss,
+			Reordering:      i.Reordering,
+			Rcv_rtt:         i.RcvRtt,
+			Rcv_space:       i.RcvSpace,
+			Total_retrans:   uint32(i.TotalRetrans),
+			Pacing_rate:     i.PacingRate,
+			Max_pacing_rate: i.Max_pacingRate,
+
+			Bytes_acked:    i.BytesAcked,
+			Bytes_received: i.BytesReceived,
+			Segs_out:       i.SegsOut,
+			Segs_in:        i.SegsIn,
+			Notsent_bytes:  i.NotsentBytes,
+			Min_rtt:        i.MinRtt,
+			Data_segs_in:   i.DataSegsIn,
+			Data_segs_out:  i.DataSegsOut,
+			Delivery_rate:  i.DeliveryRate,
+
+			Busy_time:      i.BusyTime,
+			Rwnd_limited:   i.RwndLimited,
+			Sndbuf_limited: i.SndbufLimited,
+
+			Delivered:    i.Delivered,
+			Delivered_ce: i.DeliveredCe,
+
+			Bytes_sent:    i.BytesSent,
+			Bytes_retrans: i.BytesRetrans,
+			Dsack_dups:    i.DsackDups,
+			Reord_seen:    i.ReordSeen,
+			Rcv_ooopack:   i.RcvOoopack,
+			Snd_wnd:       i.SndWnd,
+		},
+		Cong: &netlink.Cong{
+			Algorithm: i.CaAlg.String(),
+		},
+	}
 }
 
 func (i TcpInfo) String() string {
@@ -234,8 +308,26 @@ func checkDeserErr(err error) error {
 func (i *TcpInfo) UnmarshalBinary(data []byte) error {
 	buff := bytes.NewBuffer(data)
 	if buff.Len() != TcpInfoSize {
-		return fmt.Errorf("available data (%d) != %d", buff.Available(), TcpInfoSize)
+		return fmt.Errorf("available data (%d, %d) != %d", buff.Len(), buff.Available(), TcpInfoSize)
 	}
+
+	next := buff.Next(2)
+	if len(next) == 0 {
+		return nil
+	}
+	i.SrcPort = binary.NativeEndian.Uint16(next)
+
+	next = buff.Next(2)
+	if len(next) == 0 {
+		return nil
+	}
+	i.DstPort = binary.NativeEndian.Uint16(next)
+
+	next = buff.Next(4)
+	if len(next) == 0 {
+		return nil
+	}
+	i.NewState = TcpState(binary.NativeEndian.Uint32(next))
 
 	stateRaw, err := buff.ReadByte()
 	if err != nil {
@@ -271,7 +363,7 @@ func (i *TcpInfo) UnmarshalBinary(data []byte) error {
 	if err != nil {
 		return checkDeserErr(err)
 	}
-	next := buff.Next(4)
+	next = buff.Next(4)
 	if len(next) == 0 {
 		return nil
 	}
@@ -496,12 +588,12 @@ func (i *TcpInfo) UnmarshalBinary(data []byte) error {
 	if len(next) == 0 {
 		return nil
 	}
-	i.Bytes_sent = binary.NativeEndian.Uint64(next)
+	i.BytesSent = binary.NativeEndian.Uint64(next)
 	next = buff.Next(8)
 	if len(next) == 0 {
 		return nil
 	}
-	i.Bytes_retrans = binary.NativeEndian.Uint64(next)
+	i.BytesRetrans = binary.NativeEndian.Uint64(next)
 	next = buff.Next(4)
 	if len(next) == 0 {
 		return nil
@@ -525,13 +617,13 @@ func (i *TcpInfo) UnmarshalBinary(data []byte) error {
 	}
 	i.SndWnd = binary.NativeEndian.Uint32(next)
 
-	fmt.Printf("offset: %d\n", TcpInfoSize-buff.Len())
+	// fmt.Printf("offset: %d\n", TcpInfoSize-buff.Len())
 	next = buff.Next(2)
 	if len(next) == 0 {
 		return nil
 	}
 	i.CaAlg = CaAlgorithm(binary.NativeEndian.Uint16(next))
-	fmt.Printf("offset: %d\n", TcpInfoSize-buff.Len())
+	// fmt.Printf("offset: %d\n", TcpInfoSize-buff.Len())
 	next = buff.Next(2)
 	if len(next) == 0 {
 		return nil

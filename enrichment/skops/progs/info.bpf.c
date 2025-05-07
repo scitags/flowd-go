@@ -93,7 +93,7 @@ static __always_inline void tcp_get_info_chrono_stats(const struct tcp_sock *tp,
  *   2: https://nakryiko.com/posts/bpf-core-reference-guide
  *   3: https://github.com/iovisor/bcc/tree/master/libbpf-tools
  */
-static __always_inline void tcp_get_info(struct tcp_sock *tp, __u32 state, struct flowd_tcp_info *info) {
+static __always_inline void tcp_get_info(struct tcp_sock *tp, __u32 state, __u32 newState, struct flowd_tcp_info *info) {
 	/*
 	 * We can perform these casts given the layout of 'struct tcp_sock': the first memory
 	 * chunk is that of a 'struct sock' and that of a 'struct inet_connection_sock' too!
@@ -114,6 +114,7 @@ static __always_inline void tcp_get_info(struct tcp_sock *tp, __u32 state, struc
 	__builtin_memset(info, 0, sizeof(*info));
 
 	info->tcpi_state = state;
+	info->tcpi_new_state = newState;
 
 	err = BPF_CORE_READ_INTO(&info->tcpi_pacing_rate, sk, sk_pacing_rate);
 	if (err) {
