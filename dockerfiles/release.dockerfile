@@ -1,5 +1,5 @@
 # Version of the test image we'll use as base
-ARG BASE_VERSION=2.59.0
+ARG BASE_VERSION=v2.1
 
 # We'll simply add on to the CI image for testing
 FROM ghcr.io/scitags/flowd-go:test-${BASE_VERSION}
@@ -21,7 +21,6 @@ RUN microdnf --refresh --enablerepo=crb --nodocs --setopt=install_weak_deps=0 -y
 # Add the additional dependencies needed for releasing. Note the dependency on systemd is
 # introduced by the fact that the resulting package carries a SystemD unit file.
 RUN microdnf --refresh --enablerepo=crb --nodocs --setopt=install_weak_deps=0 -y install \
-        pandoc      \
         rpm-build   \
         rpmdevtools \
         systemd     \

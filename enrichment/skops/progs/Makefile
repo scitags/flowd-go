@@ -5,7 +5,7 @@ CC := clang
 CFLAGS := -g -O2 -target bpf -D__TARGET_ARCH_x86_64 -I . -c
 
 # The files to eliminate when cleaning up
-TRASH := *.o vmlinux.h
+TRASH := *.o vmlinux.h .cache
 
 sk_ops.bpf.o: *.bpf.c vmlinux.h
 	$(CC) $(CFLAGS) sk_ops.bpf.c -o $@

@@ -27,6 +27,8 @@ vmlinux.h
 *.gz
 *.man
 *.rpm
+*.1
+commit
 
 # Ignore files created at runtime
 *.pid
@@ -42,3 +44,10 @@ test
 *tmp*
 *fii*
 *fee*
+
+# Ignore artifacts generated when building RPMs
+dist/
+build/
+
+# Ignore the dependency sources
+vendor/
