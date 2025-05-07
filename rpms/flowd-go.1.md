@@ -141,6 +141,12 @@ hooked on a *clsact qdisc* which only deals with egress datagrams. The loading a
   the outbound interface of the machine (i.e. the one pointed to by the default route as given by `ip-route(8)`). The provided interface
   names should be the values presented by `ip-link(8)`.
 
+- **discoverInterfaces [bool] {false}**: Whether to automatically discover the Network Interface Cards (NICs) to attach the eBPF program to.
+  If set to true, the criteria would be to attach the eBPF program to **any** interface with an associated public IPv6 address. These public
+  IPv6 addresses are defined by a compendium of RFCs: we encourage the reader to take a look at the source to find the list against which
+  the IPv6 addresses are matched. Please be advised that if this setting is set to true the list of interfaces provided through `targetInterfaces`
+  will be ignored and a log message reflecting that will be issued.
+
 - **removeQdisc [bool] {true}**: Whether to remove the qdisc (see `tc(8)`) implicitly created to hook the eBPF program. Unless you have a very
   good reason to, don't reconfigure this value as doing so might leave the system in a 'dirty' state after flowd-go exits. In order to remove
   the qdisc manually you can run:
