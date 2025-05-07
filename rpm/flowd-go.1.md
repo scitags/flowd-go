@@ -76,7 +76,7 @@ This section lists the configuration options available for each of the provided 
 refer to the documentation accompanying the implementation, which can be found on the URL provided in the DESCRIPTION. The
 setting's value type is enclosed in brackets (`[]`) and its default value is enclosed in braces (`{}`).
 
-## np
+## namedPipe
 The **named pipe** plugin will create a FIFO through a call to `mkfifo(3)` on which it will listen for flow events. Available
 settings are:
 
