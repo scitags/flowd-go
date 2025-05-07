@@ -73,6 +73,10 @@ struct {
 #define	TCP_ECN_DEMAND_CWR	4
 #define	TCP_ECN_SEEN		8
 
+// Protocol families from socket.h
+#define AF_INET 2
+#define AF_INET6 10
+
 /*
  * Instead of passing strings to userspace we'll simply map each congestion
  * algorithm name to an enumerated type. These have been extracted from

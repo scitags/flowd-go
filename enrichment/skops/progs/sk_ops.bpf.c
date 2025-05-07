@@ -40,6 +40,10 @@ static __always_inline int handleOp(struct bpf_sock_ops *ctx, bool ignorePollThr
 	struct tcp_sock *tp;
 	struct flowd_tcp_info *tcpi;
 
+	// Only bother with IPv6 traffic
+	if (ctx->family != AF_INET6)
+		return 1;
+
 	// Declare the struct we'll use to index the map
 	struct flowSpec fSpec;
 
