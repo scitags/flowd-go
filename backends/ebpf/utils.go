@@ -4,11 +4,13 @@ package ebpf
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
 	"os"
 	"strings"
+	"syscall"
 
 	bpf "github.com/aquasecurity/libbpfgo"
 )
@@ -32,6 +34,11 @@ func (b *EbpfBackend) chooseBPFProgram() []byte {
 			return flowLabelDebugBPFProg
 		}
 		return flowLabelBPFProg
+	case FlowLabelMatchAll:
+		if b.DebugMode {
+			return flowLabelMatchAllDebugBPFProg
+		}
+		return flowLabelMatchAllBPFProg
 	case HopByHopHeaderMarking:
 		if b.DebugMode {
 			return hopByHopHeaderDebugBPFProg
@@ -110,6 +117,72 @@ func (b *EbpfBackend) genFlowTag(experimentId, activityId uint32) uint32 {
 		"activityId", fmt.Sprintf("%b", activityId), "flowTag", fmt.Sprintf("%b", flowTag))
 
 	return flowTag
+}
+
+func (b *EbpfBackend) initTCHook(targetInterfaceIndex int, targetInterface string, progFd int) error {
+	// Create the TC Hook on which to place the eBPF program
+	slog.Debug("initialising a TC hook", "targetInterface", targetInterface)
+	hook := b.module.TcHookInit()
+	if err := hook.SetInterfaceByName(targetInterface); err != nil {
+		return fmt.Errorf("failed to set TC hook on interface %s: %w", targetInterface, err)
+	}
+
+	// Place the hook in the packet egress chain
+	slog.Debug("creating the hook", "targetInterface", targetInterface)
+	hook.SetAttachPoint(bpf.BPFTcEgress)
+	if err := hook.Create(); err != nil {
+		if errno, ok := err.(syscall.Errno); ok && errno != syscall.EEXIST {
+			slog.Debug("error creating the tc hook", "targetInterface", targetInterface, "err", err)
+		}
+	}
+
+	// Prepare the options for the hook
+	// https://elixir.bootlin.com/linux/v6.8.4/source/tools/testing/selftests/bpf/prog_tests/tc_bpf.c#L26
+	tcOpts := bpf.TcOpts{
+		ProgFd:   progFd,
+		Handle:   TC_HANDLE,
+		Priority: TC_PRIORITY,
+		Flags:    bpf.BpfTcFReplace, // Let's replace the hooked program no matter what!
+	}
+
+	// Attach the program!
+	slog.Debug("attaching the TC hook", "targetInterface", targetInterface)
+	b.hooksCreated[targetInterfaceIndex] = true
+	if err := hook.Attach(&tcOpts); err != nil {
+		if errors.Is(err, syscall.EEXIST) {
+			slog.Warn("looks like flowd-go didn't clean up after itself: the eBPF hook's still there!")
+
+			b.hooksCreated[targetInterfaceIndex] = false
+
+			// TODO: In case somebody else is using the backing qdisc we should maybe
+			// TODO: not delete it: that's just bad manners! See [0].
+			// TODO:   0: https://github.com/libbpf/libbpf-bootstrap/blob/master/examples/c/tc.c
+			// b.RemoveQdisc = false
+		} else {
+			return fmt.Errorf("couldn't attach the eBPF hook: %w", err)
+		}
+	}
+
+	// Test we can get the program back to check everything's okay
+	slog.Debug("preflight eBPF checks", "targetInterface", targetInterface)
+	tcOpts.ProgFd = 0
+	tcOpts.ProgId = 0
+	tcOpts.Flags = 0
+	slog.Debug("tcOpts before querying", "targetInterface", targetInterface, "tcOpts", tcOpts)
+	if err := hook.Query(&tcOpts); err != nil {
+		return fmt.Errorf("error querying for the ebpf program: %w", err)
+	}
+	slog.Debug("tcOpts after querying", "targetInterface", targetInterface, "tcOpts", tcOpts)
+	if tcOpts.Handle != 1 {
+		return fmt.Errorf("recovered handle %d is different than expected (i.e. 1)", tcOpts.Handle)
+	}
+	b.hooks[targetInterfaceIndex] = hook
+
+	// Get a hold of the tcOpts once all the operations are done: it can be implicitly changed as
+	// we're passing the struct (i.e. b) by reference!
+	b.tcOpts[targetInterfaceIndex] = tcOpts
+
+	return nil
 }
 
 func RemoveTCHook(targetInterface string, removeQdisc bool) error {

@@ -1,5 +1,11 @@
 // +build ignore
 
+#include "vmlinux.h"
+#include <bpf/bpf_helpers.h>
+#include <bpf/bpf_endian.h>
+
+#include "marker.bpf.h"
+
 static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, void *data_end) {
 	// The pointer to the header of an TCP segment. As usual, struct tcphdr is
 	// defined on vmlinux.h.
@@ -15,9 +21,6 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 		bpf_printk("flowd-go: TCP destination port: %d", bpf_htons(l4->dest));
 	#endif
 
-	__u64 ipv6DaddrLo = ipv6AddrLo(l3->daddr);
-	__u64 ipv6DaddrHi = ipv6AddrHi(l3->daddr);
-
 	// Declare the struct we'll use to index the map
 	struct fourTuple flowHash;
 
@@ -25,18 +28,20 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 	// with compiler padding. Check that's the case...
 	__builtin_memset(&flowHash, 0, sizeof(flowHash));
 
-	// Hardcode the port numbers we'll 'look for': there are none in ICMP!
-	flowHash.ip6Hi = ipv6DaddrHi;
-	flowHash.ip6Lo = ipv6DaddrLo;
-	flowHash.dPort = bpf_htons(l4->dest);
-	flowHash.sPort = bpf_htons(l4->source);
+	#ifndef GLOWD_FLOW_LABEL_MATCH_ALL
+		// Populate the lookup based on the incoming datagram's data
+		flowHash.ip6Hi = ipv6AddrLo(l3->daddr);
+		flowHash.ip6Lo = ipv6AddrHi(l3->daddr);
+		flowHash.dPort = bpf_htons(l4->dest);
+		flowHash.sPort = bpf_htons(l4->source);
+	#endif
 
 	// Check if a flow with the above criteria has been defined by flowd-go
 	__u32 *flowTag = bpf_map_lookup_elem(&flowLabels, &flowHash);
 
 	// If there's a flow configured, mark the packet
 	if (flowTag) {
-		#ifdef GLOWD_FLOW_LABEL
+		#if defined(GLOWD_FLOW_LABEL) || defined(GLOWD_FLOW_LABEL_MATCH_ALL)
 
 			#ifdef GLOWD_DEBUG
 				bpf_printk("flowd-go: retrieved flowTag: %x", *flowTag);
