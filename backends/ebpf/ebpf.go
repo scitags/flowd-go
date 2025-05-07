@@ -4,10 +4,8 @@ package ebpf
 
 import (
 	_ "embed"
-	"errors"
 	"fmt"
 	"log/slog"
-	"syscall"
 	"time"
 	"unsafe"
 
@@ -39,6 +37,12 @@ var (
 	//go:embed progs/marker-flow-label-dbg.bpf.o
 	flowLabelDebugBPFProg []byte
 
+	//go:embed progs/marker-flow-label-match-all.bpf.o
+	flowLabelMatchAllBPFProg []byte
+
+	//go:embed progs/marker-flow-label-match-all-dbg.bpf.o
+	flowLabelMatchAllDebugBPFProg []byte
+
 	//go:embed progs/marker-hbh-header.bpf.o
 	hopByHopHeaderBPFProg []byte
 
@@ -67,16 +71,16 @@ type FlowFourTuple struct {
 
 type EbpfBackend struct {
 	module  *bpf.Module
-	hook    *bpf.TcHook
+	hooks   []*bpf.TcHook
 	flowMap *bpf.BPFMap
 
-	tcOpts bpf.TcOpts
+	tcOpts []bpf.TcOpts
 
 	rGen *rand.Rand
 
-	hookCreated bool
+	hooksCreated []bool
 
-	TargetInterface  string
+	TargetInterfaces []string
 	RemoveQdisc      bool
 	ForceHookRemoval bool
 	ProgramPath      string
@@ -90,6 +94,13 @@ func (b *EbpfBackend) String() string {
 
 func (b *EbpfBackend) Init() error {
 	slog.Debug("initialising the eBPF backend")
+
+	/*
+	 * Initialise the slices to avoid trouble!
+	 */
+	b.hooks = make([]*bpf.TcHook, len(b.TargetInterfaces))
+	b.tcOpts = make([]bpf.TcOpts, len(b.TargetInterfaces))
+	b.hooksCreated = make([]bool, len(b.TargetInterfaces))
 
 	// Setup the logging from libbpf
 	b.setupLogging()
@@ -109,54 +120,11 @@ func (b *EbpfBackend) Init() error {
 		return fmt.Errorf("error loading the BPF object: %w", err)
 	}
 
-	// Create the TC Hook on which to place the eBPF program
-	slog.Debug("initialising the hook")
-	b.hook = b.module.TcHookInit()
-	if err := b.hook.SetInterfaceByName(b.TargetInterface); err != nil {
-		return fmt.Errorf("failed to set TC hook on interface %s: %w", b.TargetInterface, err)
-	}
-
-	// Place the hook in the packet egress chain
-	slog.Debug("creating the hook")
-	b.hook.SetAttachPoint(bpf.BPFTcEgress)
-	if err := b.hook.Create(); err != nil {
-		if errno, ok := err.(syscall.Errno); ok && errno != syscall.EEXIST {
-			slog.Debug("error creating the tc hook", "err", err)
-		}
-	}
-
 	// Recover the specific program (i.e. function) we'll be attaching
 	slog.Debug("getting the eBPF program")
 	tcProg, err := b.module.GetProgram(PROG_NAME)
 	if tcProg == nil || err != nil {
 		return fmt.Errorf("couldn't find the target program %s: %w", PROG_NAME, err)
-	}
-
-	// Prepare the options for the hook
-	// https://elixir.bootlin.com/linux/v6.8.4/source/tools/testing/selftests/bpf/prog_tests/tc_bpf.c#L26
-	tcOpts := bpf.TcOpts{
-		ProgFd:   int(tcProg.FileDescriptor()),
-		Handle:   TC_HANDLE,
-		Priority: TC_PRIORITY,
-		Flags:    bpf.BpfTcFReplace, // Let's replace the hooked program no matter what!
-	}
-
-	// Attach the program!
-	slog.Debug("attaching the TC hook")
-	b.hookCreated = true
-	if err := b.hook.Attach(&tcOpts); err != nil {
-		if errors.Is(err, syscall.EEXIST) {
-			slog.Warn("looks like flowd-go didn't clean up after itself: the eBPF hook's still there!")
-
-			b.hookCreated = false
-
-			// TODO: In case somebody else is using the backing qdisc we should maybe
-			// TODO: not delete it: that's just bad manners! See [0].
-			// TODO:   0: https://github.com/libbpf/libbpf-bootstrap/blob/master/examples/c/tc.c
-			// b.RemoveQdisc = false
-		} else {
-			return fmt.Errorf("couldn't attach the eBPF hook: %w", err)
-		}
 	}
 
 	// Get a reference to the map so that we're ready when running
@@ -167,22 +135,11 @@ func (b *EbpfBackend) Init() error {
 	}
 	b.flowMap = bpfMap
 
-	// Test we can get the program back to check everything's okay
-	slog.Debug("preflight eBPF checks")
-	tcOpts.ProgFd = 0
-	tcOpts.ProgId = 0
-	tcOpts.Flags = 0
-	slog.Debug("tcOpts before querying", "tcOpts", tcOpts)
-	if err := b.hook.Query(&tcOpts); err != nil {
-		return fmt.Errorf("error querying for the ebpf program: %w", err)
+	for i, targetInterface := range b.TargetInterfaces {
+		if err := b.initTCHook(i, targetInterface, tcProg.FileDescriptor()); err != nil {
+			return fmt.Errorf("error initialising a TC hook: %w", err)
+		}
 	}
-	slog.Debug("tcOpts after querying", "tcOpts", tcOpts)
-	if tcOpts.Handle != 1 {
-		return fmt.Errorf("recovered handle %d is different than expected (i.e. 1)", tcOpts.Handle)
-	}
-	// Get a hold of the tcOpts once all the operations are done: it can be implicitly changed as
-	// we're passing it by reference!
-	b.tcOpts = tcOpts
 
 	// Initialise the random number generator
 	slog.Debug("initialising the random number generator")
@@ -242,29 +199,32 @@ func (b *EbpfBackend) Run(done <-chan struct{}, inChan <-chan glowdTypes.FlowID)
 func (b *EbpfBackend) Cleanup() error {
 	slog.Debug("cleaning up the ebpf backend")
 
-	// Only remove the hook if we created it or if we're told to remove it no matter what.
-	// Bear in mind the check against nil is not really needed...
-	if b.hook != nil && (b.hookCreated || b.ForceHookRemoval) {
-		// Detach the program. Note ProgFd and ProgId must be set to 0 or the detachment
-		// won't work...
-		localTcOpts := b.tcOpts
-		localTcOpts.ProgFd = 0
-		localTcOpts.ProgId = 0
+	for i, hook := range b.hooks {
 
-		slog.Debug("detaching the tc hook")
-		if err := b.hook.Detach(&localTcOpts); err != nil {
-			slog.Error("error detaching the ebpf hook", "err", err)
-		}
+		// Only remove the hook if we created it or if we're told to remove it no matter what.
+		// Bear in mind the check against nil is not really needed...
+		if hook != nil && (b.hooksCreated[i] || b.ForceHookRemoval) {
+			// Detach the program. Note ProgFd and ProgId must be set to 0 or the detachment
+			// won't work...
+			localTcOpts := b.tcOpts[i]
+			localTcOpts.ProgFd = 0
+			localTcOpts.ProgId = 0
 
-		if b.RemoveQdisc {
-			slog.Debug("removing the backing qdisc")
-			// Explicitly ask for the backing QDisc to be destroyed.
-			// See https://patchwork.kernel.org/project/netdevbpf/patch/20210428162553.719588-3-memxor@gmail.com/
-			b.hook.SetAttachPoint(bpf.BPFTcEgress | bpf.BPFTcIngress)
-		}
-		slog.Debug("destroying the tc hook")
-		if err := b.hook.Destroy(); err != nil {
-			slog.Warn("error destroying the hook", "err", err)
+			slog.Debug("detaching the tc hook", "targetInterface", b.TargetInterfaces[i])
+			if err := hook.Detach(&localTcOpts); err != nil {
+				slog.Error("error detaching the ebpf hook", "targetInterface", b.TargetInterfaces[i], "err", err)
+			}
+
+			if b.RemoveQdisc {
+				slog.Debug("removing the backing qdisc", "targetInterface", b.TargetInterfaces[i])
+				// Explicitly ask for the backing QDisc to be destroyed.
+				// See https://patchwork.kernel.org/project/netdevbpf/patch/20210428162553.719588-3-memxor@gmail.com/
+				hook.SetAttachPoint(bpf.BPFTcEgress | bpf.BPFTcIngress)
+			}
+			slog.Debug("destroying the tc hook", "targetInterface", b.TargetInterfaces[i])
+			if err := hook.Destroy(); err != nil {
+				slog.Warn("error destroying the hook", "targetInterface", b.TargetInterfaces[i], "err", err)
+			}
 		}
 	}
 

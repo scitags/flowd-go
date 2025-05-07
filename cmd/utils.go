@@ -8,6 +8,7 @@ import (
 
 	glowd "github.com/scitags/flowd-go"
 	"github.com/scitags/flowd-go/backends/ebpf"
+	"github.com/scitags/flowd-go/plugins/perfsonar"
 	glowdTypes "github.com/scitags/flowd-go/types"
 )
 
@@ -24,6 +25,27 @@ func initBackends(backends []glowdTypes.Backend) error {
 	for _, backend := range backends {
 		if err := backend.Init(); err != nil {
 			return fmt.Errorf("error setting up backend %s: %w", backend, err)
+		}
+	}
+	return nil
+}
+
+// Are there any plugin-backend dependencies we should be aware of?
+func pluginBackendDependencies(plugins []glowdTypes.Plugin, backends []glowdTypes.Backend) error {
+	for _, plugin := range plugins {
+		switch plugin.(type) {
+		case *perfsonar.PerfsonarPlugin:
+			for _, backend := range backends {
+				ebpfBackend, ok := backend.(*ebpf.EbpfBackend)
+				if !ok {
+					continue
+				}
+				slog.Warn("overriding marking strategy for the eBPF backend",
+					"previous", ebpfBackend.MarkingStrategy, "new", ebpf.FlowLabelMatchAll)
+				ebpfBackend.MarkingStrategy = ebpf.FlowLabelMatchAll
+			}
+		// Do nothing on default, just be exhaustive :P
+		default:
 		}
 	}
 	return nil

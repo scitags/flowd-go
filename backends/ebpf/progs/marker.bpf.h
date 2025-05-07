@@ -1,5 +1,11 @@
 // +build ignore
 
+#ifndef __MARKER_INC__
+#define __MARKER_INC__
+
+#include "vmlinux.h"
+#include <bpf/bpf_helpers.h>
+
 // Enforceable actions. These are defined on include/uapi/linux/if_ether.h
 // (i.e. /usr/include/linux/pkt_cls.h). The problem is including linux/pkt_cls.h
 // conflicts with the inclusion of vmlinux.h!
@@ -57,3 +63,14 @@ struct hopByHopDestOptsHdr_t {
 	__u8 hdrLen;
 	__u8 opts[6];
 };
+
+/*
+ * Prototypes of util functions.
+ */
+static __always_inline __u64 ipv6AddrLo(struct in6_addr addr);
+static __always_inline __u64 ipv6AddrHi(struct in6_addr addr);
+static __always_inline void populateFlowLbl(__u8 *flowLbl, __u32 flowTag);
+static __always_inline void populateHbhHdr(struct hopByHopHdr_t *hbhHdr, __u8 nextHdr, __u32 flowTag);
+static __always_inline void populateHbhDoHdr(struct hopByHopDestOptsHdr_t *hbhDoHdr, __u8 nextHdr, __u32 flowTag);
+
+#endif

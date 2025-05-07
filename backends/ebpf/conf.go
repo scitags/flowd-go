@@ -10,13 +10,14 @@ type MarkingStrategy string
 
 const (
 	FlowLabelMarking           MarkingStrategy = "flowLabel"
+	FlowLabelMatchAll          MarkingStrategy = "flowLabelMatchAll"
 	HopByHopHeaderMarking      MarkingStrategy = "hopByHop"
 	HopByHopDestHeadersMarking MarkingStrategy = "hopByHopAndDestination"
 )
 
 var (
 	Defaults = map[string]interface{}{
-		"targetInterface":  "lo",
+		"targetInterfaces": []string{"lo"},
 		"RemoveQdisc":      true,
 		"ForceHookRemoval": true,
 		"programPath":      "",

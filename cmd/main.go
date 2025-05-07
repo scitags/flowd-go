@@ -86,6 +86,11 @@ var (
 			}
 			slog.Debug("read configuration", "conf", conf)
 
+			if err := pluginBackendDependencies(conf.Plugins, conf.Backends); err != nil {
+				slog.Error("couldn't fulfill the plugin-backend dependencies", "err", err)
+				return
+			}
+
 			if err := os.WriteFile(conf.General.PIDPath, []byte(fmt.Sprintf("%d\n", os.Getpid())), 0644); err != nil {
 				slog.Error("couldn't create the PID file", "path", conf.General.PIDPath, "err", err)
 			}
