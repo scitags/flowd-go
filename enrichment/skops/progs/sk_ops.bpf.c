@@ -35,10 +35,32 @@
  *   - https://mozillazg.com/2022/06/ebpf-libbpf-btf-powered-enabled-raw-tracepoint-common-questions-en.html
  */
 
-static __always_inline int handleOp(struct bpf_sock_ops *ctx) {
+static __always_inline int handleOp(struct bpf_sock_ops *ctx, bool ignorePollThrottle) {
 	struct bpf_sock *sk;
 	struct tcp_sock *tp;
 	struct flowd_tcp_info *tcpi;
+
+	// Declare the struct we'll use to index the map
+	struct flowSpec fSpec;
+
+	// Initialise the struct with 0s. This is necessary for some reason to do
+	// with compiler padding. Check that's the case...
+	__builtin_memset(&fSpec, 0, sizeof(fSpec));
+
+	// Hardcode the port numbers we'll 'look for': there are none in ICMP!
+	fSpec.dPort = bpf_ntohl(ctx->remote_port);
+	fSpec.sPort = ctx->local_port;
+
+	// Check if a flow with the above criteria has been defined by flowd-go
+	__u32 *dummy = bpf_map_lookup_elem(&flowsToFollow, &fSpec);
+
+	// If there's a flow configured, mark the packet
+	if (!dummy) {
+		#ifdef FLOWD_DEBUG
+			bpf_printk("bailing: no entry for this flow in the flowsToFollow map: dst: %d; src: %d", bpf_ntohl(ctx->remote_port), ctx->local_port);
+		#endif
+		return 1;
+	}
 
 	#ifdef FLOWD_POLL
 		__u64 *next_dump;
@@ -64,8 +86,10 @@ static __always_inline int handleOp(struct bpf_sock_ops *ctx) {
 			return 1;
 
 		now = bpf_ktime_get_ns();
-		if (now < *next_dump)
-			return 1;
+		if (!ignorePollThrottle) {
+			if (now < *next_dump)
+				return 1;
+		}
 		*next_dump = now + INTERVAL;
 	#endif
 
@@ -85,13 +109,16 @@ static __always_inline int handleOp(struct bpf_sock_ops *ctx) {
 	if (!tcpi)
 		return 1;
 
-	tcp_get_info(tp, ctx->state, tcpi);
+	tcp_get_info(tp, ctx->state, ctx->args[1], tcpi);
 	tcp_get_cong_info(tp, tcpi);
 
-	#ifdef FLOWD_DEBUG
-		print_flowd_tcp_info(tcpi);
-		print_flowd_tcp_info_bytes(tcpi);
-	#endif
+	tcpi->src_port = (__u16) ctx->local_port;
+	tcpi->dst_port = (__u16) bpf_ntohl(ctx->remote_port);
+
+	// #ifdef FLOWD_DEBUG
+	// 	print_flowd_tcp_info(tcpi);
+	// 	print_flowd_tcp_info_bytes(tcpi);
+	// #endif
 
 	/*
 	 * Use an adaptative wakeup mechanism, we could also use BPF_RB_FORCE_WAKEUP or
@@ -131,18 +158,14 @@ int connTracker(struct bpf_sock_ops *ctx) {
 			#ifdef FLOWD_DEBUG
 				bpf_printk("state change from %d to %d (%d) [%d]", ctx->args[0], ctx->args[1], ctx->is_fullsock, ctx->state);
 			#endif
-			return handleOp(ctx);
+			return handleOp(ctx, true);
 
 		/*
 		 * Let's look at socket statistics every RTT
 		 */
 		case BPF_SOCK_OPS_RTT_CB:
 			#ifdef FLOWD_POLL
-				#ifdef FLOWD_DEBUG
-					bpf_printk("new RTT");
-				#endif
-
-				return handleOp(ctx);
+				return handleOp(ctx, false);
 			#endif
 
 			return 1;

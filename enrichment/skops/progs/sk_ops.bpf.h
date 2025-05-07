@@ -5,16 +5,12 @@
 #include <bpf/bpf_helpers.h>
 
 /*
- * Specification (i.e. {src,dst} IPv{4,6} {src,dst} port) of a given flow.
- * Note how leveraging __u64's allows us to support both IPv4 and IPv6
- * addresses. For IPv4, the entire IPv4 address will be encoded in the
- * lower 32 bits of ip6Lo.
+ * Specification (i.e. {src,dst} port) of a given flow at the transport layer. Note
+ * how both ports are encoded as 32-bit quantities in the definition of struct bpf_sock_ops!
  */
-struct fourTuple {
-	__u64 ip6Hi;
-	__u64 ip6Lo;
-	__u16 dPort;
-	__u16 sPort;
+struct flowSpec {
+	__u32 dPort;
+	__u32 sPort;
 };
 
 #ifdef FLOWD_POLL
@@ -45,7 +41,7 @@ struct fourTuple {
 struct {
 	__uint(type, BPF_MAP_TYPE_LRU_HASH);
 	__uint(max_entries, 100000);
-	__type(key, struct fourTuple);
+	__type(key, struct flowSpec);
 	__type(value, __u8);
 } flowsToFollow SEC(".maps");
 
@@ -202,6 +198,11 @@ struct dctcp {
  *   3: http://www.catb.org/esr/structure-packing/
  */
  struct flowd_tcp_info {
+	__u16 src_port;
+	__u16 dst_port;
+
+	__u32 tcpi_new_state; /* (we use a __u64 for 8-byte alignment) */
+
 	__u8 tcpi_state;
 	__u8 tcpi_retransmits;
 	__u8 tcpi_probes;
