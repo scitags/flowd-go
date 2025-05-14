@@ -51,3 +51,6 @@ build/
 
 # Ignore the dependency sources
 vendor/
+
+# Ignore clangd configuration files
+compile_commands.json
