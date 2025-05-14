@@ -55,10 +55,10 @@ var (
 	//go:embed progs/marker-do-header-dbg.bpf.o
 	destinationHeaderDebugBPFProg []byte
 
-	//go:embed progs/marker-hbhdo-header.bpf.o
+	//go:embed progs/marker-hbh-do-headers.bpf.o
 	hopByHopDestHeaderBPFProg []byte
 
-	//go:embed progs/marker-hbhdo-header-dbg.bpf.o
+	//go:embed progs/marker-hbh-do-headers-dbg.bpf.o
 	hopByHopDestHeaderDebugBPFProg []byte
 
 	logLevelTranslation = map[slog.Level]int{

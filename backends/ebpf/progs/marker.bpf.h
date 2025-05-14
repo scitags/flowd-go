@@ -78,7 +78,7 @@ struct compExtensionHdr_t {
 static __always_inline __u64 ipv6AddrLo(struct in6_addr addr);
 static __always_inline __u64 ipv6AddrHi(struct in6_addr addr);
 static __always_inline void populateFlowLbl(__u8 *flowLbl, __u32 flowTag);
-static __always_inline void populateHbhHdr(struct hopByHopHdr_t *hbhHdr, __u8 nextHdr, __u32 flowTag);
-static __always_inline void populateHbhDoHdr(struct hopByHopDestOptsHdr_t *hbhDoHdr, __u8 nextHdr, __u32 flowTag);
+static __always_inline void populateExtensionHdr(struct extensionHdr_t *extHdr, __u8 nextHdr, __u32 flowTag);
+static __always_inline void populateCompExtensionHdr(struct compExtensionHdr_t *compHdr, __u8 nextHdr, __u32 flowTag);
 
 #endif
