@@ -11,7 +11,7 @@ TRASH := *.o vmlinux.h .cache
 # This is the only variable we have to modify when adding new targets.
 # Note each item will be appended to 'marker-' so as to generate the
 # output programs.
-PROG_NAMES := flow-label flow-label-match-all hbh-header hbh-do-headers
+PROG_NAMES := flow-label flow-label-match-all hbh-header do-header hbh-do-headers
 
 # Derive the constants the program depends on for conditionally compiling
 # it. We simple add the GLOWD_ prefix and translate each element of PROG_NAMES
