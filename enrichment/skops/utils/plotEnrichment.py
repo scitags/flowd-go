@@ -1,97 +1,93 @@
-import argparse, pathlib, json
+import argparse, pathlib, json, logging, sys
 
 import matplotlib
-# Use the non-interactive backend
-matplotlib.use('Agg')
-
 import matplotlib.pyplot as plt
 
-def parseIperf3():
-    pass
+# Use the non-interactive backend and disable logging
+matplotlib.use('Agg')
+plt.set_loglevel(level = "warning")
+
+def parseArgs():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--debug",        help = "enable debugging output", action = "store_true")
+    parser.add_argument("--firefly-path", help = "path to the JSON file containing the fireflies", type = str, default = "fireflies.json")
+    parser.add_argument("--iperf3-path",  help = "path to the JSON file containing the iperf3 traffic data", type = str, default = "iperf3.json")
+
+    return parser.parse_args()
+
+def loadData(fireflyPath: str, iperf3Path: str) -> dict:
+    data = {}
+    try:
+
+        firefly = json.loads(pathlib.Path(fireflyPath).read_text())
+
+        try:
+            data["netlink"] = firefly["netlink"]
+            data["ebpf"] = firefly["ebpfTcpInfo"]
+        except KeyError as err:
+            logging.error(f"error accessing firefly data: {err}")
+            sys.exit(-1)
+
+        data["iperf3Raw"] = json.loads(pathlib.Path(iperf3Path).read_text())
+
+        # Parse the iperf3 data as it's a bit unwieldy...
+        data["iperf3"] = [interval['streams'][0] for interval in data["iperf3Raw"]["intervals"]]
+
+        # Bytes sent are reported per slot and not accumulated in iperf3
+        acc = 0
+        for sample in data["iperf3"]:
+            acc += sample["bytes"]
+            sample["bytessent"] = acc
+
+    except FileNotFoundError as err:
+        logging.error(f"couldn't load the data: {err}")
+        sys.exit(-1)
+
+    logging.debug(f"loaded data: {data}")
+
+    return data
+
+netlinkToIperf3Mapping = {
+    "sndcwnd": "snd_cwnd"
+}
+
+def getFactor(sample, variable):
+    if variable == "sndCwnd":
+        return sample["tcpInfo"]["sndMss"]
+    return 1
+
+def plot(data: dict, variable: str, title: str, yLabel: str, scale: float = 1.0):
+    fig = plt.figure(num = 1, clear = True)
+    ax = fig.add_subplot()
+
+    ax.plot([sample['tcpInfo'][variable] * getFactor(sample, variable) / scale for sample in data['netlink']], '-b', label = 'netlink')
+    ax.plot([sample['tcpInfo'][variable] * getFactor(sample, variable) / scale for sample in data['ebpf']], '-r', label = 'eBPF')
+    ax.plot([sample[netlinkToIperf3Mapping.get(variable.lower(), variable.lower())] / scale for sample in data['iperf3']], '-g', label = 'iperf3')
+
+    plt.legend(loc="upper left")
+    plt.title(title)
+    ax.set_xlabel('Time [s]')
+    ax.set_ylabel(yLabel)
+
+    fig.savefig(f"./plots/{variable}.png")
 
 def main():
-    netlinkData = json.loads(pathlib.Path("fireflies.json").read_text())["netlink"]
-    ebpfData = json.loads(pathlib.Path("fireflies.json").read_text())["ebpfTcpInfo"]
-    iperfData = json.loads(pathlib.Path("iperf3.json").read_text())
+    args = parseArgs()
 
-    print(f"number of netlink snapshots taken: {len(netlinkData)}")
-    print(f"number of ebpf snapshots taken: {len(ebpfData)}")
+    if args.debug:
+        logging.basicConfig(level = logging.DEBUG)
 
-    # for k, v in firefly['netlink'][0].items():
-    #     print(f"\tk: {k}:")
+    data = loadData(args.firefly_path, args.iperf3_path)
 
-    #     if v is None:
-    #         print("\t\tv: None")
-    #         continue
+    for k in data.keys():
+        logging.info(f"loaded {len(data[k])} {k} data samples")
 
-    #     for kk, vv in v.items():
-    #         print(f"\t\tkk: {kk}")
-
-    for i, snapshot in enumerate(netlinkData):
-        print(f"{snapshot['tcpInfo']['rtt']} -- {iperfData['intervals'][i]['streams'][0]['rtt']}")
-        print(f"{snapshot['tcpInfo']['rttVar']} -- {iperfData['intervals'][i]['streams'][0]['rttvar']}")
-        print(f"{snapshot['tcpInfo']['pMtu']} -- {iperfData['intervals'][i]['streams'][0]['pmtu']}")
-        print(f"{snapshot['tcpInfo']['sndCwnd'] * snapshot['tcpInfo']['sndMss']} -- {iperfData['intervals'][i]['streams'][0]['snd_cwnd']}")
-        print(f"{snapshot['tcpInfo']['bytesSent']} -- {iperfData['intervals'][i]['streams'][0]['bytes']}")
-
-    fig = plt.figure(num=1, clear=True)
-    ax = fig.add_subplot()
-    ax.plot([snapshot['tcpInfo']['rtt'] for snapshot in netlinkData], '-b', label = 'netlink')
-    ax.plot([iperfData['intervals'][i]['streams'][0]['rtt'] for i in range(len(netlinkData))], '-g', label = 'iperf3')
-    ax.plot([snapshot['tcpInfo']['rtt'] for snapshot in ebpfData], '-r', label = 'eBPF')
-    plt.legend(loc="upper left")
-    plt.title("RTT")
-    ax.set_xlabel('Time [s]')
-    ax.set_ylabel('RTT [us]')
-    fig.savefig("rtt.png")
-
-    fig = plt.figure(num=1, clear=True)
-    ax = fig.add_subplot()
-    ax.plot([snapshot['tcpInfo']['rttVar'] for snapshot in netlinkData], '-b', label = 'netlink')
-    ax.plot([iperfData['intervals'][i]['streams'][0]['rttvar'] for i in range(len(netlinkData))], '-g', label = 'iperf3')
-    ax.plot([snapshot['tcpInfo']['rttVar'] for snapshot in ebpfData], '-r', label = 'eBPF')
-    plt.legend(loc="upper left")
-    plt.title("RTT Variance")
-    ax.set_xlabel('Time [s]')
-    ax.set_ylabel('RTT Var [us]')
-    fig.savefig("rttVar.png")
-
-    fig = plt.figure(num=1, clear=True)
-    ax = fig.add_subplot()
-    ax.plot([snapshot['tcpInfo']['sndCwnd'] * snapshot['tcpInfo']['sndMss'] / 2 ** 20 for snapshot in netlinkData], '-b', label = 'netlink')
-    ax.plot([iperfData['intervals'][i]['streams'][0]['snd_cwnd'] / 2 ** 20 for i in range(len(netlinkData))], '-g', label = 'iperf3')
-    ax.plot([snapshot['tcpInfo']['sndCwnd'] * snapshot['tcpInfo']['sndMss'] / 2 ** 20 for snapshot in ebpfData], '-r', label = 'eBPF')
-    plt.legend(loc="upper left")
-    plt.title("Sender's Congestion Window")
-    ax.set_xlabel('Time [s]')
-    ax.set_ylabel('Congesiton Window [MiB]')
-    fig.savefig("sndCwnd.png")
-
-    fig = plt.figure(num=1, clear=True)
-    ax = fig.add_subplot()
-    ax.plot([snapshot['tcpInfo']['pMtu'] for snapshot in netlinkData], '-b', label = 'netlink')
-    ax.plot([iperfData['intervals'][i]['streams'][0]['pmtu'] for i in range(len(netlinkData))], '-g', label = 'iperf3')
-    ax.plot([snapshot['tcpInfo']['pMtu'] for snapshot in ebpfData], '-r', label = 'eBPF')
-    plt.legend(loc="upper left")
-    plt.title("PMTU")
-    ax.set_xlabel('Time [s]')
-    ax.set_ylabel('PMTU [bytes]')
-    fig.savefig("pmtu.png")
-
-    iperfSentBytes = []
-    for i in range(len(netlinkData)):
-        iperfSentBytes.append(iperfData['intervals'][i]['streams'][0]['bytes'])
-
-    fig = plt.figure(num=1, clear=True)
-    ax = fig.add_subplot()
-    ax.plot([snapshot['tcpInfo']['bytesSent'] / 2 ** 20 for snapshot in netlinkData], '-b', label = "netlink")
-    ax.plot([sum(iperfSentBytes[0:i]) / 2 ** 20 for i in range(len(netlinkData))], '-g', label = "iperf3")
-    ax.plot([snapshot['tcpInfo']['bytesSent'] / 2 ** 20 for snapshot in ebpfData], '-r', label = "eBPF")
-    plt.legend(loc="upper left")
-    plt.title("Sent Bytes")
-    ax.set_xlabel('Time [s]')
-    ax.set_ylabel('Data [MiB]')
-    fig.savefig("bytes.png")
+    plot(data, "rtt", "RTT", "RTT [us]")
+    plot(data, "rttVar", "RTT Variance", "RTT Var [us]")
+    plot(data, "sndCwnd", "Sender's Congestion Window", "Congestion Window [MiB]", scale = 2 ** 20)
+    plot(data, "pMtu", "Path MTU", "PMTU [bytes]")
+    plot(data, "bytesSent", "Sent Bytes", "Data [MiB]", scale = 2 ** 20)
 
 if __name__ == "__main__":
     main()
