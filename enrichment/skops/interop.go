@@ -130,6 +130,12 @@ func (s CaState) String() string {
 
 const TcpInfoSize = 368
 
+// TcpInfo represents all the available data on a struct tcp_sock in the linux kernel.
+// Some of the units shown in the comments accompanying members have been extracted from
+// either iperf3 (https://github.com/esnet/iperf/blob/204421d895ef7b7a6546c3b8f42aae24ffa99950/src/tcp_info.c)
+// or the linux kernel itself. Files of interest in the latter include net/ipv4/tcp.c, include/uapi/linux/tcp.h,
+// include/linux/tcp.h, net/ipv4/tcp_diag.c and net/ipv4/inet_diag.c. Note how RFC 5681 is also a great source
+// of information for the use of all these parameters.
 type TcpInfo struct {
 	SrcPort uint16
 	DstPort uint16
@@ -147,7 +153,7 @@ type TcpInfo struct {
 
 	Rto    uint32
 	Ato    uint32
-	SndMss uint32
+	SndMss uint32 /* Sender's Maximum Segment SIze (MSS) This member is shown in iperf3 combined SndCwnd [bytes] */
 	RcvMss uint32
 
 	Unacked uint32
@@ -167,15 +173,15 @@ type TcpInfo struct {
 	RcvSsthresh uint32
 	Rtt         uint32
 	Rttvar      uint32
-	SndSsthresh uint32
-	SndCwnd     uint32
+	SndSsthresh uint32 /* Slow start size threshold */
+	SndCwnd     uint32 /* This member is shown in iperf3 combined with SndMss [sender's MSS]*/
 	Advmss      uint32
 	Reordering  uint32
 
 	RcvRtt   uint32
 	RcvSpace uint32
 
-	TotalRetrans uint64
+	TotalRetrans uint64 /* This member is shown in iperf3 [dimensionless] */
 
 	PacingRate     uint64
 	Max_pacingRate uint64
