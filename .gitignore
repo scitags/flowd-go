@@ -54,3 +54,12 @@ vendor/
 
 # Ignore clangd configuration files
 compile_commands.json
+
+# Ignore Python virtual environments
+*env/
+
+# Ignore JSON files by default
+*.json
+
+# Ignore generated plots and images
+*.png
