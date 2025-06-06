@@ -1,13 +1,11 @@
 package fireflyp
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net"
 	"os"
-	"strings"
 	"time"
 
 	glowdTypes "github.com/scitags/flowd-go/types"
@@ -19,11 +17,10 @@ const (
 
 var (
 	Defaults = map[string]interface{}{
-		"bindAddress":     "127.0.0.1",
-		"bindPort":        10514,
-		"bufferSize":      2 * minRecvBufferSize,
-		"deadline":        0,
-		"hasSyslogHeader": true,
+		"bindAddress": "127.0.0.1",
+		"bindPort":    10514,
+		"bufferSize":  2 * minRecvBufferSize,
+		"deadline":    0,
 	}
 )
 
@@ -96,8 +93,8 @@ func (p *FireflyPlugin) Run(done <-chan struct{}, outChan chan<- glowdTypes.Flow
 			go func(msg []byte) {
 				slog.Debug("serving an incoming UDP firefly")
 
-				auxFirefly, err := parseFirefly(msg, p.HasSyslogHeader)
-				if err != nil {
+				auxFirefly := glowdTypes.SlimFirefly{}
+				if err := auxFirefly.Parse(msg); err != nil {
 					slog.Error("couldn't parse the incoming firefly", "err", err,
 						"hasSyslogHeader", p.HasSyslogHeader)
 				}
@@ -115,22 +112,4 @@ func (p *FireflyPlugin) Cleanup() error {
 		slog.Error("error closing the UDP listener", "err", err)
 	}
 	return nil
-}
-
-func parseFirefly(msg []byte, hasSyslogHeader bool) (glowdTypes.AuxFirefly, error) {
-	auxFirefly := glowdTypes.AuxFirefly{}
-	jsonIndex := 0
-
-	if hasSyslogHeader {
-		jsonIndex = strings.Index(string(msg), "{")
-		if jsonIndex == -1 {
-			return auxFirefly, fmt.Errorf("couldn't find the beginning of the JSON")
-		}
-	}
-
-	if err := json.Unmarshal(msg[jsonIndex:], &auxFirefly); err != nil {
-		return auxFirefly, fmt.Errorf("couldn't unmarhsal incoming firefly: %w", err)
-	}
-
-	return auxFirefly, nil
 }

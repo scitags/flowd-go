@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/structs"
+
 	"github.com/scitags/flowd-go/enrichment/netlink"
 )
 
@@ -45,6 +47,10 @@ func init() {
 	)
 }
 
+// A firefly represents a given flow's characteristics. It's meant to be
+// a UDP datagram's payload and it should always fit within a given MTU
+// which for practical purposes is 1500 bytes. The contents of the firefly
+// are specified in the SciTags Specification available at https://www.scitags.org.
 type Firefly struct {
 	Version       int `json:"version"`
 	FlowLifecycle struct {
@@ -70,18 +76,54 @@ type Firefly struct {
 	EbpfTcpInfo []*netlink.InetDiagTCPInfoResp `json:"ebpfTcpInfo,omitempty"`
 }
 
-type AuxFirefly struct {
+func (f *Firefly) ParseTimeStamps(flowID FlowID) {
+	if !flowID.StartTs.IsZero() {
+		f.FlowLifecycle.StartTime = flowID.StartTs.Format(TIME_FORMAT)
+	}
+
+	if !flowID.EndTs.IsZero() {
+		f.FlowLifecycle.EndTime = flowID.EndTs.Format(TIME_FORMAT)
+	}
+
+	f.FlowLifecycle.CurrentTime = time.Now().Format(TIME_FORMAT)
+}
+
+func (f *Firefly) MarshalJSON() ([]byte, error) {
+	s := structs.New(f)
+	s.TagName = "json"
+
+	enc, err := json.Marshal(s.Map())
+	if err != nil {
+		return nil, err
+	}
+
+	return enc, nil
+}
+
+// A SlimFirefly represents a firefly containing only a flow ID. This type is
+// leveraged when parsing incoming fireflies where we are only concerned with
+// the flowd ID for dispatching information to the backends. It implements the
+// Unmarshaler interface.
+type SlimFirefly struct {
 	FlowID FlowID `json:"flow-id"`
 }
 
-func (f *AuxFirefly) UnmarshalJSON(in []byte) error {
+// Method Parse parses an incoming firefly (with and without a syslog header). Note
+// how json.Unmarshal doesn't work with fireflies containing a syslog header because
+// the data itself is not a valid JSON document. This implies an error is returned
+// before UnmarshalJSON is even called...
+func (f *SlimFirefly) Parse(in []byte) error {
 	jsonIndex := strings.Index(string(in), "{")
 	if jsonIndex == -1 {
 		return fmt.Errorf("couldn't find the JSON start token '{'")
 	}
 
+	return json.Unmarshal(in[jsonIndex:], f)
+}
+
+func (f *SlimFirefly) UnmarshalJSON(in []byte) error {
 	rawFirefly := Firefly{}
-	if err := json.Unmarshal(in[jsonIndex:], &rawFirefly); err != nil {
+	if err := json.Unmarshal(in, &rawFirefly); err != nil {
 		return fmt.Errorf("error unmarshaling the raw firefly: %w", err)
 	}
 
@@ -155,18 +197,4 @@ func (f *AuxFirefly) UnmarshalJSON(in []byte) error {
 	}
 
 	return nil
-}
-
-// func (f *AuxFirefly) MarshalJSON() ([]byte, error) { return nil, nil }
-
-func (f *Firefly) ParseTimeStamps(flowID FlowID) {
-	if !flowID.StartTs.IsZero() {
-		f.FlowLifecycle.StartTime = flowID.StartTs.Format(TIME_FORMAT)
-	}
-
-	if !flowID.EndTs.IsZero() {
-		f.FlowLifecycle.EndTime = flowID.EndTs.Format(TIME_FORMAT)
-	}
-
-	f.FlowLifecycle.CurrentTime = time.Now().Format(TIME_FORMAT)
 }
