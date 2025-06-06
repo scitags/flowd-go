@@ -117,9 +117,6 @@ relay. Be sure to check the documentation on the firelfy backend for more inform
 - **deadline [int] {0}**: The deadline (in seconds) to apply to the UDP socket. If set to `0` then no deadline is applied. Please bear in mind this
   is a fine-tuning parameter that shouldn't usually be tampered with. Configure a different value at your own risk!
 
-- **hasSyslogHeader [bool] {true}**: Whether the incoming firefly is expected to contain a `syslog(2)` header or not. This mainly controls how the
-  UDP payload is parsed.
-
 ## perfsonar
 The **perfSONAR** plugin will simply mark **all outgoing traffic** with the provided activity and experiment IDs. This plugin will override the
 chosen eBPF marking strategy if it's not set to `"flowLabelMatchAll"` and emit a warning message stating the fact.
