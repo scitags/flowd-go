@@ -9,7 +9,7 @@ import (
 	glowdTypes "github.com/scitags/flowd-go/types"
 )
 
-func (b *FireflyBackend) pollNetlinkStatus(done chan *netlink.InetDiagTCPInfoResp, flowID glowdTypes.FlowID) {
+func (b *FireflyBackend) pollNetlinkStatus(done chan []*netlink.InetDiagTCPInfoResp, flowID glowdTypes.FlowID) {
 	slog.Debug("entering netlink polling goroutine", "flowID", flowID)
 	for {
 		select {

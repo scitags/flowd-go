@@ -23,6 +23,7 @@ var (
 		"pollNetlink":            false,
 		"pollBPF":                false,
 		"netlinkPollingInterval": 5000,
+		"enrichmentVerbosity":    "lean",
 	}
 )
 
@@ -41,6 +42,8 @@ type FireflyBackend struct {
 	NetlinkPollingInterval int  `json:"netlinkPollingInterval"`
 	PollNetlink            bool `json:"pollNetlink"`
 
+	EnrichmentVerbosity string `json:"enrichmentVerbosity"`
+
 	ebpfEnricher *skops.EbpfEnricher
 
 	tcpInfoChan chan skops.TcpInfo
@@ -49,7 +52,8 @@ type FireflyBackend struct {
 
 	hashGen maphash.Hash
 
-	ongoingConnections *connectionCache
+	ongoingNetlinkConnections *connectionCache
+	ongoingEbpfConnections    *ebpfConnectionCache
 }
 
 func (b *FireflyBackend) String() string {
@@ -60,8 +64,9 @@ func (b *FireflyBackend) String() string {
 func (b *FireflyBackend) Init() error {
 	slog.Debug("initialising the firefly backend")
 
-	slog.Debug("initialising the ongoing connections map")
-	b.ongoingConnections = NewConnectionCache(100)
+	slog.Debug("initialising the ongoing connection maps")
+	b.ongoingNetlinkConnections = NewConnectionCache(100)
+	b.ongoingEbpfConnections = NewEbpfConnectionCache(100)
 
 	slog.Debug("initialising the hash generator")
 	b.hashGen = maphash.Hash{}
@@ -88,26 +93,10 @@ func (b *FireflyBackend) Init() error {
 	return nil
 }
 
-func (b *FireflyBackend) dispatchTCPStats() {
-	for tcpInfo := range b.tcpInfoChan {
-		slog.Debug("tcpInfo",
-			"src", tcpInfo.SrcPort, "dst", tcpInfo.DstPort,
-			"sentMBytes", tcpInfo.BytesSent/(1024*1024),
-			"rawCwnd", tcpInfo.SndCwnd,
-			"mss", tcpInfo.SndMss,
-			"cwnd", tcpInfo.SndCwnd*tcpInfo.SndMss/1024,
-			"state", tcpInfo.State,
-			"newState", tcpInfo.NewState,
-			"caAlg", tcpInfo.CaAlg,
-			"caState", tcpInfo.CaState,
-		)
-	}
-}
-
 func (b *FireflyBackend) Run(done <-chan struct{}, inChan <-chan glowdTypes.FlowID) {
 	slog.Debug("running the firefly backend")
 
-	if b.PollBPF {
+	if b.PollBPF && b.ebpfEnricher != nil {
 		b.tcpInfoChan = make(chan skops.TcpInfo)
 		go b.ebpfEnricher.Run(done, b.tcpInfoChan)
 		go b.dispatchTCPStats()
@@ -122,7 +111,7 @@ func (b *FireflyBackend) Run(done <-chan struct{}, inChan <-chan glowdTypes.Flow
 			}
 			slog.Debug("got a flowID")
 
-			if b.PollBPF {
+			if b.PollBPF && b.ebpfEnricher != nil {
 				fSpec := skops.FlowSpec{
 					DstPort: uint32(flowID.Dst.Port),
 					SrcPort: uint32(flowID.Src.Port),

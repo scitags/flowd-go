@@ -9,7 +9,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/scitags/flowd-go/enrichment/netlink"
 	glowdTypes "github.com/scitags/flowd-go/types"
 )
 
@@ -24,20 +23,12 @@ import (
 // TODO:   2: https://www.kernel.org/doc/html/latest/networking/af_xdp.html
 func (b *FireflyBackend) sendFirefly(flowID glowdTypes.FlowID) error {
 	var err error
-	var nlInfo *netlink.InetDiagTCPInfoResp
-	if b.AddNetlinkContext {
-		nlInfo, err = b.addNetlinkContext(uint8(flowID.Family), flowID.Src.Port, flowID.Dst.Port)
-		if err != nil {
-			slog.Warn("error getting info from netlink, proceeding without it", "err", err)
-
-			// Even though this should already be the case, be explicit!
-			nlInfo = nil
-		}
-	}
+	var nlInfo []*glowdTypes.Enrichment
 
 	if b.PollNetlink {
+		slog.Debug("beginning netlink polling")
 		if flowID.State == glowdTypes.START {
-			doneChan, ok := b.ongoingConnections.Insert(b.hashFlowID(flowID))
+			doneChan, ok := b.ongoingNetlinkConnections.Insert(b.hashFlowID(flowID))
 			if !ok {
 				go b.pollNetlinkStatus(doneChan, flowID)
 			} else {
@@ -46,7 +37,7 @@ func (b *FireflyBackend) sendFirefly(flowID glowdTypes.FlowID) error {
 		} else if flowID.State == glowdTypes.END {
 			flowHash := b.hashFlowID(flowID)
 
-			doneChan, ok := b.ongoingConnections.Get(flowHash)
+			doneChan, ok := b.ongoingNetlinkConnections.Get(flowHash)
 			if !ok {
 				slog.Warn("found no entry in connection cache for this flowID", "flowID", flowID)
 			}
@@ -54,14 +45,44 @@ func (b *FireflyBackend) sendFirefly(flowID glowdTypes.FlowID) error {
 			slog.Debug("dispatching end signal on done channel", "flowID", flowID)
 			doneChan <- nil
 
-			slog.Debug("reading back the last netlink snapshot")
+			slog.Debug("reading back the netlink snapshots")
 			nlSnapshot := <-doneChan
 
 			if b.AddNetlinkContext {
 				nlInfo = nlSnapshot
 			}
 
-			b.ongoingConnections.Remove(flowHash)
+			b.ongoingNetlinkConnections.Remove(flowHash)
+		}
+	}
+
+	var ebpfInfo []*glowdTypes.Enrichment
+	if b.PollBPF {
+		slog.Debug("beginning ebpf polling")
+		auxFlowID := flowID
+		// Zero out the addresses to not take them into account when hashing
+		auxFlowID.Src.IP = net.IP{}
+		auxFlowID.Dst.IP = net.IP{}
+
+		flowHash := b.hashFlowID(auxFlowID)
+
+		if flowID.State == glowdTypes.START {
+			slog.Debug("creating ongoing connection", "flowHash", flowHash)
+			ok := b.ongoingEbpfConnections.Create(flowHash)
+			if ok {
+				slog.Warn("an entry for this flowID already existed", "auxFlowID", auxFlowID)
+			}
+		} else if flowID.State == glowdTypes.END {
+			snapshots, ok := b.ongoingEbpfConnections.Get(flowHash)
+			if !ok {
+				slog.Warn("found no entry in ebpf connection cache for this flowID", "auxFlowID", auxFlowID)
+			}
+
+			if b.AddBPFContext {
+				ebpfInfo = snapshots
+			}
+
+			b.ongoingEbpfConnections.Remove(flowHash)
 		}
 	}
 
@@ -82,7 +103,8 @@ func (b *FireflyBackend) sendFirefly(flowID glowdTypes.FlowID) error {
 	localFirefly.Context.ActivityID = flowID.Activity
 	localFirefly.Context.Application = glowdTypes.APPLICATION
 
-	localFirefly.Netlink = []*netlink.InetDiagTCPInfoResp{nlInfo}
+	localFirefly.Netlink = nlInfo
+	localFirefly.EbpfTcpInfo = ebpfInfo
 
 	localFirefly.ParseTimeStamps(flowID)
 
@@ -147,7 +169,7 @@ func (b *FireflyBackend) sendToDestination(family glowdTypes.Family, destIP net.
 		}
 	}()
 
-	slog.Debug("sending firefly", "dst", destIP)
+	slog.Debug("sending firefly", "dst", destIP, "size", len(payload))
 	if _, err = conn.Write(payload); err != nil {
 		return fmt.Errorf("couldn't send the firefly to the destination: %w", err)
 	}

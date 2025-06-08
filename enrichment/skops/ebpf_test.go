@@ -19,6 +19,10 @@ import (
 	glowdTypes "github.com/scitags/flowd-go/types"
 )
 
+const (
+	RUNTIME int = 190
+)
+
 func init() {
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
 		AddSource: true,
@@ -61,6 +65,8 @@ func TestGatherFirefly(t *testing.T) {
 		PollBPF:                true,
 		PollNetlink:            true,
 		NetlinkPollingInterval: 1000,
+
+		EnrichmentVerbosity: "lean",
 	}
 
 	if err := fireflyBackend.Init(); err != nil {
@@ -144,7 +150,7 @@ func TestGatherFirefly(t *testing.T) {
 
 	wg.Add(1)
 	go func() {
-		time.Sleep(190 * time.Second)
+		time.Sleep(time.Duration(RUNTIME) * time.Second)
 		dummyFlow.State = glowdTypes.END
 		flowdIdChan <- dummyFlow
 		wg.Done()

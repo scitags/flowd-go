@@ -4,28 +4,27 @@ import (
 	"log/slog"
 	"sync"
 
-	"github.com/scitags/flowd-go/enrichment/netlink"
 	glowdTypes "github.com/scitags/flowd-go/types"
 )
 
 type connectionCache struct {
 	sync.Mutex
-	cache map[uint64]chan *netlink.InetDiagTCPInfoResp
+	cache map[uint64]chan []*glowdTypes.Enrichment
 }
 
 func NewConnectionCache(cap int) *connectionCache {
-	return &connectionCache{cache: make(map[uint64]chan *netlink.InetDiagTCPInfoResp, cap)}
+	return &connectionCache{cache: make(map[uint64]chan []*glowdTypes.Enrichment, cap)}
 }
 
-func (cc *connectionCache) Get(key uint64) (chan *netlink.InetDiagTCPInfoResp, bool) {
+func (cc *connectionCache) Get(key uint64) (chan []*glowdTypes.Enrichment, bool) {
 	cc.Lock()
 	doneChan, ok := cc.cache[key]
 	cc.Unlock()
 	return doneChan, ok
 }
 
-func (cc *connectionCache) Insert(key uint64) (chan *netlink.InetDiagTCPInfoResp, bool) {
-	doneChan := make(chan *netlink.InetDiagTCPInfoResp)
+func (cc *connectionCache) Insert(key uint64) (chan []*glowdTypes.Enrichment, bool) {
+	doneChan := make(chan []*glowdTypes.Enrichment)
 
 	cc.Lock()
 	_, ok := cc.cache[key]

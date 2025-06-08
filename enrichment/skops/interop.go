@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/scitags/flowd-go/enrichment/netlink"
+	glowdTypes "github.com/scitags/flowd-go/types"
 )
 
 type TcpState uint8
@@ -222,9 +222,9 @@ type TcpInfo struct {
 	CaPriv  [13]uint64
 }
 
-func (i TcpInfo) ToTCPInfoResp() *netlink.InetDiagTCPInfoResp {
-	return &netlink.InetDiagTCPInfoResp{
-		TCPInfo: &netlink.TCPInfo{
+func (i TcpInfo) ToTCPInfoResp() *glowdTypes.Enrichment {
+	return &glowdTypes.Enrichment{
+		TCPInfo: &glowdTypes.TCPInfo{
 			State:                     uint8(i.State),
 			Ca_state:                  uint8(i.CaState),
 			Retransmits:               i.Retransmits,
@@ -282,7 +282,7 @@ func (i TcpInfo) ToTCPInfoResp() *netlink.InetDiagTCPInfoResp {
 			Rcv_ooopack:   i.RcvOoopack,
 			Snd_wnd:       i.SndWnd,
 		},
-		Cong: &netlink.Cong{
+		Cong: &glowdTypes.Cong{
 			Algorithm: i.CaAlg.String(),
 		},
 	}

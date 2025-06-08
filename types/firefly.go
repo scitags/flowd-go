@@ -9,8 +9,6 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
-
-	"github.com/scitags/flowd-go/enrichment/netlink"
 )
 
 const (
@@ -72,8 +70,8 @@ type Firefly struct {
 		ActivityID   uint32 `json:"activity-id"`
 		Application  string `json:"application"`
 	} `json:"context"`
-	Netlink     []*netlink.InetDiagTCPInfoResp `json:"netlink,omitempty"`
-	EbpfTcpInfo []*netlink.InetDiagTCPInfoResp `json:"ebpfTcpInfo,omitempty"`
+	Netlink     []*Enrichment `json:"netlink,omitempty"`
+	EbpfTcpInfo []*Enrichment `json:"ebpfTcpInfo,omitempty"`
 }
 
 func (f *Firefly) ParseTimeStamps(flowID FlowID) {
