@@ -9,7 +9,7 @@ import (
 	glowdTypes "github.com/scitags/flowd-go/types"
 )
 
-func (b *FireflyBackend) addNetlinkContext(family uint8, srcPort, dstPort uint16) (*netlink.InetDiagTCPInfoResp, error) {
+func (b *FireflyBackend) addNetlinkContext(family uint8, srcPort, dstPort uint16) (*glowdTypes.Enrichment, error) {
 	nlReplies, err := netlink.NewTCPDiagRequest(family, srcPort, dstPort).ExecuteRequest()
 	if err != nil {
 		return nil, fmt.Errorf("couldn't execute the netlink request: %w", err)

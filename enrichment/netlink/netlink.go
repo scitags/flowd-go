@@ -10,6 +10,8 @@ import (
 	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netlink/nl"
 	"golang.org/x/sys/unix"
+
+	glowdTypes "github.com/scitags/flowd-go/types"
 )
 
 // Getting data from procfs(5) can be accomplished with:
@@ -47,7 +49,7 @@ func PollTCPSockets(family uint8) ([]*netlink.Socket, error) {
 	// Only keep established connections. We'll do the filtering in place!
 	n := 0
 	for _, conn := range tcpConns {
-		if conn.State == uint8(TCP_ESTABLISHED) && !IsIPPrivate(conn.ID.Source) && !IsIPPrivate(conn.ID.Destination) {
+		if conn.State == uint8(glowdTypes.TCP_ESTABLISHED) && !IsIPPrivate(conn.ID.Source) && !IsIPPrivate(conn.ID.Destination) {
 			tcpConns[n] = conn
 			n++
 		}
@@ -103,7 +105,7 @@ func NewTCPDiagRequest(family uint8, srcPort uint16, dstPort uint16) *TCPDiagReq
 		// 	(1 << uint(TCP_LISTEN))),
 
 		// Ignore listening sockets!
-		States: TCP_ALL_FLAGS & ^(1 << uint(TCP_LISTEN)),
+		States: glowdTypes.TCP_ALL_FLAGS & ^(1 << uint(glowdTypes.TCP_LISTEN)),
 
 		ID: InetDiagSockID{
 			// As seen on [0], there are no mentions to r->id.idiag_src or r->id.idiag_dst so it looks like
@@ -153,17 +155,17 @@ func NewTCPDiagRequest(family uint8, srcPort uint16, dstPort uint16) *TCPDiagReq
 }
 
 // This is mostly pulled from the implementation of netlink.SocketTCPInfo
-func (r *TCPDiagRequest) ExecuteRequest() ([]*InetDiagTCPInfoResp, error) {
+func (r *TCPDiagRequest) ExecuteRequest() ([]*glowdTypes.Enrichment, error) {
 	slog.Debug("executing the netlink request")
 
-	results := []*InetDiagTCPInfoResp{}
+	results := []*glowdTypes.Enrichment{}
 	nParsed := 0
 	err := r.req.ExecuteIter(unix.NETLINK_INET_DIAG, nl.SOCK_DIAG_BY_FAMILY, func(msg []byte) bool {
 		slog.Debug("parsing Netlink message", "nParsed", nParsed)
 		nParsed++
 
-		sockInfo := &Socket{}
-		if err := sockInfo.deserialize(msg); err != nil {
+		sockInfo, err := deserializeSocket(msg)
+		if err != nil {
 			slog.Error("couldn't parse socket information", "err", err)
 			return false
 		}
@@ -189,51 +191,53 @@ func (r *TCPDiagRequest) ExecuteRequest() ([]*InetDiagTCPInfoResp, error) {
 	return results, nil
 }
 
-func attrsToInetDiagTCPInfoResp(attrs []syscall.NetlinkRouteAttr, sockInfo *Socket) (*InetDiagTCPInfoResp, error) {
-	info := &InetDiagTCPInfoResp{
-		InetDiagMsg: sockInfo,
+func attrsToInetDiagTCPInfoResp(attrs []syscall.NetlinkRouteAttr, sockInfo *glowdTypes.Socket) (*glowdTypes.Enrichment, error) {
+	info := &glowdTypes.Enrichment{
+		Socket: sockInfo,
 	}
+
+	var err error
 	for _, a := range attrs {
 		slog.Debug("parsing netlink attribute", "type", inetDiagMap[a.Attr.Type], "len", a.Attr.Len)
 		switch a.Attr.Type {
 		case netlink.INET_DIAG_INFO:
-			info.TCPInfo = &TCPInfo{}
-			if err := info.TCPInfo.deserialize(a.Value); err != nil {
+			info.TCPInfo, err = deserializeTCPInfo(a.Value)
+			if err != nil {
 				return nil, err
 			}
 		case netlink.INET_DIAG_BBRINFO:
-			info.BBRInfo = &TCPBBRInfo{}
-			if err := info.BBRInfo.deserialize(a.Value); err != nil {
+			info.BBRInfo, err = deserializeTCPBBRInfo(a.Value)
+			if err != nil {
 				return nil, err
 			}
 		case netlink.INET_DIAG_TOS:
-			info.TOS = &TOS{}
-			if err := info.TOS.deserialize(a.Value); err != nil {
+			info.TOS, err = deserializeTOS(a.Value)
+			if err != nil {
 				return nil, err
 			}
 		case netlink.INET_DIAG_MEMINFO:
-			info.MemInfo = &MemInfo{}
-			if err := info.MemInfo.deserialize(a.Value); err != nil {
+			info.MemInfo, err = deserializeMemInfo(a.Value)
+			if err != nil {
 				return nil, err
 			}
 		case netlink.INET_DIAG_SKMEMINFO:
-			info.SkMemInfo = &SkMemInfo{}
-			if err := info.SkMemInfo.deserialize(a.Value); err != nil {
+			info.SkMemInfo, err = deserializeSkMemInfo(a.Value)
+			if err != nil {
 				return nil, err
 			}
 		case netlink.INET_DIAG_CONG:
-			info.Cong = &Cong{}
-			if err := info.Cong.deserialize(a.Value); err != nil {
+			info.Cong, err = deserializeCong(a.Value)
+			if err != nil {
 				return nil, err
 			}
 		case netlink.INET_DIAG_VEGASINFO:
-			info.VegasInfo = &VegasInfo{}
-			if err := info.VegasInfo.deserialize(a.Value); err != nil {
+			info.VegasInfo, err = deserializeVegas(a.Value)
+			if err != nil {
 				return nil, err
 			}
 		case netlink.INET_DIAG_DCTCPINFO:
-			info.DCTCPInfo = &DCTCPInfo{}
-			if err := info.DCTCPInfo.deserialize(a.Value); err != nil {
+			info.DCTCPInfo, err = deserializeDCTCPInfo(a.Value)
+			if err != nil {
 				return nil, err
 			}
 		default:

@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/scitags/flowd-go/enrichment/netlink"
 	"golang.org/x/sys/unix"
 )
 
@@ -20,7 +19,7 @@ type FlowID struct {
 	StartTs    time.Time
 	EndTs      time.Time
 	CurrentTs  time.Time
-	NetLink    netlink.InetDiagTCPInfoResp
+	Enrichment Enrichment
 }
 
 type IPPort struct {

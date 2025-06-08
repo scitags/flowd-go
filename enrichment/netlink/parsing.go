@@ -13,6 +13,8 @@ import (
 
 	"github.com/vishvananda/netlink/nl"
 	"golang.org/x/sys/unix"
+
+	glowdTypes "github.com/scitags/flowd-go/types"
 )
 
 const (
@@ -45,10 +47,12 @@ func (b *readBuffer) Next(n int) []byte {
 	return s
 }
 
-func (s *Socket) deserialize(b []byte) error {
+func deserializeSocket(b []byte) (*glowdTypes.Socket, error) {
 	if len(b) < sizeofSocket {
-		return fmt.Errorf("socket data short read (%d); want %d", len(b), sizeofSocket)
+		return nil, fmt.Errorf("socket data short read (%d); want %d", len(b), sizeofSocket)
 	}
+
+	s := glowdTypes.Socket{}
 
 	rb := readBuffer{Bytes: b}
 	s.Family = rb.Read()
@@ -75,7 +79,7 @@ func (s *Socket) deserialize(b []byte) error {
 	s.UID = native.Uint32(rb.Next(4))
 	s.INode = native.Uint32(rb.Next(4))
 
-	return nil
+	return &s, nil
 }
 
 const (
@@ -85,18 +89,20 @@ const (
 	skMemInfoLen  = 36
 )
 
-func (t *TOS) deserialize(b []byte) error {
+func deserializeTOS(b []byte) (*glowdTypes.TOS, error) {
 	if len(b) != tosLen {
-		return errors.New("Invalid length")
+		return nil, errors.New("Invalid length")
 	}
+
+	t := glowdTypes.TOS{}
 
 	var err error
 	rb := bytes.NewBuffer(b)
 	t.TOS, err = rb.ReadByte()
 	if err != nil {
-		return checkDeserErr(err)
+		return &t, checkDeserErr(err)
 	}
-	return nil
+	return &t, nil
 }
 
 func checkDeserErr(err error) error {
@@ -106,476 +112,489 @@ func checkDeserErr(err error) error {
 	return err
 }
 
-func (t *Cong) deserialize(b []byte) error {
-	// Drop the trailing '\0
+func deserializeCong(b []byte) (*glowdTypes.Cong, error) {
+	t := glowdTypes.Cong{}
+
+	// Drop the trailing '\0'
 	s := string(b[:len(b)-1])
 	for _, c := range s {
 		if c > unicode.MaxASCII {
-			return errors.New("non-ASCII character found")
+			return &t, errors.New("non-ASCII character found")
 		}
 	}
 
 	t.Algorithm = s
-	return nil
+
+	return &t, nil
 }
 
-func (t *VegasInfo) deserialize(b []byte) error {
+func deserializeVegas(b []byte) (*glowdTypes.VegasInfo, error) {
 	if len(b) != 16 {
-		return errors.New("invalid length for vegasInfo")
+		return nil, errors.New("invalid length for vegasInfo")
 	}
+
+	t := glowdTypes.VegasInfo{}
 
 	rb := bytes.NewBuffer(b)
 
 	next := rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Enabled = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.RTTCount = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.RTT = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.MinRTT = native.Uint32(next)
 
-	return nil
+	return &t, nil
 }
 
-func (t *DCTCPInfo) deserialize(b []byte) error {
+func deserializeDCTCPInfo(b []byte) (*glowdTypes.DCTCPInfo, error) {
 	if len(b) != 16 {
-		return errors.New("invalid length for dctcpInfo")
+		return nil, errors.New("invalid length for dctcpInfo")
 	}
+
+	t := glowdTypes.DCTCPInfo{}
 
 	rb := bytes.NewBuffer(b)
 
 	next := rb.Next(2)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Enabled = native.Uint16(next)
 
 	next = rb.Next(2)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.CEState = native.Uint16(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Alpha = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.ABEcn = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.ABTot = native.Uint32(next)
 
-	return nil
+	return &t, nil
 }
 
-func (t *SkMemInfo) deserialize(b []byte) error {
+func deserializeSkMemInfo(b []byte) (*glowdTypes.SkMemInfo, error) {
 	if len(b) != skMemInfoLen {
-		return errors.New("Invalid length")
+		return nil, errors.New("Invalid length")
 	}
+
+	t := glowdTypes.SkMemInfo{}
 
 	rb := bytes.NewBuffer(b)
 
 	next := rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.RMemAlloc = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.RcvBuff = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.WMemAlloc = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.SndBuff = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.FwdAlloc = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.WMemQueued = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.OptMem = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Backlog = native.Uint32(next)
 
-	return nil
+	return &t, nil
 }
 
-func (t *TCPInfo) deserialize(b []byte) error {
+func deserializeTCPInfo(b []byte) (*glowdTypes.TCPInfo, error) {
 	var err error
 	rb := bytes.NewBuffer(b)
 
+	t := glowdTypes.TCPInfo{}
+
 	t.State, err = rb.ReadByte()
 	if err != nil {
-		return checkDeserErr(err)
+		return &t, checkDeserErr(err)
 	}
 
 	t.Ca_state, err = rb.ReadByte()
 	if err != nil {
-		return checkDeserErr(err)
+		return &t, checkDeserErr(err)
 	}
 
 	t.Retransmits, err = rb.ReadByte()
 	if err != nil {
-		return checkDeserErr(err)
+		return &t, checkDeserErr(err)
 	}
 
 	t.Probes, err = rb.ReadByte()
 	if err != nil {
-		return checkDeserErr(err)
+		return &t, checkDeserErr(err)
 	}
 
 	t.Backoff, err = rb.ReadByte()
 	if err != nil {
-		return checkDeserErr(err)
+		return &t, checkDeserErr(err)
 	}
 	t.Options, err = rb.ReadByte()
 	if err != nil {
-		return checkDeserErr(err)
+		return &t, checkDeserErr(err)
 	}
 
 	scales, err := rb.ReadByte()
 	if err != nil {
-		return checkDeserErr(err)
+		return &t, checkDeserErr(err)
 	}
 	t.Snd_wscale = scales >> 4  // first 4 bits
 	t.Rcv_wscale = scales & 0xf // last 4 bits
 
 	rateLimAndFastOpen, err := rb.ReadByte()
 	if err != nil {
-		return checkDeserErr(err)
+		return &t, checkDeserErr(err)
 	}
 	t.Delivery_rate_app_limited = rateLimAndFastOpen >> 7 // get first bit
 	t.Fastopen_client_fail = rateLimAndFastOpen >> 5 & 3  // get next two bits
 
 	next := rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Rto = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Ato = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Snd_mss = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Rcv_mss = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Unacked = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Sacked = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Lost = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Retrans = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Fackets = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Last_data_sent = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Last_ack_sent = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Last_data_recv = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Last_ack_recv = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Pmtu = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Rcv_ssthresh = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Rtt = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Rttvar = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Snd_ssthresh = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Snd_cwnd = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Advmss = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Reordering = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Rcv_rtt = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Rcv_space = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Total_retrans = native.Uint32(next)
 
 	next = rb.Next(8)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Pacing_rate = native.Uint64(next)
 
 	next = rb.Next(8)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Max_pacing_rate = native.Uint64(next)
 
 	next = rb.Next(8)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Bytes_acked = native.Uint64(next)
 
 	next = rb.Next(8)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Bytes_received = native.Uint64(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Segs_out = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Segs_in = native.Uint32(next)
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Notsent_bytes = native.Uint32(next)
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Min_rtt = native.Uint32(next)
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Data_segs_in = native.Uint32(next)
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Data_segs_out = native.Uint32(next)
 
 	next = rb.Next(8)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Delivery_rate = native.Uint64(next)
 
 	next = rb.Next(8)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Busy_time = native.Uint64(next)
 
 	next = rb.Next(8)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Rwnd_limited = native.Uint64(next)
 
 	next = rb.Next(8)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Sndbuf_limited = native.Uint64(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Delivered = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Delivered_ce = native.Uint32(next)
 
 	next = rb.Next(8)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Bytes_sent = native.Uint64(next)
 
 	next = rb.Next(8)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Bytes_retrans = native.Uint64(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Dsack_dups = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Reord_seen = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Rcv_ooopack = native.Uint32(next)
 
 	next = rb.Next(4)
 	if len(next) == 0 {
-		return nil
+		return &t, nil
 	}
 	t.Snd_wnd = native.Uint32(next)
-	return nil
+	return &t, nil
 }
 
-func (t *TCPBBRInfo) deserialize(b []byte) error {
+func deserializeTCPBBRInfo(b []byte) (*glowdTypes.TCPBBRInfo, error) {
 	if len(b) != tcpBBRInfoLen {
-		return errors.New("Invalid length")
+		return nil, errors.New("Invalid length")
 	}
+
+	t := glowdTypes.TCPBBRInfo{}
 
 	rb := bytes.NewBuffer(b)
 	t.BBRBW = native.Uint64(rb.Next(8))
@@ -583,13 +602,15 @@ func (t *TCPBBRInfo) deserialize(b []byte) error {
 	t.BBRPacingGain = native.Uint32(rb.Next(4))
 	t.BBRCwndGain = native.Uint32(rb.Next(4))
 
-	return nil
+	return &t, nil
 }
 
-func (m *MemInfo) deserialize(b []byte) error {
+func deserializeMemInfo(b []byte) (*glowdTypes.MemInfo, error) {
 	if len(b) != memInfoLen {
-		return errors.New("Invalid length")
+		return nil, errors.New("Invalid length")
 	}
+
+	m := glowdTypes.MemInfo{}
 
 	rb := bytes.NewBuffer(b)
 	m.RMem = native.Uint32(rb.Next(4))
@@ -597,5 +618,5 @@ func (m *MemInfo) deserialize(b []byte) error {
 	m.FMem = native.Uint32(rb.Next(4))
 	m.TMem = native.Uint32(rb.Next(4))
 
-	return nil
+	return &m, nil
 }
