@@ -18,6 +18,8 @@ const (
 
 	// TCP_ALL_FLAGS includes flag bits for all TCP connection states. It corresponds to TCPF_ALL in some linux code.
 	TCP_ALL_FLAGS = 0xFFF
+
+	NS_PER_MS uint64 = 1_000_000
 )
 
 var stateName = map[State]string{
