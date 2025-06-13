@@ -51,7 +51,7 @@ func (e *EbpfEnricher) Cleanup() {
 	e.module.Close()
 }
 
-func NewEnricher() (*EbpfEnricher, error) {
+func NewEnricher(pollingInterval uint64) (*EbpfEnricher, error) {
 	slog.Debug("initialising the eBPF backend")
 
 	e := EbpfEnricher{}
@@ -70,6 +70,10 @@ func NewEnricher() (*EbpfEnricher, error) {
 		return nil, fmt.Errorf("error creating the BPF module: %w", err)
 	}
 	e.module = bpfModule
+
+	if err := bpfModule.InitGlobalVariable("POLLING_INTERVAL_NS", pollingInterval); err != nil {
+		slog.Error("error setting the polling interval", "err", err)
+	}
 
 	// Try to load the module's object
 	if err := e.module.BPFLoadObject(); err != nil {

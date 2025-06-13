@@ -94,7 +94,7 @@ static __always_inline int handleOp(struct bpf_sock_ops *ctx, bool ignorePollThr
 			if (now < *next_dump)
 				return 1;
 		}
-		*next_dump = now + INTERVAL;
+		*next_dump = now + POLLING_INTERVAL_NS;
 	#endif
 
 	tp = bpf_skc_to_tcp_sock(sk);
