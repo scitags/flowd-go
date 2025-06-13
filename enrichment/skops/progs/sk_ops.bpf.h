@@ -28,11 +28,12 @@ struct flowSpec {
 	} pollAcc SEC(".maps");
 
 	/*
-	 * Poll interval in nanoseconds: we should try to specify this as an extern variable when
-	 * loading the program through libbpf with Module.InitGlobalVariable from libbpfgo or
-	 * something of the sort!
+	 * Poll interval in nanoseconds. This global variable should be initialized by the handling
+	 * program through libbpf. Note how it's crucial the variable is declared volatile; otherwise
+	 * clang is free to assume it'll always be 0 and simply remove it altogether...
 	 */
 	#define INTERVAL 1000000000ULL /* 1 sec */
+	const volatile unsigned long long POLLING_INTERVAL_NS = 0;
 #endif
 
 /*
