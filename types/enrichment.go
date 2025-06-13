@@ -15,7 +15,7 @@ var validTags = map[string]struct{}{
 type Enrichment struct {
 	Verbosity string      `structs:"-" lean:"-"`
 	TCPInfo   *TCPInfo    `structs:"tcpInfo" lean:"tcpInfo"`
-	Cong      *Cong       `structs:"cong,omitempty" lean:"-"`
+	Cong      *Cong       `structs:"cong,omitempty" lean:"cong"`
 	Socket    *Socket     `structs:"skBuff,omitempty" lean:"-"`
 	BBRInfo   *TCPBBRInfo `structs:"bbr,omitempty" lean:"-"`
 	TOS       *TOS        `structs:"tos,omitempty" lean:"-"`
