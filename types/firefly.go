@@ -3,6 +3,7 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net"
 	"os"
 	"strings"
@@ -53,7 +54,7 @@ type Firefly struct {
 	Version       int `json:"version"`
 	FlowLifecycle struct {
 		State       string `json:"state"`
-		CurrentTime string `json:"current-time"`
+		CurrentTime string `json:"current-time,omitempty"`
 		StartTime   string `json:"start-time"`
 		EndTime     string `json:"end-time,omitempty"`
 	} `json:"flow-lifecycle"`
@@ -70,20 +71,26 @@ type Firefly struct {
 		ActivityID   uint32 `json:"activity-id"`
 		Application  string `json:"application"`
 	} `json:"context"`
-	Netlink     []*Enrichment `json:"netlink,omitempty"`
-	EbpfTcpInfo []*Enrichment `json:"ebpfTcpInfo,omitempty"`
+	Netlink     *Enrichment `json:"netlink,omitempty"`
+	EbpfTcpInfo *Enrichment `json:"ebpfTcpInfo,omitempty"`
 }
 
-func (f *Firefly) ParseTimeStamps(flowID FlowID) {
+func (f *Firefly) PopulateTimeStamps(flowID FlowID) {
 	if !flowID.StartTs.IsZero() {
 		f.FlowLifecycle.StartTime = flowID.StartTs.Format(TIME_FORMAT)
+	} else if flowID.StartTs.IsZero() && flowID.State == START {
+		slog.Error("flowID has no start time", "flowID", flowID)
 	}
 
 	if !flowID.EndTs.IsZero() {
 		f.FlowLifecycle.EndTime = flowID.EndTs.Format(TIME_FORMAT)
+	} else if flowID.EndTs.IsZero() && flowID.State == END {
+		slog.Error("flowID has no end time", "flowID", flowID)
 	}
 
-	f.FlowLifecycle.CurrentTime = time.Now().Format(TIME_FORMAT)
+	if flowID.State == ONGOING {
+		f.FlowLifecycle.CurrentTime = time.Now().UTC().Format(TIME_FORMAT)
+	}
 }
 
 func (f *Firefly) MarshalJSON() ([]byte, error) {
