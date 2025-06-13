@@ -58,8 +58,9 @@ compile_commands.json
 # Ignore Python virtual environments
 *env/
 
-# Ignore JSON files by default
+# Ignore JSON and JSON Lines files by default
 *.json
+*.jsonl
 
 # Ignore generated plots and images
 *.png
