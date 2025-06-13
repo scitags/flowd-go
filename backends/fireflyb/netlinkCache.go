@@ -3,37 +3,49 @@ package fireflyb
 import (
 	"log/slog"
 	"sync"
+	"time"
 
 	glowdTypes "github.com/scitags/flowd-go/types"
 )
 
+type cacheEntry struct {
+	doneChan chan *glowdTypes.Enrichment
+	startTs  time.Time
+}
+
 type connectionCache struct {
 	sync.Mutex
-	cache map[uint64]chan []*glowdTypes.Enrichment
+	cache map[uint64]cacheEntry
 }
 
 func NewConnectionCache(cap int) *connectionCache {
-	return &connectionCache{cache: make(map[uint64]chan []*glowdTypes.Enrichment, cap)}
+	return &connectionCache{cache: make(map[uint64]cacheEntry, cap)}
 }
 
-func (cc *connectionCache) Get(key uint64) (chan []*glowdTypes.Enrichment, bool) {
+func (cc *connectionCache) Get(key uint64) (cacheEntry, bool) {
 	cc.Lock()
 	doneChan, ok := cc.cache[key]
 	cc.Unlock()
 	return doneChan, ok
 }
 
-func (cc *connectionCache) Insert(key uint64) (chan []*glowdTypes.Enrichment, bool) {
-	doneChan := make(chan []*glowdTypes.Enrichment)
+func (cc *connectionCache) Insert(key uint64, startTs time.Time) (cacheEntry, bool) {
+	entry := cacheEntry{doneChan: make(chan *glowdTypes.Enrichment), startTs: startTs}
 
 	cc.Lock()
 	_, ok := cc.cache[key]
 	if !ok {
-		cc.cache[key] = doneChan
+		cc.cache[key] = entry
 	}
 	cc.Unlock()
 
-	return doneChan, ok
+	return entry, ok
+}
+
+func (cc *connectionCache) CloseChan(key uint64) {
+	cc.Lock()
+	close(cc.cache[key].doneChan)
+	cc.Unlock()
 }
 
 func (cc *connectionCache) Remove(key uint64) {
