@@ -30,8 +30,8 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 
 	#ifndef GLOWD_FLOW_LABEL_MATCH_ALL
 		// Populate the lookup based on the incoming datagram's data
-		flowHash.ip6Hi = ipv6AddrLo(l3->daddr);
-		flowHash.ip6Lo = ipv6AddrHi(l3->daddr);
+		flowHash.ip6Hi = ipv6AddrHi(l3->daddr);
+		flowHash.ip6Lo = ipv6AddrLo(l3->daddr);
 		flowHash.dPort = bpf_htons(l4->dest);
 		flowHash.sPort = bpf_htons(l4->source);
 	#endif
