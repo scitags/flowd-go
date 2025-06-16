@@ -181,6 +181,11 @@ func (b *EbpfBackend) Run(done <-chan struct{}, inChan <-chan glowdTypes.FlowID)
 			}
 			slog.Debug("got a flowID", "flowID", flowID)
 
+			if flowID.Family != glowdTypes.IPv6 {
+				slog.Debug("ignoring IPv4 flow")
+				continue
+			}
+
 			rawDstIPHi, rawDstIPLo := extractHalves(flowID.Dst.IP)
 			flowHash := FlowFourTuple{
 				IPv6Hi:  rawDstIPHi,
