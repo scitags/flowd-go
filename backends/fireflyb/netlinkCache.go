@@ -11,26 +11,27 @@ import (
 type cacheEntry struct {
 	doneChan chan *glowdTypes.Enrichment
 	startTs  time.Time
+	wg       sync.WaitGroup
 }
 
 type connectionCache struct {
 	sync.Mutex
-	cache map[uint64]cacheEntry
+	cache map[uint64]*cacheEntry
 }
 
 func NewConnectionCache(cap int) *connectionCache {
-	return &connectionCache{cache: make(map[uint64]cacheEntry, cap)}
+	return &connectionCache{cache: make(map[uint64]*cacheEntry, cap)}
 }
 
-func (cc *connectionCache) Get(key uint64) (cacheEntry, bool) {
+func (cc *connectionCache) Get(key uint64) (*cacheEntry, bool) {
 	cc.Lock()
-	doneChan, ok := cc.cache[key]
+	entry, ok := cc.cache[key]
 	cc.Unlock()
-	return doneChan, ok
+	return entry, ok
 }
 
-func (cc *connectionCache) Insert(key uint64, startTs time.Time) (cacheEntry, bool) {
-	entry := cacheEntry{doneChan: make(chan *glowdTypes.Enrichment), startTs: startTs}
+func (cc *connectionCache) Insert(key uint64, startTs time.Time) (*cacheEntry, bool) {
+	entry := &cacheEntry{doneChan: make(chan *glowdTypes.Enrichment), startTs: startTs, wg: sync.WaitGroup{}}
 
 	cc.Lock()
 	_, ok := cc.cache[key]

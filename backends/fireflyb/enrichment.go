@@ -82,7 +82,38 @@ func (b *FireflyBackend) dispatchTCPStats() {
 		// 	"caState", tcpInfo.CaState,
 		// )
 
-		go b.updateEbpfStatus(tcpInfo)
+		flowID := glowdTypes.FlowID{
+			Src: glowdTypes.IPPort{
+				IP:   net.IP{},
+				Port: tcpInfo.SrcPort,
+			},
+			Dst: glowdTypes.IPPort{
+				IP:   net.IP{},
+				Port: tcpInfo.DstPort,
+			},
+		}
+		flowHash := b.hashFlowID(flowID)
+
+		if tcpInfo.NewState == skops.CLOSE {
+			slog.Debug("last eBPF poller update", "srcPort", flowID.Src.Port, "dstPort", flowID.Dst.Port)
+			b.updateEbpfStatus(tcpInfo, flowHash)
+
+			slog.Debug("shutting down eBPF poller", "srcPort", flowID.Src.Port, "dstPort", flowID.Dst.Port)
+			cacheEntry, ok := b.ongoingEbpfConnections.Get(flowHash)
+			if !ok {
+				slog.Error("nonexistent channel for flow", "srcPort", flowID.Src.Port, "dstPort", flowID.Dst.Port)
+				continue
+			}
+
+			slog.Debug("waiting for accesses to connection cache to finish", "srcPort", flowID.Src.Port, "dstPort", flowID.Dst.Port)
+			cacheEntry.wg.Wait()
+
+			slog.Debug("closing the channel", "srcPort", flowID.Src.Port, "dstPort", flowID.Dst.Port)
+			b.ongoingEbpfConnections.CloseChan(flowHash)
+			continue
+		}
+
+		go b.updateEbpfStatus(tcpInfo, flowHash)
 	}
 }
 
@@ -121,19 +152,7 @@ func (b *FireflyBackend) pollEbpfStatus(doneChan chan *glowdTypes.Enrichment, fl
 	}
 }
 
-func (b *FireflyBackend) updateEbpfStatus(tcpi skops.TcpInfo) {
-	flowID := glowdTypes.FlowID{
-		Src: glowdTypes.IPPort{
-			IP:   net.IP{},
-			Port: tcpi.SrcPort,
-		},
-		Dst: glowdTypes.IPPort{
-			IP:   net.IP{},
-			Port: tcpi.DstPort,
-		},
-	}
-	flowHash := b.hashFlowID(flowID)
-
+func (b *FireflyBackend) updateEbpfStatus(tcpi skops.TcpInfo, flowHash uint64) {
 	info := tcpi.ToTCPInfoResp()
 	info.Verbosity = b.EnrichmentVerbosity
 
@@ -143,13 +162,10 @@ func (b *FireflyBackend) updateEbpfStatus(tcpi skops.TcpInfo) {
 		slog.Error("nonexistent channel for flow")
 		return
 	}
+	cacheEntry.wg.Add(1)
+	defer cacheEntry.wg.Done()
 
 	slog.Debug("current TCP state", "state", tcpi.State, "newState", tcpi.NewState)
 
 	cacheEntry.doneChan <- info
-
-	if tcpi.NewState == skops.CLOSE {
-		slog.Debug("shutting down eBPF poller", "srcPort", flowID.Src.Port, "dstPort", flowID.Dst.Port)
-		b.ongoingEbpfConnections.CloseChan(flowHash)
-	}
 }
