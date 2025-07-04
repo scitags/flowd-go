@@ -1,4 +1,4 @@
-gOC := go
+GOC := go
 
 # Include the bpf headers from the kernel!
 ENV_FLAGS := $(ENV_FLAGS) CGO_CFLAGS="-I/usr/include/bpf"
