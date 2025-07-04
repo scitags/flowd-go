@@ -66,6 +66,15 @@ static __always_inline int handleOp(struct bpf_sock_ops *ctx, bool ignorePollThr
 		return 1;
 	}
 
+	// If the connection is closing remove the element from the map
+	if (ctx->args[1] == TCP_CLOSE) {
+		if (bpf_map_delete_elem(&flowsToFollow, &fSpec)) {
+			#ifdef FLOWD_DEBUG
+				bpf_printk("error deleting the flow from the flowsToFollow map: dst: %d; src: %d", bpf_ntohl(ctx->remote_port), ctx->local_port);
+			#endif
+		}
+	}
+
 	#ifdef FLOWD_POLL
 		__u64 *next_dump;
 		__u64 now;
