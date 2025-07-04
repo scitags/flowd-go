@@ -128,10 +128,6 @@ func (b *FireflyBackend) Run(done <-chan struct{}, inChan <-chan glowdTypes.Flow
 					if err := b.ebpfEnricher.FlowMap.Update(flowSpecPtr, dummyPtr); err != nil {
 						slog.Error("error inserting value into flow map: %w, stats will not be collected", err)
 					}
-				} else if flowID.State == glowdTypes.END {
-					if err := b.ebpfEnricher.FlowMap.DeleteKey(flowSpecPtr); err != nil {
-						slog.Error("error deleting key from flow map: %w", err)
-					}
 				} else {
 					slog.Warn("wrong state for the flow ID", "state", flowID.State)
 				}
