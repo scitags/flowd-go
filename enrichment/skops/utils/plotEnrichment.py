@@ -28,9 +28,15 @@ def parseArgs():
     )
 
     parser.add_argument("--prefix",
-        help = "prefix to append to generated graphs (default: def)",
+        help = "prefix to append to generated graphs (default: plots/def-)",
         type = str,
         default = "plots/def-"
+    )
+
+    parser.add_argument("--cong-alg",
+        help = "congestion algorithm (default: none)",
+        type = str,
+        default = "none"
     )
 
     return parser.parse_args()
@@ -38,7 +44,14 @@ def parseArgs():
 # Simply round us to ms to be compliant with ISO 8601
 def processTimeStamp(ts: str):
     us = ts.split(":")[-2].split("+")[0].split(".")[-1]
-    return ts.replace(us, us[:3])
+
+    # Extend us so that is has at least three digits!
+    if len(us) < 3:
+        usExt = us + '0' * (3 - len(us))
+    else:
+        usExt = us
+
+    return ts.replace(us, usExt[:3])
 
 def loadFireflyData(lines: list[str]):
     netlinkDataPoints = []
@@ -158,6 +171,11 @@ def plot(prefix: str, data: dict, variable: str, title: str, yLabel: str, scale:
 
     fig.savefig(f"./{prefix}{variable}.png")
 
+def genTitle(title: str, congAlg: str) -> str:
+    if congAlg != "":
+        return f"{title} - {congAlg.upper()}"
+    return title
+
 def main():
     args = parseArgs()
 
@@ -171,11 +189,11 @@ def main():
 
     logging.debug(f"loaded iperf3 data: {data['iperf3']}")
 
-    plot(args.prefix, data, "rtt", "RTT", "RTT [us]")
-    plot(args.prefix, data, "rttVar", "RTT Variance", "RTT Var [us]")
-    plot(args.prefix, data, "sndCwnd", "Sender's Congestion Window", "Congestion Window [MiB]", scale = 2 ** 20)
-    plot(args.prefix, data, "pMtu", "Path MTU", "PMTU [bytes]")
-    plot(args.prefix, data, "bytesSent", "Sent Bytes", "Data [MiB]", scale = 2 ** 20)
+    plot(args.prefix, data, "rtt", genTitle("RTT", args.cong_alg), "RTT [us]")
+    plot(args.prefix, data, "rttVar", genTitle("RTT Variance", args.cong_alg), "RTT Var [us]")
+    plot(args.prefix, data, "sndCwnd", genTitle("Sender's Congestion Window", args.cong_alg), "Congestion Window [MiB]", scale = 2 ** 20)
+    plot(args.prefix, data, "pMtu", genTitle("Path MTU", args.cong_alg), "PMTU [bytes]")
+    plot(args.prefix, data, "bytesSent", genTitle("Sent Bytes", args.cong_alg), "Data [MiB]", scale = 2 ** 20)
 
 if __name__ == "__main__":
     main()
