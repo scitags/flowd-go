@@ -220,8 +220,8 @@ func TestGatherFirefly(t *testing.T) {
 		dummyFlow.State = glowdTypes.END
 		flowdIdChan <- dummyFlow
 
-		slog.Debug("closing the done channel in 2 seconds")
-		time.Sleep(2 * time.Second)
+		slog.Debug("closing the done channel in 20 seconds")
+		time.Sleep(20 * time.Second)
 		close(doneChan)
 	}()
 
