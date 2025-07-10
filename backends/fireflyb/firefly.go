@@ -48,18 +48,7 @@ func (b *FireflyBackend) Init() error {
 	slog.Debug("initialising the firefly backend")
 
 	if b.SendToCollector {
-		pIP := net.ParseIP(b.CollectorAddress)
-		if pIP == nil {
-			return fmt.Errorf("couldn't parse the provided collector IPvX %q", b.CollectorAddress)
-		}
-
-		// If we got an IPv4 address... plundered from net/ip.go!
-		addressFmt := "[%s]:%d"
-		if p4 := pIP.To4(); len(p4) == net.IPv4len {
-			addressFmt = "%s:%d"
-		}
-
-		conn, err := net.Dial("udp", fmt.Sprintf(addressFmt, pIP, b.CollectorPort))
+		conn, err := net.Dial("udp", parseCollectorAddress(b.CollectorAddress, b.CollectorPort))
 		if err != nil {
 			return fmt.Errorf("couldn't initialize UDP socket: %w", err)
 		}
