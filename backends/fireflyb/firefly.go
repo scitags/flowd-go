@@ -5,7 +5,6 @@ import (
 	"hash/maphash"
 	"log/slog"
 	"net"
-	"strings"
 
 	glowdTypes "github.com/scitags/flowd-go/types"
 )
@@ -49,13 +48,7 @@ func (b *FireflyBackend) Init() error {
 	slog.Debug("initialising the firefly backend")
 
 	if b.SendToCollector {
-		addressFmt := "%s:%d"
-		// If we got an IPv6 address...
-		if pIP := net.ParseIP(b.CollectorAddress); pIP != nil && strings.Contains(b.CollectorAddress, ":") {
-			addressFmt = "[%s]:%d"
-		}
-
-		conn, err := net.Dial("udp", fmt.Sprintf(addressFmt, b.CollectorAddress, b.CollectorPort))
+		conn, err := net.Dial("udp", parseCollectorAddress(b.CollectorAddress, b.CollectorPort))
 		if err != nil {
 			return fmt.Errorf("couldn't initialize UDP socket: %w", err)
 		}
