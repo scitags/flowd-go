@@ -21,7 +21,8 @@ SPECFILE_NAME        = $(shell awk '$$1 == "Name:"     { print $$2 }' $(SPECFILE
 SPECFILE_VERSION     = $(shell awk '$$1 == "Version:"  { print $$2 }' $(SPECFILE))
 SPECFILE_RELEASE     = $(shell awk '$$1 == "Release:"  { print $$2 }' $(SPECFILE))
 DIST                ?= $(shell rpm --eval %{dist})
-RPM_TARGET_ARCH     ?= $(shell arch)
+ARCH                := $(shell uname -m)
+RPM_TARGET_ARCH      = $(ARCH)
 
 # How are we going to bundle the sources into a *.tar.gz? By default we'll leverage Go
 # to vendor and generate the Makefile, but we can also download a ready-made copy from
@@ -48,7 +49,6 @@ RPM_BUILDROOT = $(shell echo ${HOME})/rpmbuild
 # The value returned by uname(1) is not the one used when distributing software, so we'll
 # just do a naive translation. We could even safely assume to always be running on amd64
 # though....
-ARCH := $(shell uname -m)
 ifeq ($(ARCH),x86_64)
 DL_ARCH := amd64
 else

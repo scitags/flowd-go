@@ -103,7 +103,7 @@ endif
 TARGET_ARCH ?= x86_64
 ifeq ($(TARGET_ARCH),x86_64)
 ENV_FLAGS := $(ENV_FLAGS) GOARCH=amd64
-else ($(TARGET_ARCH),aarch64)
+else ifeq ($(TARGET_ARCH),aarch64)
 ENV_FLAGS := $(ENV_FLAGS) GOARCH=arm64
 endif
 
