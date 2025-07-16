@@ -21,6 +21,7 @@ SPECFILE_NAME        = $(shell awk '$$1 == "Name:"     { print $$2 }' $(SPECFILE
 SPECFILE_VERSION     = $(shell awk '$$1 == "Version:"  { print $$2 }' $(SPECFILE))
 SPECFILE_RELEASE     = $(shell awk '$$1 == "Release:"  { print $$2 }' $(SPECFILE))
 DIST                ?= $(shell rpm --eval %{dist})
+RPM_TARGET_ARCH     ?= $(shell arch)
 
 # How are we going to bundle the sources into a *.tar.gz? By default we'll leverage Go
 # to vendor and generate the Makefile, but we can also download a ready-made copy from
@@ -73,6 +74,7 @@ rpm-dbg:
 	@echo "         VERSION: $(VERSION)"
 	@echo "         DL_ARCH: $(DL_ARCH)"
 	@echo "      GO_VERSION: $(GO_VERSION)"
+	@echo " RPM_TARGET_ARCH: $(RPM_TARGET_ARCH)"
 
 # Files to include in the SRPM
 RPM_FILES := backends cmd enrichment plugins settings rpm stun types const.go go.mod go.sum Makefile vendor commit
@@ -133,7 +135,7 @@ rpm: sources
 # Note how we need network access so that Go can pull its dependencies!
 .PHONY: rpm-mock
 rpm-mock: srpm
-	mock -r almalinux-9-x86_64 build/SRPMS/flowd-go-$(SPECFILE_VERSION)-$(SPECFILE_RELEASE).src.rpm
+	mock -r almalinux-9-$(RPM_TARGET_ARCH) -v --resultdir $(PWD)/build build/SRPMS/flowd-go-$(SPECFILE_VERSION)-$(SPECFILE_RELEASE).src.rpm
 
 # .PHONY: rpm-cat
 # rpm-cat:
