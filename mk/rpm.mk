@@ -32,8 +32,12 @@ RPM_TARGET_ARCH      = $(ARCH)
 SRC_GEN_MODE ?= go
 
 # Let's get the Go version we're currently using so that we can download it should we
-# need to.
+# need to. We'll mangle the Go version for now given we cannot install 1.24.4 when
+# building on Koji...
 GO_VERSION = $(shell awk '/^go[[:space:]]/ {print $$2}' go.mod)
+ifeq ($(GO_VERSION),1.24)
+GO_VERSION := $(GO_VERSION).4
+endif
 
 # The name of the *.tar.gz with the bundled sources. Note this name MUST be the one specified
 # in the SPEC file on field Sources0.
