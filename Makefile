@@ -28,7 +28,7 @@ endif
 ifdef BUILDING_RPM
 VERSION := $(RPM_PACKAGE_VERSION)
 else
-VERSION = 2.0
+VERSION = $(shell git describe --tags --abbrev=0)
 endif
 
 # The version to embed in image tags. Note this is exported so that both the
@@ -97,6 +97,14 @@ ENV_FLAGS := $(ENV_FLAGS) CC="$(CC)"
 
 # This is not really needed, but we'd rather be explicit!
 ENV_FLAGS := $(ENV_FLAGS) CGO_ENABLED="1"
+endif
+
+# Adjust the target architecture based
+TARGET_ARCH ?= x86_64
+ifeq ($(TARGET_ARCH),x86_64)
+ENV_FLAGS := $(ENV_FLAGS) GOARCH=amd64
+else ifeq ($(TARGET_ARCH),aarch64)
+ENV_FLAGS := $(ENV_FLAGS) GOARCH=arm64
 endif
 
 help:

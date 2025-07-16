@@ -1,9 +1,9 @@
 module github.com/scitags/flowd-go
 
-go 1.22.9
+go 1.23.9
 
 require (
-	github.com/aquasecurity/libbpfgo v0.7.0-libbpf-1.4.0.20240729111821-61d531acf4ca
+	github.com/aquasecurity/libbpfgo v0.8.0-libbpf-1.5
 	github.com/containerd/cgroups v1.1.0
 	github.com/cpuguy83/go-md2man/v2 v2.0.4
 	github.com/labstack/echo/v4 v4.12.0
