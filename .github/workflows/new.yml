@@ -33,3 +33,19 @@ jobs:
       - name: Firefly plugin tests
         shell: bash
         run: go test ./plugins/fireflyp
+
+  build:
+    name: "Build it!"
+    needs: test
+    runs-on: ubuntu-latest
+    container:
+        image: ghcr.io/scitags/flowd-go:test-v2.1
+        volumes:
+          - ${{ github.workspace }}:/flowd-go
+    steps:
+      - name: Check we can build the project
+        shell: bash
+        run: |
+          pwd
+          ls -lh
+          make build
