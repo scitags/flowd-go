@@ -21,6 +21,14 @@ jobs:
         with:
           go-version: 1.23.9
 
-      - name: Show environment information
+      - name: Show the current directory
+        shell: bash
+        env:
+          WORKSPACE: ${{ github.workspace }}
+        run: |
+          ls -lh
+          echo "$WORKSPACE"
+
+      - name: Firefly plugin tests
         shell: bash
         run: go test ./plugins/fireflyp
