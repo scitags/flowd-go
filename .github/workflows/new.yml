@@ -6,6 +6,9 @@ on: push
 
 # Let's define what we want to do!
 jobs:
+  dbg:
+    name: Show the environment
+    uses: scitags/flowd-go/.github/workflows/dbg.yml@main
   checkout:
     name: foo
     runs-on: ubuntu-latest
