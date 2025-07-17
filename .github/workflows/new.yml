@@ -47,8 +47,4 @@ jobs:
 
       - name: Check we can build the project
         shell: bash
-        # working-directory: /flowd-go
-        run: |
-          pwd
-          ls -lh
-          ls -lh /flowd-go
+        run: make build
