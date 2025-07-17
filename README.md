@@ -21,6 +21,12 @@ The technical specification we try to adhere to can be found [here](https://docs
 The [SciTags Organization](https://www.scitags.org/) is the entity behind this effort of tagging network traffic to get better insights into how
 network flows behave in the search of strategies for optimizing data delivery in data-heavy realms such as that of High Energy Physics (HEP).
 
+The documentation accompanying `flowd-go` is shipped as a series of Markdown files. You can find all of them with:
+
+    $ find . -path ./vendor -prune -o -name "*.md" -print
+
+Be sure to give those a read for information not covered in this document: we didn't want to make it too long...
+
 ## Quickstart
 The golden rule is that 'if something can be done, then a `make` target can be leveraged for it'. This basically means that compiling, running,
 generating the documentation and all those common tasks can be accomplished by simply issuing the appropriate `make <target>`. To get an
@@ -77,6 +83,10 @@ targets together with an explanation on what they achieve.
 
 Also, be sure to run the following to be greeted with a help message showing you what other commands besides `run` are available. You can also check
 the Markdown-formatted manpage on `rpms/flowd-go.1.md` to get a list of available flags and commands along a more detailed description.
+
+## Releasing
+All the documentation regarding how to make a release can be found on [`rpm/README.md`](./rpm/README.md). The bottom line is that both
+a regular GitHub-CI-based release and a CERN Koji-based release will be made.
 
 ### Not so quickstart
 One can also leverage Docker containers to run `flowd-go`. However, given we'll be making use of some rather advanced technologies in the sense that
