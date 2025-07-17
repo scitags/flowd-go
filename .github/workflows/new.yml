@@ -9,8 +9,10 @@ jobs:
   dbg:
     name: Show the environment
     uses: scitags/flowd-go/.github/workflows/dbg.yml@main
-  checkout:
-    name: foo
+
+  test:
+    name: Run Go-level tests
+    needs: dbg
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
