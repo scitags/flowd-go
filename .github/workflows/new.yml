@@ -18,4 +18,4 @@ jobs:
 
       - name: Show environment information
         shell: bash
-        run: go test ./stun
+        run: go test ./plugins/fireflyp
