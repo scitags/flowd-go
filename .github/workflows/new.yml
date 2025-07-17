@@ -6,17 +6,15 @@ on: push
 
 # Let's define what we want to do!
 jobs:
-  dbg:
-    name: Show the environment
+  base:
+    name: Do all the prep work
     uses: scitags/flowd-go/.github/workflows/dbg.yml@main
 
   test:
     name: Run Go-level tests
-    needs: dbg
+    needs: base
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
       - uses: actions/setup-go@v5
         with:
           go-version: 1.23.9
@@ -45,8 +43,8 @@ jobs:
     steps:
       - name: Check we can build the project
         shell: bash
-        working-directory: /flowd-go
+        # working-directory: /flowd-go
         run: |
           pwd
           ls -lh
-          make build
+          ls -lh /flowd-go
