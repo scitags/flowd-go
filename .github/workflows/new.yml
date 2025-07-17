@@ -15,6 +15,8 @@ jobs:
     needs: base
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/setup-go@v5
         with:
           go-version: 1.23.9
@@ -41,6 +43,8 @@ jobs:
         volumes:
           - ${{ github.workspace }}:/flowd-go
     steps:
+      - uses: actions/checkout@v4
+
       - name: Check we can build the project
         shell: bash
         # working-directory: /flowd-go
