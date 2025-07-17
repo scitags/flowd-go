@@ -27,6 +27,7 @@ jobs:
           WORKSPACE: ${{ github.workspace }}
         run: |
           ls -lh
+          pwd
           echo "$WORKSPACE"
 
       - name: Firefly plugin tests
