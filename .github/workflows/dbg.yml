@@ -8,7 +8,6 @@ on:
 # Let's define what we want to do!
 jobs:
   showEnv:
-    name: Show the environment
     runs-on: ubuntu-latest
     steps:
       - name: Dump GitHub context
