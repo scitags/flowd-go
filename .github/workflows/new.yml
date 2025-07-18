@@ -8,137 +8,35 @@ on: push
 jobs:
   base:
     name: Prep time!
-    uses: scitags/flowd-go/.github/workflows/dbg.yml@main
+    uses: ./.github/workflows/dbg.yml@main
 
   test:
     name: Test it!
     needs: base
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: 1.23.9
-
-      - name: Show the current directory
-        shell: bash
-        env:
-          WORKSPACE: ${{ github.workspace }}
-        run: |
-          ls -lh
-          pwd
-          echo "$WORKSPACE"
-
-      - name: Firefly plugin tests
-        shell: bash
-        run: go test ./plugins/fireflyp
+    uses: ./.github/workflows/test.yml@main
 
   build:
     name: "Build it!"
     needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: 1.23.9
-
-        # We disable CGO to avoid including any eBPF-induced
-        # dependencies so as to keep stuff fast.
-      - name: Check we can build the project
-        shell: bash
-        run: CGO_ENABLED=0 go build -o foo ./cmd
+    uses: ./.github/workflows/build.yml@main
 
   srpm:
     name: SRPM time!
     needs: build
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/scitags/flowd-go:rpm-v2.1
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Create the SRPM
-        shell: bash
-        run: make srpm
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: flowd-go.src.rpm
-          path: ./build/SRPMS/flowd-go*.src.rpm
+    uses: ./.github/workflows/srpm.yml@main
 
   rpm-x86_64:
     name: Build the x86_64 RPM
     needs: srpm
-    runs-on: ubuntu-latest
-    container:
-        image: ghcr.io/scitags/flowd-go:rpm-v2.1
-    steps:
-      - name: Check the current architecture
-        run: arch
-
-      - uses: actions/checkout@v4
-
-      - name: Download the SRPM
-        uses: actions/download-artifact@v4
-        with:
-          name: flowd-go.src.rpm
-          path: artifacts
-
-      - name: Show the artifacts
-        run: ls -lh artifacts
-
-      - name: Install the dependencies
-        run: dnf builddep -y flowd-go.spec
-
-      - name: Build the RPM
-        run: make rpm SRPM_PATH=artifacts/*.src.rpm
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: flowd-go.x86_64.rpm
-          path: ./build/RPMS/x86_64/flowd-go*.rpm
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: flowd-go.x86_64
-          path: ./build/BUILDROOT/flowd-go-*/usr/bin/flowd-go
+    uses: ./.github/workflows/rpm.yml@main
+    with:
+      target-arch: x86_64
+      target-runner: ubuntu-latest
 
   rpm-aarch64:
     name: Build the aarch64 RPM
     needs: srpm
-    runs-on: ubuntu-24.04-arm
-    container:
-        image: ghcr.io/scitags/flowd-go:rpm-v2.1
-    steps:
-      - name: Check the current architecture
-        run: arch
-
-      - uses: actions/checkout@v4
-
-      - name: Download the SRPM
-        uses: actions/download-artifact@v4
-        with:
-          name: flowd-go.src.rpm
-          path: artifacts
-
-      - name: Show the artifacts
-        run: ls -lh artifacts
-
-      - name: Install the dependencies
-        run: dnf builddep -y flowd-go.spec
-
-      - name: Build the RPM
-        run: make rpm SRPM_PATH=artifacts/*.src.rpm
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: flowd-go.aarch64.rpm
-          path: ./build/RPMS/aarch64/flowd-go*.rpm
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: flowd-go.aarch64
-          path: ./build/BUILDROOT/flowd-go-*/usr/bin/flowd-go
+    uses: ./.github/workflows/rpm.yml@main
+    with:
+      target-arch: aarch64
+      target-runner: ubuntu-24.04-arm
