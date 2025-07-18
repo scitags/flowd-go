@@ -115,6 +115,16 @@ jobs:
       - name: Build the RPM
         run: make rpm SRPM_PATH=artifacts/*.src.rpm
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flowd-go.x86_64.rpm
+          path: ./build/RPMS/aarch64/flowd-go*.rpm
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flowd-go.aarch64
+          path: ./build/BUILDROOT/flowd-go-*/usr/bin/flowd-go
+
   # package:
   #   name: "Package it!"
   #   needs: build
