@@ -109,6 +109,9 @@ jobs:
       - name: Show the artifacts
         run: ls -lh artifacts
 
+      - name: Install the dependencies
+        run: dnf builddep -y flowd-go.spec
+
       - name: Build the RPM
         run: make rpm SRPM_PATH=artifacts/*.src.rpm
 
