@@ -132,7 +132,7 @@ srpm: sources
 # Build the binary (i.e. carrying teh compiled binary) RPM. Please note the target name MUST be rpm as this is what
 # CERN's koji instance expects.
 .PHONY: rpm
-rpm: srpm
+rpm:
 	rpmbuild -rb                        \
 		--define "dist $(DIST)"         \
 		--define "_topdir $(PWD)/build" \
