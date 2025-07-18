@@ -8,27 +8,27 @@ on: push
 jobs:
   base:
     name: Prep time!
-    uses: ./.github/workflows/dbg.yml@main
+    uses: ./.github/workflows/dbg.yml
 
   test:
     name: Test it!
     needs: base
-    uses: ./.github/workflows/test.yml@main
+    uses: ./.github/workflows/test.yml
 
   build:
     name: "Build it!"
     needs: test
-    uses: ./.github/workflows/build.yml@main
+    uses: ./.github/workflows/build.yml
 
   srpm:
     name: SRPM time!
     needs: build
-    uses: ./.github/workflows/srpm.yml@main
+    uses: ./.github/workflows/srpm.yml
 
   rpm-x86_64:
     name: Build the x86_64 RPM
     needs: srpm
-    uses: ./.github/workflows/rpm.yml@main
+    uses: ./.github/workflows/rpm.yml
     with:
       target-arch: x86_64
       target-runner: ubuntu-latest
@@ -36,7 +36,7 @@ jobs:
   rpm-aarch64:
     name: Build the aarch64 RPM
     needs: srpm
-    uses: ./.github/workflows/rpm.yml@main
+    uses: ./.github/workflows/rpm.yml
     with:
       target-arch: aarch64
       target-runner: ubuntu-24.04-arm
