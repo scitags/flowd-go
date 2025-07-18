@@ -51,7 +51,6 @@ jobs:
         shell: bash
         run: CGO_ENABLED=0 go build -o foo ./cmd
 
-
   debugMock:
     runs-on: ubuntu-latest
     steps:
@@ -60,6 +59,26 @@ jobs:
 
       - name: Run a privileged container
         run: docker run --privileged --rm -t --cap-add=SYS_ADMIN ghcr.io/scitags/flowd-go:mock-v2.1 sh -c "mock --shell echo hello world"
+
+  testX86:
+    name: "x86 Test"
+    needs: build
+    runs-on: ubuntu-latest
+    container:
+        image: ghcr.io/scitags/flowd-go:mock-arm-v2.1
+    steps:
+      - name: Check arch
+        run: arch
+
+  testARM:
+    name: "ARM test"
+    needs: build
+    runs-on: ubuntu-24.04-arm
+    container:
+        image: ghcr.io/scitags/flowd-go:mock-arm-v2.1
+    steps:
+      - name: Check arch
+        run: arch
 
   package:
     name: "Package it!"
