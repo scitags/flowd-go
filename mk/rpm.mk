@@ -137,6 +137,7 @@ rpm:
 		--define "dist $(DIST)"         \
 		--define "_topdir $(PWD)/build" \
 		--define '_sourcedir $(PWD)'    \
+		--noclean \
 		$(SRPM_PATH)
 
 # Note how we need network access so that Go can pull its dependencies!
