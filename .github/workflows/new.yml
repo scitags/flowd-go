@@ -66,7 +66,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: flowd-go.srpm
+          name: flowd-go.src.rpm
           path: ./build/SRPMS/flowd-go*.src.rpm
 
   # debugMock:
@@ -103,14 +103,14 @@ jobs:
       - name: Download the SRPM
         uses: actions/download-artifact@v4
         with:
-          name: flowd-go.srpm
+          name: flowd-go.src.rpm
           path: artifacts
 
       - name: Show the artifacts
         run: ls -lh artifacts
 
       - name: Build the RPM
-        run: make rpm SRPM_PATH=artifacts/flowd-go.srpm
+        run: make rpm SRPM_PATH=artifacts/*.src.rpm
 
   # package:
   #   name: "Package it!"
