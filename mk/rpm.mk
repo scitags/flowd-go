@@ -130,28 +130,17 @@ srpm: sources
 # Build the binary (i.e. carrying teh compiled binary) RPM. Please note the target name MUST be rpm as this is what
 # CERN's koji instance expects.
 .PHONY: rpm
-rpm: sources
-	rpmbuild -bb --define "dist $(DIST)" --define "_topdir $(PWD)/build" --define '_sourcedir $(PWD)' $(SPECFILE)
+rpm: srpm
+	rpmbuild -rb                        \
+		--define "dist $(DIST)"         \
+		--define "_topdir $(PWD)/build" \
+		--define '_sourcedir $(PWD)'    \
+		$(PWD)/build/SRPMS/flowd-go-$(SPECFILE_VERSION)-$(SPECFILE_RELEASE).src.rpm
 
 # Note how we need network access so that Go can pull its dependencies!
 .PHONY: rpm-mock
 rpm-mock: srpm
 	mock -r almalinux-9-$(RPM_TARGET_ARCH) -v --resultdir $(PWD)/build build/SRPMS/flowd-go-$(SPECFILE_VERSION)-$(SPECFILE_RELEASE).src.rpm
-
-.PHONY: rpm-mock-x86_64
-rpm-mock-x86_64:
-	mock -r almalinux-9-cern-x86_64 -v \
-		--resultdir $(PWD)/mock/results/x86_64 \
-		--rootdir   $(PWD)/mock/roots/x86_64 \
-		build/SRPMS/flowd-go-$(SPECFILE_VERSION)-$(SPECFILE_RELEASE).src.rpm
-
-.PHONY: rpm-mock-aarch64
-rpm-mock-aarch64:
-	mock -r almalinux-9-cern-x86_64-to-aarch64 -v \
-		--resultdir $(PWD)/mock/results/aarch64 \
-		--rootdir   $(PWD)/mock/roots/x86_64 \
-		--isolation=simple \
-		build/SRPMS/flowd-go-$(SPECFILE_VERSION)-$(SPECFILE_RELEASE).src.rpm
 
 # .PHONY: rpm-cat
 # rpm-cat:
