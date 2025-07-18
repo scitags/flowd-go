@@ -7,11 +7,11 @@ on: push
 # Let's define what we want to do!
 jobs:
   base:
-    name: Do all the prep work
+    name: Prep time!
     uses: scitags/flowd-go/.github/workflows/dbg.yml@main
 
   test:
-    name: Run Go-level tests
+    name: Test it!
     needs: base
     runs-on: ubuntu-latest
     steps:
@@ -38,13 +38,52 @@ jobs:
     name: "Build it!"
     needs: test
     runs-on: ubuntu-latest
-    container:
-        image: ghcr.io/scitags/flowd-go:test-v2.1
-        volumes:
-          - ${{ github.workspace }}:/flowd-go
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.23.9
+
+        # We disable CGO to avoid including any eBPF-induced
+        # dependencies so as to keep stuff fast.
       - name: Check we can build the project
         shell: bash
-        run: make build
+        run: CGO_ENABLED=0 go build -o foo ./cmd
+
+  package:
+    name: "Package it!"
+    needs: build
+    runs-on: ubuntu-latest
+    container:
+        image: ghcr.io/scitags/flowd-go:mock-v2.1
+        options: --cap-add=SYS_ADMIN
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create the SRPM
+        shell: bash
+        run: make srpm
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: srpm
+          path: ./build/SRPMS/flowd-go*.src.rpm
+
+      - name: Create the x86_64 RPM
+        shell: bash
+        run: make rpm-mock-x86_64
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rpm-x86_64
+          path: /var/lib/mock/almalinux-9-cern-x86_64/result/flowd-go-*.x86_64.rpm
+
+      - name: Create the aarch64 RPM
+        shell: bash
+        run: make rpm-mock-aarch64
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rpm-aarch64
+          path: /var/lib/mock/almalinux-9-cern-x86_64-to-aarch64/result/flowd-go-*.aarch64.rpm
