@@ -23,6 +23,7 @@ SPECFILE_RELEASE     = $(shell awk '$$1 == "Release:"  { print $$2 }' $(SPECFILE
 DIST                ?= $(shell rpm --eval %{dist})
 ARCH                := $(shell uname -m)
 RPM_TARGET_ARCH      = $(ARCH)
+SRPM_PATH           ?= $(PWD)/build/SRPMS/flowd-go-$(SPECFILE_VERSION)-$(SPECFILE_RELEASE).src.rpm
 
 # How are we going to bundle the sources into a *.tar.gz? By default we'll leverage Go
 # to vendor and generate the Makefile, but we can also download a ready-made copy from
@@ -76,6 +77,7 @@ rpm-dbg:
 	@echo "         DL_ARCH: $(DL_ARCH)"
 	@echo "      GO_VERSION: $(GO_VERSION)"
 	@echo " RPM_TARGET_ARCH: $(RPM_TARGET_ARCH)"
+	@echo "       SRPM_PATH: $(SRPM_PATH)"
 
 # Files to include in the SRPM
 RPM_FILES := backends cmd enrichment plugins settings rpm stun types const.go go.mod go.sum Makefile vendor commit
@@ -135,7 +137,7 @@ rpm: srpm
 		--define "dist $(DIST)"         \
 		--define "_topdir $(PWD)/build" \
 		--define '_sourcedir $(PWD)'    \
-		$(PWD)/build/SRPMS/flowd-go-$(SPECFILE_VERSION)-$(SPECFILE_RELEASE).src.rpm
+		$(SRPM_PATH)
 
 # Note how we need network access so that Go can pull its dependencies!
 .PHONY: rpm-mock
