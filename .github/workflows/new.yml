@@ -51,42 +51,12 @@ jobs:
         shell: bash
         run: CGO_ENABLED=0 go build -o foo ./cmd
 
-  debugMock:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Try to mount the working directory
-        run: docker run --rm -t -v $(pwd):/flowd-go ghcr.io/scitags/flowd-go:mock-v2.1 sh -c "ls -l /flowd-go || true"
-
-      - name: Run a privileged container
-        run: docker run --privileged --rm -t --cap-add=SYS_ADMIN ghcr.io/scitags/flowd-go:mock-v2.1 sh -c "mock --shell echo hello world"
-
-  testX86:
-    name: "x86 Test"
+  srpm:
+    name: SRPM time!
     needs: build
     runs-on: ubuntu-latest
     container:
-        image: ghcr.io/scitags/flowd-go:mock-arm-v2.1
-    steps:
-      - name: Check arch
-        run: arch
-
-  testARM:
-    name: "ARM test"
-    needs: build
-    runs-on: ubuntu-24.04-arm
-    container:
-        image: ghcr.io/scitags/flowd-go:mock-arm-v2.1
-    steps:
-      - name: Check arch
-        run: arch
-
-  package:
-    name: "Package it!"
-    needs: build
-    runs-on: ubuntu-latest
-    container:
-        image: ghcr.io/scitags/flowd-go:mock-v2.1
-        options: --cap-add=SYS_ADMIN --privileged
+      image: ghcr.io/scitags/flowd-go:rpm-v2.1
     steps:
       - uses: actions/checkout@v4
 
@@ -96,23 +66,85 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: srpm
+          name: flowd-go.src.rpm
           path: ./build/SRPMS/flowd-go*.src.rpm
 
-      - name: Create the x86_64 RPM
-        shell: bash
-        run: make rpm-mock-x86_64
+  # debugMock:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Try to mount the working directory
+  #       run: docker run --rm -t -v $(pwd):/flowd-go ghcr.io/scitags/flowd-go:mock-v2.1 sh -c "ls -l /flowd-go || true"
 
-      - uses: actions/upload-artifact@v4
+  #     - name: Run a privileged container
+  #       run: docker run --privileged --rm -t --cap-add=SYS_ADMIN ghcr.io/scitags/flowd-go:mock-v2.1 sh -c "mock --shell echo hello world"
+
+  rpm-x86_64:
+    name: Build the x86_64 RPM
+    needs: srpm
+    runs-on: ubuntu-latest
+    container:
+        image: ghcr.io/scitags/flowd-go:rpm-v2.1
+    steps:
+      - name: Check the current architecture
+        run: arch
+
+  rpm-aarch64:
+    name: Build the aarch64 RPM
+    needs: srpm
+    runs-on: ubuntu-24.04-arm
+    container:
+        image: ghcr.io/scitags/flowd-go:rpm-v2.1
+    steps:
+      - name: Check the current architecture
+        run: arch
+
+      - uses: actions/checkout@v4
+
+      - name: Download the SRPM
+        uses: actions/download-artifact@v4
         with:
-          name: rpm-x86_64
-          path: /var/lib/mock/almalinux-9-cern-x86_64/result/flowd-go-*.x86_64.rpm
+          name: flowd-go.src.rpm
+          path: artifacts
 
-      - name: Create the aarch64 RPM
-        shell: bash
-        run: make rpm-mock-aarch64
+      - name: Show the artifacts
+        run: ls -lh artifacts
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: rpm-aarch64
-          path: /var/lib/mock/almalinux-9-cern-x86_64-to-aarch64/result/flowd-go-*.aarch64.rpm
+      - name: Build the RPM
+        run: make rpm SRPM_PATH=artifacts/*.src.rpm
+
+  # package:
+  #   name: "Package it!"
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   container:
+  #       image: ghcr.io/scitags/flowd-go:mock-v2.1
+  #       options: --cap-add=SYS_ADMIN --privileged
+  #   steps:
+  #     - uses: actions/checkout@v4
+
+  #     - name: Create the SRPM
+  #       shell: bash
+  #       run: make srpm
+
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: srpm
+  #         path: ./build/SRPMS/flowd-go*.src.rpm
+
+  #     - name: Create the x86_64 RPM
+  #       shell: bash
+  #       run: make rpm-mock-x86_64
+
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: rpm-x86_64
+  #         path: /var/lib/mock/almalinux-9-cern-x86_64/result/flowd-go-*.x86_64.rpm
+
+  #     - name: Create the aarch64 RPM
+  #       shell: bash
+  #       run: make rpm-mock-aarch64
+
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: rpm-aarch64
+  #         path: /var/lib/mock/almalinux-9-cern-x86_64-to-aarch64/result/flowd-go-*.aarch64.rpm

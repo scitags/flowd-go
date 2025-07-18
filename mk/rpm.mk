@@ -23,6 +23,7 @@ SPECFILE_RELEASE     = $(shell awk '$$1 == "Release:"  { print $$2 }' $(SPECFILE
 DIST                ?= $(shell rpm --eval %{dist})
 ARCH                := $(shell uname -m)
 RPM_TARGET_ARCH      = $(ARCH)
+SRPM_PATH           ?= $(PWD)/build/SRPMS/flowd-go-$(SPECFILE_VERSION)-$(SPECFILE_RELEASE).src.rpm
 
 # How are we going to bundle the sources into a *.tar.gz? By default we'll leverage Go
 # to vendor and generate the Makefile, but we can also download a ready-made copy from
@@ -76,6 +77,7 @@ rpm-dbg:
 	@echo "         DL_ARCH: $(DL_ARCH)"
 	@echo "      GO_VERSION: $(GO_VERSION)"
 	@echo " RPM_TARGET_ARCH: $(RPM_TARGET_ARCH)"
+	@echo "       SRPM_PATH: $(SRPM_PATH)"
 
 # Files to include in the SRPM
 RPM_FILES := backends cmd enrichment plugins settings rpm stun types const.go go.mod go.sum Makefile vendor commit
@@ -130,28 +132,17 @@ srpm: sources
 # Build the binary (i.e. carrying teh compiled binary) RPM. Please note the target name MUST be rpm as this is what
 # CERN's koji instance expects.
 .PHONY: rpm
-rpm: sources
-	rpmbuild -bb --define "dist $(DIST)" --define "_topdir $(PWD)/build" --define '_sourcedir $(PWD)' $(SPECFILE)
+rpm:
+	rpmbuild -rb                        \
+		--define "dist $(DIST)"         \
+		--define "_topdir $(PWD)/build" \
+		--define '_sourcedir $(PWD)'    \
+		$(SRPM_PATH)
 
 # Note how we need network access so that Go can pull its dependencies!
 .PHONY: rpm-mock
 rpm-mock: srpm
 	mock -r almalinux-9-$(RPM_TARGET_ARCH) -v --resultdir $(PWD)/build build/SRPMS/flowd-go-$(SPECFILE_VERSION)-$(SPECFILE_RELEASE).src.rpm
-
-.PHONY: rpm-mock-x86_64
-rpm-mock-x86_64:
-	mock -r almalinux-9-cern-x86_64 -v \
-		--resultdir $(PWD)/mock/results/x86_64 \
-		--rootdir   $(PWD)/mock/roots/x86_64 \
-		build/SRPMS/flowd-go-$(SPECFILE_VERSION)-$(SPECFILE_RELEASE).src.rpm
-
-.PHONY: rpm-mock-aarch64
-rpm-mock-aarch64:
-	mock -r almalinux-9-cern-x86_64-to-aarch64 -v \
-		--resultdir $(PWD)/mock/results/aarch64 \
-		--rootdir   $(PWD)/mock/roots/x86_64 \
-		--isolation=simple \
-		build/SRPMS/flowd-go-$(SPECFILE_VERSION)-$(SPECFILE_RELEASE).src.rpm
 
 # .PHONY: rpm-cat
 # rpm-cat:
