@@ -61,7 +61,7 @@ jobs:
         run: docker run --privileged --rm -t --cap-add=SYS_ADMIN ghcr.io/scitags/flowd-go:mock-v2.1 sh -c "mock --shell echo hello world"
 
   testX86:
-    name: "Package it!"
+    name: "x86 Test"
     needs: build
     runs-on: ubuntu-latest
     container:
@@ -70,8 +70,8 @@ jobs:
       - name: Check arch
         run: arch
 
-  testX86:
-    name: "Package it!"
+  testARM:
+    name: "ARM test"
     needs: build
     runs-on: ubuntu-24.04-arm
     container:
