@@ -138,6 +138,14 @@ rpm: sources
 rpm-mock: srpm
 	mock -r almalinux-9-$(RPM_TARGET_ARCH) -v --resultdir $(PWD)/build build/SRPMS/flowd-go-$(SPECFILE_VERSION)-$(SPECFILE_RELEASE).src.rpm
 
+.PHONY: rpm-mock-x86_64
+rpm-mock-x86_64:
+	mock -r almalinux-9-cern-x86_64 -v build/SRPMS/flowd-go-$(SPECFILE_VERSION)-$(SPECFILE_RELEASE).src.rpm
+
+.PHONY: rpm-mock-aarch64
+rpm-mock-x86_64:
+	mock -r almalinux-9-cern-x86_64-to-aarch64 -v build/SRPMS/flowd-go-$(SPECFILE_VERSION)-$(SPECFILE_RELEASE).src.rpm
+
 # .PHONY: rpm-cat
 # rpm-cat:
 # 	rpm2cpio build/SRPMS/flowd-go-$(SPECFILE_VERSION)-$(SPECFILE_RELEASE).src.rpm | cpio -idmv
