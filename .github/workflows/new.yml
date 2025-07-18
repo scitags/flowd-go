@@ -7,11 +7,11 @@ on: push
 # Let's define what we want to do!
 jobs:
   base:
-    name: Do all the prep work
+    name: Prep time!
     uses: scitags/flowd-go/.github/workflows/dbg.yml@main
 
   test:
-    name: Run Go-level tests
+    name: Test it!
     needs: base
     runs-on: ubuntu-latest
     steps:
