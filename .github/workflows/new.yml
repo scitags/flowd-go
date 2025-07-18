@@ -66,7 +66,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: srpm
+          name: flowd-go.srpm
           path: ./build/SRPMS/flowd-go*.src.rpm
 
   # debugMock:
@@ -89,7 +89,7 @@ jobs:
         run: arch
 
   rpm-aarch64:
-    name: Build the x86_64 RPM
+    name: Build the aarch64 RPM
     needs: srpm
     runs-on: ubuntu-24.04-arm
     container:
@@ -103,14 +103,14 @@ jobs:
       - name: Download the SRPM
         uses: actions/download-artifact@v4
         with:
-          name: srpm
-          path: flowd-go.srpm
+          name: flowd-go.srpm
+          path: artifacts
 
-      - name: Show the current directory
-        run: ls -lh
+      - name: Show the artifacts
+        run: ls -lh artifacts
 
       - name: Build the RPM
-        run: make rpm SRPM_PATH=flowd-go.srpm
+        run: make rpm SRPM_PATH=artifacts/flowd-go.srpm
 
   # package:
   #   name: "Package it!"
