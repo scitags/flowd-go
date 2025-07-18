@@ -90,7 +90,7 @@ jobs:
 
   rpm-aarch64:
     name: Build the x86_64 RPM
-    needs: build
+    needs: srpm
     runs-on: ubuntu-24.04-arm
     container:
         image: ghcr.io/scitags/flowd-go:rpm-v2.1
