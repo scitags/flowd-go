@@ -1,67 +1,63 @@
 ---
 
-########################################################################################################################
-# For a syntax reference check https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions #
-########################################################################################################################
+# Check https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idneeds
+# for the syntax reference
 
 # What should the action be called?
 name: Release
 
-# We'll run when SemVer (https://semver.org) tags are pushed
+# Run when semver (v*.*.*) or test (t*) tags are pushed!
 on:
   push:
-    tags: [ 'v*.*.*' ]
+    tags:
+      - "v*.*.*"
+      - "t*"
 
 # Let's define what we want to do!
 jobs:
-    build:
-        name: build
-        runs-on: ubuntu-latest
-        container:
-            image: ghcr.io/scitags/flowd-go:release-v2.1
-        steps:
-            - name: Show environment information
-              env:
-                GITHUB_CONTEXT: ${{ toJson(github) }}
-              shell: bash
-              run: |
-                echo "Environment:"
-                env
-                echo "The current directory is: $(pwd)"
-                echo "It's contents are:"
-                ls -lh
-                echo "Who are we? $(id)"
-                echo "GitHub's context"
-                echo $GITHUB_CONTEXT
-                echo "HOME contents"
-                ls -lh ${HOME}
-                uname -a
+  base:
+    name: Prep time!
+    uses: ./.github/workflows/dbg.yml
 
-            - name: Clone the flowd-go repo and checkout the appropriate branch
-              shell: bash
-              env:
-                BRANCH_NAME: ${{ github.ref_name }}
-              run: |
-                git clone --branch $BRANCH_NAME https://github.com/scitags/flowd-go.git flowd-go
+  test:
+    name: Test it!
+    needs: base
+    uses: ./.github/workflows/test.yml
 
-            - name: Build the SRPM
-              shell: bash
-              working-directory: ./flowd-go
-              run: |
-                make srpm
+  srpm:
+    name: SRPM time!
+    needs: test
+    uses: ./.github/workflows/srpm.yml
 
-            - name: Build the RPM
-              shell: bash
-              working-directory: ./flowd-go
-              run: |
-                make rpm
+  rpm-x86_64:
+    name: Build the x86_64 RPM
+    needs: srpm
+    uses: ./.github/workflows/rpm.yml
+    with:
+      target-arch: x86_64
+      target-runner: ubuntu-latest
 
-            - name: Release time!
-              shell: bash
-              working-directory: ./flowd-go
-              env:
-                TAG_NAME: ${{ github.ref_name }}
-                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              run: |
-                make build
-                gh release create --repo scitags/flowd-go --generate-notes $TAG_NAME ./bin/flowd-go sources.tar.gz ./build/SRPMS/*.rpm ./build/RPMS/x86_64/*.rpm
+  rpm-aarch64:
+    name: Build the aarch64 RPM
+    needs: srpm
+    uses: ./.github/workflows/rpm.yml
+    with:
+      target-arch: aarch64
+      target-runner: ubuntu-24.04-arm
+
+  release:
+    name: Make a new release
+    runs-on: ubuntu-latest
+    needs: [rpm-x86_64, rpm-aarch64]
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create the release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: ./artifacts/*
