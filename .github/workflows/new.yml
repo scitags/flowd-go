@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
         image: ghcr.io/scitags/flowd-go:mock-v2.1
-        options: --cap-add=SYS_ADMIN
+        options: --cap-add=SYS_ADMIN --privileged
     steps:
       - uses: actions/checkout@v4
 

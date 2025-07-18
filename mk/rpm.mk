@@ -150,6 +150,7 @@ rpm-mock-aarch64:
 	mock -r almalinux-9-cern-x86_64-to-aarch64 -v \
 		--resultdir $(PWD)/mock/results/aarch64 \
 		--rootdir   $(PWD)/mock/roots/x86_64 \
+		--isolation=simple \
 		build/SRPMS/flowd-go-$(SPECFILE_VERSION)-$(SPECFILE_RELEASE).src.rpm
 
 # .PHONY: rpm-cat
