@@ -45,19 +45,19 @@ jobs:
       target-arch: aarch64
       target-runner: ubuntu-24.04-arm
 
-    release:
-      name: Make a new release
-      runs-on: ubuntu-latest
-      needs: [rpm-x86_64, rpm-aarch64]
-      permissions:
-        contents: write
-      steps:
-        - name: Download all artifacts
-          uses: actions/download-artifact@v4
-          with:
-            path: artifacts
+  release:
+    name: Make a new release
+    runs-on: ubuntu-latest
+    needs: [rpm-x86_64, rpm-aarch64]
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
 
-        - name: Create the release
-          uses: ncipollo/release-action@v1
-          with:
-            artifacts: ./artifacts/*
+      - name: Create the release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: ./artifacts/*
