@@ -3,6 +3,8 @@ name: Check stuff builds (without cgo)
 
 on:
   push:
+    branches:
+      - '*'
 
 jobs:
   base:
