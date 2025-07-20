@@ -2,7 +2,9 @@
 name: New Workflow
 
 # We'll run tests whenever something's pushed
-on: push
+on:
+  push:
+  workflow_call:
 
 # Let's define what we want to do!
 jobs:
