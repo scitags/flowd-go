@@ -24,7 +24,7 @@ jobs:
       - name: Check we can build the project
         shell: bash
         run: CGO_ENABLED=0 go build -o foo ./cmd
-    if: ${{ ! cgo }}
+    if: ${{ ! inputs.cgo }}
 
   build-cgo:
     name: "Build it with cgo!"
@@ -40,4 +40,4 @@ jobs:
       - name: Check we can build the project
         shell: bash
         run: make build
-    if: ${{ cgo }}
+    if: ${{ inputs.cgo }}
