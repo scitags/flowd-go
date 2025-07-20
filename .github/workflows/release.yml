@@ -26,7 +26,7 @@ jobs:
 
   srpm:
     name: SRPM time!
-    needs: build
+    needs: test
     uses: ./.github/workflows/srpm.yml
 
   rpm-x86_64:
