@@ -1,29 +1,54 @@
 ---
 
-########################################################################################################################
-# For a syntax reference check https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions #
-########################################################################################################################
+# Check https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idneeds
+# for the syntax reference
 
 # What should the action be called?
 name: Release
 
-# We'll run when SemVer (https://semver.org) tags are pushed
+# Run when semver (v*.*.*) or test (t*) tags are pushed!
 on:
   push:
     tags:
-      - 'v*.*.*'
-      - 't*.*.*'
+      - "v*.*.*"
+      - "t*"
 
 # Let's define what we want to do!
 jobs:
-  prev:
-    name: Run all the necessary stuff
-    uses: ./.github/workflows/new.yml
+  base:
+    name: Prep time!
+    uses: ./.github/workflows/dbg.yml
 
-  release:
+  test:
+    name: Test it!
+    needs: base
+    uses: ./.github/workflows/test.yml
+
+  srpm:
+    name: SRPM time!
+    needs: build
+    uses: ./.github/workflows/srpm.yml
+
+  rpm-x86_64:
+    name: Build the x86_64 RPM
+    needs: srpm
+    uses: ./.github/workflows/rpm.yml
+    with:
+      target-arch: x86_64
+      target-runner: ubuntu-latest
+
+  rpm-aarch64:
+    name: Build the aarch64 RPM
+    needs: srpm
+    uses: ./.github/workflows/rpm.yml
+    with:
+      target-arch: aarch64
+      target-runner: ubuntu-24.04-arm
+
+    release:
       name: Make a new release
       runs-on: ubuntu-latest
-      needs: prev
+      needs: [rpm-x86_64, rpm-aarch64]
       permissions:
         contents: write
       steps:
