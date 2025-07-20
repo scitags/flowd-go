@@ -57,7 +57,20 @@ jobs:
         with:
           path: artifacts
 
+      - name: Show the artifacts
+        run: ls -lh artifacts/*/*
+
+      - name: Update CHANGELOG
+        id: changelog
+        uses: requarks/changelog-action@v1
+        with:
+          token: ${{ github.token }}
+          tag: ${{ github.ref_name }}
+          writeToFile: false
+
       - name: Create the release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: ./artifacts/*
+          artifacts: ./artifacts/*/*
+          body: ${{ steps.changelog.outputs.changes }}
+          makeLatest: true
