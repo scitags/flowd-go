@@ -1,0 +1,74 @@
+[baseos]
+name=AlmaLinux $releasever CERN - BaseOS
+baseurl=https://linuxsoft.cern.ch/cern/alma/$releasever/BaseOS/$basearch/os/
+enabled=1
+countme=1
+gpgcheck=1
+gpgkey=file:///usr/share/distribution-gpg-keys/alma/RPM-GPG-KEY-AlmaLinux-9
+skip_if_unavailable=False
+
+[appstream]
+name=AlmaLinux $releasever CERN - AppStream
+baseurl=https://linuxsoft.cern.ch/cern/alma/$releasever/AppStream/$basearch/os/
+enabled=1
+countme=1
+gpgcheck=1
+gpgkey=file:///usr/share/distribution-gpg-keys/alma/RPM-GPG-KEY-AlmaLinux-9
+
+[crb]
+name=AlmaLinux $releasever CERN - CRB
+baseurl=https://linuxsoft.cern.ch/cern/alma/$releasever/CRB/$basearch/os/
+enabled=1
+countme=1
+gpgcheck=1
+gpgkey=file:///usr/share/distribution-gpg-keys/alma/RPM-GPG-KEY-AlmaLinux-9
+
+[extras]
+name=AlmaLinux $releasever CERN - Extras
+baseurl=https://linuxsoft.cern.ch/cern/alma/$releasever/extras/$basearch/os/
+enabled=1
+countme=1
+gpgcheck=1
+gpgkey=file:///usr/share/distribution-gpg-keys/alma/RPM-GPG-KEY-AlmaLinux-9
+
+[devel]
+name=AlmaLinux $releasever CERN - Devel (WARNING: UNSUPPORTED - FOR BUILDROOT USE ONLY!)
+baseurl=https://linuxsoft.cern.ch/cern/alma/$releasever/devel/$basearch/os/
+enabled=0
+gpgcheck=1
+gpgkey=file:///usr/share/distribution-gpg-keys/alma/RPM-GPG-KEY-AlmaLinux-9
+
+[baseos-debuginfo]
+name=AlmaLinux $releasever CERN - BaseOS debuginfo
+baseurl=https://linuxsoft.cern.ch/cern/alma/$releasever/BaseOS/debug/$basearch/
+enabled=0
+gpgcheck=1
+gpgkey=file:///usr/share/distribution-gpg-keys/alma/RPM-GPG-KEY-AlmaLinux-9
+
+[appstream-debuginfo]
+name=AlmaLinux $releasever CERN - AppStream debuginfo
+baseurl=https://linuxsoft.cern.ch/cern/alma/$releasever/AppStream/debug/$basearch/
+enabled=0
+gpgcheck=1
+gpgkey=file:///usr/share/distribution-gpg-keys/alma/RPM-GPG-KEY-AlmaLinux-9
+
+[crb-debuginfo]
+name=AlmaLinux $releasever CERN - CRB debuginfoo
+baseurl=https://linuxsoft.cern.ch/cern/alma/$releasever/CRB/debug/$basearch/
+enabled=0
+gpgcheck=1
+gpgkey=file:///usr/share/distribution-gpg-keys/alma/RPM-GPG-KEY-AlmaLinux-9
+
+[extras-debuginfo]
+name=AlmaLinux $releasever CERN - Extras debuginfo
+baseurl=https://linuxsoft.cern.ch/cern/alma/$releasever/extras/debug/$basearch/
+enabled=0
+gpgcheck=1
+gpgkey=file:///usr/share/distribution-gpg-keys/alma/RPM-GPG-KEY-AlmaLinux-9
+
+[devel-debuginfo]
+name=AlmaLinux $releasever CERN - Devel debuginfo
+baseurl=https://linuxsoft.cern.ch/cern/alma/$releasever/devel/debug/$basearch/
+enabled=0
+gpgcheck=1
+gpgkey=file:///usr/share/distribution-gpg-keys/alma/RPM-GPG-KEY-AlmaLinux-9
