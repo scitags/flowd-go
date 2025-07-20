@@ -1,8 +1,6 @@
 ---
 name: Check stuff builds (with cgo)
 
-on:
-
 jobs:
   base:
     name: Prep time!
