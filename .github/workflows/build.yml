@@ -1,0 +1,43 @@
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      cgo:
+        required: true
+        type: boolean
+
+# Let's define what we want to do!
+jobs:
+  build-no-cgo:
+    name: "Build it without cgo!"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.23.9
+
+        # We disable CGO to avoid including any eBPF-induced
+        # dependencies so as to keep stuff fast.
+      - name: Check we can build the project
+        shell: bash
+        run: CGO_ENABLED=0 go build -o foo ./cmd
+    if: ${{ ! inputs.cgo }}
+
+  build-cgo:
+    name: "Build it with cgo!"
+    runs-on: ubuntu-latest
+    container:
+        image: ghcr.io/scitags/flowd-go:rpm-v2.1
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the dependencies
+        run: dnf builddep -y flowd-go.spec
+
+      - name: Check we can build the project
+        shell: bash
+        run: make build
+    if: ${{ inputs.cgo }}

@@ -1,0 +1,51 @@
+name: Build an arch-specific RPM
+
+# See https://docs.github.com/en/actions/how-tos/sharing-automations/reuse-workflows for
+# information on reusable workflows
+on:
+  workflow_call:
+    inputs:
+      target-runner:
+        required: true
+        type: string
+      target-arch:
+        required: true
+        type: string
+
+jobs:
+  rpm:
+    name: Build the ${{ inputs.target-arch }} RPM
+    runs-on: ${{ inputs.target-runner }}
+    container:
+        image: ghcr.io/scitags/flowd-go:rpm-v2.1
+    steps:
+      - name: Check the current architecture
+        run: arch
+
+      - name: Check the repo out
+        uses: actions/checkout@v4
+
+      - name: Download the SRPM
+        uses: actions/download-artifact@v4
+        with:
+          name: flowd-go.src.rpm
+          path: artifacts
+
+      - name: Show the artifacts
+        run: ls -lh artifacts
+
+      - name: Install the dependencies
+        run: dnf builddep -y flowd-go.spec
+
+      - name: Build the RPM
+        run: make rpm SRPM_PATH=artifacts/*.src.rpm
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flowd-go.${{ inputs.target-arch }}.rpm
+          path: ./build/RPMS/${{ inputs.target-arch }}/flowd-go*.rpm
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flowd-go.${{ inputs.target-arch }}
+          path: ./build/BUILDROOT/flowd-go-*/usr/bin/flowd-go

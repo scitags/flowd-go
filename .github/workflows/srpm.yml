@@ -1,0 +1,26 @@
+name: Build an SRPM
+
+on:
+  workflow_call:
+
+jobs:
+  srpm:
+    name: SRPM time!
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/scitags/flowd-go:rpm-v2.1
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bypass git's security concerns
+        shell: bash
+        run: git config --global safe.directory '*'
+
+      - name: Create the SRPM
+        shell: bash
+        run: make srpm
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flowd-go.src.rpm
+          path: ./build/SRPMS/flowd-go*.src.rpm

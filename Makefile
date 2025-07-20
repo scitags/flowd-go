@@ -28,7 +28,7 @@ endif
 ifdef BUILDING_RPM
 VERSION := $(RPM_PACKAGE_VERSION)
 else
-VERSION = 2.0
+VERSION = $(shell git describe --tags --abbrev=0)
 endif
 
 # The version to embed in image tags. Note this is exported so that both the
@@ -99,6 +99,21 @@ ENV_FLAGS := $(ENV_FLAGS) CC="$(CC)"
 ENV_FLAGS := $(ENV_FLAGS) CGO_ENABLED="1"
 endif
 
+# Adjust the target architecture based on the TARGET_ARCH variable.
+# As this variable is populated by the {%_target} macro it can
+# change with the rpmbuild version, so we're handling several
+# cases we've run into in the wild
+TARGET_ARCH ?= x86_64
+ifeq ($(TARGET_ARCH),x86_64)
+ENV_FLAGS := $(ENV_FLAGS) GOARCH=amd64
+else ifeq ($(TARGET_ARCH),x86_64-linux)
+ENV_FLAGS := $(ENV_FLAGS) GOARCH=amd64
+else ifeq ($(TARGET_ARCH),aarch64)
+ENV_FLAGS := $(ENV_FLAGS) GOARCH=arm64
+else ifeq ($(TARGET_ARCH),aarch64-linux)
+ENV_FLAGS := $(ENV_FLAGS) GOARCH=arm64
+endif
+
 help:
 	@echo "usage: make <target>"
 	@echo "targets:"
@@ -155,6 +170,7 @@ help:
 # Simply build flowd-go
 build: $(SOURCES) ebpf-progs
 	@mkdir -p bin
+	@echo "TARGET_ARCH: $(TARGET_ARCH)"
 	$(ENV_FLAGS) $(GOC) build $(CFLAGS) -o $(BIN_DIR)/$(BIN_NAME) $(MAIN_PACKAGE)
 
 # We'll only compile the eBPF program if we're on Linux

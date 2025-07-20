@@ -1,8 +1,7 @@
 Name:		flowd-go
-Version:	2.1
+Version:	2.1.0
 Release:	1
 Summary:	SciTags flowd-go Daemon
-BuildArch:	x86_64
 
 URL: https://github.com/scitags/flowd-go
 
@@ -11,7 +10,7 @@ Source0: flowd-go-%{version}.tar.gz
 License:	ASL 2.0
 
 # Note libbpf-static already depends on the needed libbpf-devel
-BuildRequires:	libbpf-static = 2:1.4.0-1.el9
+BuildRequires:	libbpf-static = 2:1.5.0-1.el9
 
 # We would need bpftool to generate vmlinux.h when building. Including
 # vmlinux.h can be quite a headache given the file's size, but it might
@@ -27,7 +26,7 @@ BuildRequires:	make >= 1:4.3-8.el9
 BuildRequires:	clang >= 18.1.8-3.el9
 BuildRequires:	llvm  >= 18.1.8-3.el9
 
-BuildRequires:	golang >= 1.22.9
+BuildRequires:	golang >= 1.23.9
 BuildRequires:	gzip >= 1.12
 
 # Needed for all the SystemD-related macros and such
@@ -56,7 +55,12 @@ SciTags initiative as seen on https://www.scitags.org
 %setup
 
 %build
-make build
+# Note how we must specify the architecture we're building the RPM for
+# so that we can configure GOARCH accordingly. The _target macro is
+# populated by rpmbuild(1) through its --target option which is set
+# by mock(1) when building the package. For the moment, it'll either
+# be x86_64 or aarch64.
+make build TARGET_ARCH=%{_target}
 
 # Time to copy the binary file!
 %install
@@ -92,8 +96,11 @@ install -m 0664 rpm/%{name}.1.gz    %{buildroot}%{_mandir}/man1/%{name}.1.gz
 %{_unitdir}/%{name}.service
 %doc %{_mandir}/man1/%{name}.1*
 
-# Changes introducd with each version
+# Changes introduced with each version
 %changelog
+* Wed Jul 16 2025 Pablo Collado Soto <pablo.collado.soto@cern.ch> - 2.1.0-1
+- Support specifying collectors through hostnames
+
 * Thu Apr 24 2025 Pablo Collado Soto <pablo.collado.soto@cern.ch> - 2.1-1
 - Revamp the RPM building logic
 - Enhance the eBPF-based enrichment logic
