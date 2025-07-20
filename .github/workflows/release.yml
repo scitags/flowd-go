@@ -57,7 +57,30 @@ jobs:
         with:
           path: artifacts
 
+      - name: Show the artifacts
+        run: ls -lh artifacts/*/*
+
+      - name: Move the artifacts to a single directory
+        shell: bash
+        run: |
+          mkdir -p ./artifacts/upload
+          mv ./artifacts/flowd-go.aarch64.rpm/*.rpm          ./artifacts/upload
+          mv ./artifacts/flowd-go.x86_64.rpm/*.rpm           ./artifacts/upload
+          mv ./artifacts/flowd-go.src.rpm/*.rpm              ./artifacts/upload
+          mv ./artifacts/flowd-go.aarch64/*/usr/bin/flowd-go ./artifacts/upload/flowd-go.aarch64
+          mv ./artifacts/flowd-go.x86_64/*/usr/bin/flowd-go  ./artifacts/upload/flowd-go.x86_64
+
+      - name: Generate changelog
+        id: changelog
+        uses: requarks/changelog-action@v1
+        with:
+          token: ${{ github.token }}
+          tag: ${{ github.ref_name }}
+          writeToFile: false
+
       - name: Create the release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: ./artifacts/*
+          artifacts: ./artifacts/upload/*
+          body: ${{ steps.changelog.outputs.changes }}
+          makeLatest: true

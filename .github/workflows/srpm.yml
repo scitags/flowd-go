@@ -12,6 +12,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Bypass git's security concerns
+        shell: bash
+        run: git config --global safe.directory '*'
+
       - name: Create the SRPM
         shell: bash
         run: make srpm
