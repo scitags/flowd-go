@@ -79,7 +79,7 @@ If all goes well the packages will be built and you'll see them appear on the as
 repository over at
 
     https://linuxsoft.cern.ch/repos/scitags9al-testing/x86_64/os/Packages/f/
-    https://linuxsoft.cern.ch/repos/scitags9al-testing/aarc64/os/Packages/f/
+    https://linuxsoft.cern.ch/repos/scitags9al-testing/aarch64/os/Packages/f/
 
 for the different target architectures. One can install the packages manually from here
 to test them out with
@@ -149,6 +149,9 @@ this Koji bonanza:
     # Getting information on running (and finished) tags
     $ koji taskinfo <task-id>
     $ koji list-tasks --mine
+
+    # Untagging builds so that we can cleanly re-run stuff
+    $ koji untag-build scitags9al-testing flowd-go-2.1.0-1
 
 <!-- REFs -->
 [koji]: https://koji.build

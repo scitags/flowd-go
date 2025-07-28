@@ -52,6 +52,18 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.24
+
+      - name: Install gcccg
+        run: go install github.com/pcolladosoto/gcccg@latest
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -69,18 +81,6 @@ jobs:
           mv ./artifacts/flowd-go.src.rpm/*.rpm              ./artifacts/upload
           mv ./artifacts/flowd-go.aarch64/*/usr/bin/flowd-go ./artifacts/upload/flowd-go.aarch64
           mv ./artifacts/flowd-go.x86_64/*/usr/bin/flowd-go  ./artifacts/upload/flowd-go.x86_64
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: 1.24
-
-      - name: Install gcccg
-        run: go install github.com/pcolladosoto/gcccg@latest
-
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
 
       - name: Show the checked out repo
         run: ls -lh
