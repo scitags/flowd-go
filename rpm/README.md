@@ -35,6 +35,11 @@ Just a quick TODO list for when we (inevitably) forget how to make a release:
 
 1. Look for the result in the [scitags9al-testing][scitags9al-repo] RPM repository.
 
+Should the build fail, one can re-run it with the `--scratch` option, thus avoiding
+the extra tagging step:
+
+    $ koji build --scratch scitags9al "git+https://github.com/scitags/flowd-go.git#main"
+
 ## Koji 101
 Koji is a system aimed at making the process of releasing RPMs that much easier. Under the
 hood it leverages [Mock][mock] which in turn makes use of `rpmbuild(1)` to build the RPMs.
