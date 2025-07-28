@@ -6,9 +6,8 @@ import (
 	glowdTypes "github.com/scitags/flowd-go/types"
 )
 
-var Defaults = map[string]interface{}{}
-
 type EbpfBackend struct {
+	MarkingStrategy MarkingStrategy
 }
 
 type EbpfBackendConf struct {

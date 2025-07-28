@@ -21,6 +21,9 @@ SPECFILE_NAME        = $(shell awk '$$1 == "Name:"     { print $$2 }' $(SPECFILE
 SPECFILE_VERSION     = $(shell awk '$$1 == "Version:"  { print $$2 }' $(SPECFILE))
 SPECFILE_RELEASE     = $(shell awk '$$1 == "Release:"  { print $$2 }' $(SPECFILE))
 DIST                ?= $(shell rpm --eval %{dist})
+ARCH                := $(shell uname -m)
+RPM_TARGET_ARCH      = $(ARCH)
+SRPM_PATH           ?= $(PWD)/build/SRPMS/flowd-go-$(SPECFILE_VERSION)-$(SPECFILE_RELEASE).src.rpm
 
 # How are we going to bundle the sources into a *.tar.gz? By default we'll leverage Go
 # to vendor and generate the Makefile, but we can also download a ready-made copy from
@@ -30,7 +33,8 @@ DIST                ?= $(shell rpm --eval %{dist})
 SRC_GEN_MODE ?= go
 
 # Let's get the Go version we're currently using so that we can download it should we
-# need to.
+# need to. We'll mangle the Go version for now given we cannot install 1.24.4 when
+# building on Koji...
 GO_VERSION = $(shell awk '/^go[[:space:]]/ {print $$2}' go.mod)
 
 # The name of the *.tar.gz with the bundled sources. Note this name MUST be the one specified
@@ -47,7 +51,6 @@ RPM_BUILDROOT = $(shell echo ${HOME})/rpmbuild
 # The value returned by uname(1) is not the one used when distributing software, so we'll
 # just do a naive translation. We could even safely assume to always be running on amd64
 # though....
-ARCH := $(shell uname -m)
 ifeq ($(ARCH),x86_64)
 DL_ARCH := amd64
 else
@@ -73,6 +76,8 @@ rpm-dbg:
 	@echo "         VERSION: $(VERSION)"
 	@echo "         DL_ARCH: $(DL_ARCH)"
 	@echo "      GO_VERSION: $(GO_VERSION)"
+	@echo " RPM_TARGET_ARCH: $(RPM_TARGET_ARCH)"
+	@echo "       SRPM_PATH: $(SRPM_PATH)"
 
 # Files to include in the SRPM
 RPM_FILES := backends cmd enrichment plugins settings rpm stun types const.go go.mod go.sum Makefile vendor commit
@@ -127,13 +132,18 @@ srpm: sources
 # Build the binary (i.e. carrying teh compiled binary) RPM. Please note the target name MUST be rpm as this is what
 # CERN's koji instance expects.
 .PHONY: rpm
-rpm: sources
-	rpmbuild -bb --define "dist $(DIST)" --define "_topdir $(PWD)/build" --define '_sourcedir $(PWD)' $(SPECFILE)
+rpm:
+	rpmbuild -rb                        \
+		--define "dist $(DIST)"         \
+		--define "_topdir $(PWD)/build" \
+		--define '_sourcedir $(PWD)'    \
+		--noclean \
+		$(SRPM_PATH)
 
 # Note how we need network access so that Go can pull its dependencies!
 .PHONY: rpm-mock
 rpm-mock: srpm
-	mock -r almalinux-9-x86_64 build/SRPMS/flowd-go-$(SPECFILE_VERSION)-$(SPECFILE_RELEASE).src.rpm
+	mock -r almalinux-9-$(RPM_TARGET_ARCH) -v --resultdir $(PWD)/build build/SRPMS/flowd-go-$(SPECFILE_VERSION)-$(SPECFILE_RELEASE).src.rpm
 
 # .PHONY: rpm-cat
 # rpm-cat:
