@@ -30,10 +30,18 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 
 	#ifndef GLOWD_FLOW_LABEL_MATCH_ALL
 		// Populate the lookup based on the incoming datagram's data
-		flowHash.ip6Hi = ipv6AddrLo(l3->daddr);
-		flowHash.ip6Lo = ipv6AddrHi(l3->daddr);
+		flowHash.ip6Hi = ipv6AddrHi(l3->daddr);
+		flowHash.ip6Lo = ipv6AddrLo(l3->daddr);
 		flowHash.dPort = bpf_htons(l4->dest);
 		flowHash.sPort = bpf_htons(l4->source);
+	#endif
+
+	#ifdef GLOWD_DEBUG
+		bpf_printk("flowd-go: IPv6                 destination address: %pI6", &l3->daddr);
+		bpf_printk("flowd-go:     IPv6 destination address Hi [127:64]: %x", flowHash.ip6Hi);
+		bpf_printk("flowd-go:     IPv6 destination address Lo   [63:0]: %x", flowHash.ip6Lo);
+		bpf_printk("flowd-go: TCP                     destination port: %d", flowHash.dPort);
+		bpf_printk("flowd-go: TCP                          source port: %d", flowHash.sPort);
 	#endif
 
 	// Check if a flow with the above criteria has been defined by flowd-go
@@ -50,52 +58,107 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 			populateFlowLbl(l3->flow_lbl, *flowTag);
 		#endif
 
-		#ifdef GLOWD_HBH_HEADER
-			struct hopByHopHdr_t hopByHopHdr;
+		#if defined(GLOWD_HBH_HEADER) || defined(GLOWD_DO_HEADER)
+			struct extensionHdr_t extensionHdr;
+
+			// Check we won't go overboard and overwhelm the MTU!
+			// In order to check individual GSO/GRO segments in an sk_buff use the
+			// BPF_MTU_CHK_SEGS as seen on 0:
+			//   0: see https://github.com/xdp-project/bpf-examples/blob/main/MTU-tests/tc_mtu_enforce.c
+			__u32 mtuLen = 0;
+			if(bpf_check_mtu(ctx, 0, &mtuLen, sizeof(extensionHdr), 0)) {
+				#ifdef GLOWD_DEBUG
+					bpf_printk("flowd-go: adding extension headers would overflow the MTU, skipping...");
+				#endif
+
+				return TC_ACT_OK;
+			}
+
+			#ifdef GLOWD_DEBUG
+				bpf_printk("flowd-go: IPv6 header size increase: %d bytes", sizeof(extensionHdr));
+				bpf_printk("flowd-go: detected MTU: %d bytes", mtuLen);
+			#endif
 
 			// Initialise the header
-			__builtin_memset(&hopByHopHdr, 0, sizeof(hopByHopHdr));
+			__builtin_memset(&extensionHdr, 0, sizeof(extensionHdr));
 
 			// Fill in the Hob-by-Hop Header!
-			populateHbhHdr(&hopByHopHdr, l3->nexthdr, *flowTag);
+			populateExtensionHdr(&extensionHdr, l3->nexthdr, *flowTag);
+
+			#ifdef GLOWD_HBH_HEADER
+				// Signal the next header is a Hop-by-Hop Extension Header
+				l3->nexthdr = NEXT_HDR_HOP_BY_HOP;
+			#else
+				// Signal the next header is a Destination Options Extension Header
+				l3->nexthdr = NEXT_HDR_DEST_OPTS;
+			#endif
+
+			// Update the payload length
+			l3->payload_len = bpf_htons(bpf_ntohs(l3->payload_len) + sizeof(struct extensionHdr_t));
+
+			// Be sure to check available flags (i.e. BPF_F_ADJ_ROOM_*) on bpf-helpers(7).
+			if (bpf_skb_adjust_room(ctx, sizeof(struct extensionHdr_t), BPF_ADJ_ROOM_NET, 0)) {
+				#ifdef GLOWD_DEBUG
+					bpf_printk("flowd-go: error making room for the extension header");
+				#endif
+
+				return TC_ACT_SHOT;
+			}
+
+			// Be sure to check available flags (i.e. BPF_F_{RECOMPUTE_CSUM,NVALIDATE_HASH}) on bpf-helpers(7).
+			if (bpf_skb_store_bytes(ctx, sizeof(struct ethhdr) + sizeof(struct ipv6hdr), &extensionHdr, sizeof(struct extensionHdr_t), BPF_F_RECOMPUTE_CSUM)) {
+				#ifdef GLOWD_DEBUG
+					bpf_printk("flowd-go: error storing the extension header");
+				#endif
+
+				return TC_ACT_SHOT;
+			}
+		#endif
+
+		#ifdef GLOWD_HBHDO_HEADER
+			struct compExtensionHdr_t compExtensionHdr;
+
+			__u32 mtuLen = 0;
+			if(bpf_check_mtu(ctx, 0, &mtuLen, sizeof(compExtensionHdr), 0)) {
+				#ifdef GLOWD_DEBUG
+					bpf_printk("flowd-go: adding extension headers would overflow the MTU, skipping...");
+				#endif
+
+				return TC_ACT_OK;
+			}
+
+			#ifdef GLOWD_DEBUG
+				bpf_printk("flowd-go: IPv6 header size increase: %d bytes", sizeof(compExtensionHdr));
+				bpf_printk("flowd-go: detected MTU: %d bytes", mtuLen);
+			#endif
+
+			// Initialise the header
+			__builtin_memset(&compExtensionHdr, 0, sizeof(compExtensionHdr));
+
+			// Fill in the Hob-by-Hop and Destination Options Headers!
+			populateCompExtensionHdr(&compExtensionHdr, l3->nexthdr, *flowTag);
 
 			// Signal the next header is a Hop-by-Hop extension header
 			l3->nexthdr = NEXT_HDR_HOP_BY_HOP;
 
 			// Update the payload length
-			l3->payload_len = bpf_htons(bpf_ntohs(l3->payload_len) + sizeof(struct hopByHopHdr_t));
+			l3->payload_len = bpf_htons(bpf_ntohs(l3->payload_len) + sizeof(struct compExtensionHdr_t));
 
-			if (bpf_skb_adjust_room(ctx, sizeof(struct hopByHopHdr_t), BPF_ADJ_ROOM_NET, 0)) {
-				bpf_printk("flowd-go: error making room for the Hop-by-Hop header");
+			if (bpf_skb_adjust_room(ctx, sizeof(struct compExtensionHdr_t), BPF_ADJ_ROOM_NET, 0)) {
+				#ifdef GLOWD_DEBUG
+					bpf_printk("flowd-go: error making room for the extension header");
+				#endif
+
 				return TC_ACT_SHOT;
 			}
 
-			if (bpf_skb_store_bytes(ctx, sizeof(struct ethhdr) + sizeof(struct ipv6hdr), &hopByHopHdr, sizeof(struct hopByHopHdr_t), 0)) {
-				bpf_printk("flowd-go: error making room for the Hop-by-Hop header");
+			if (bpf_skb_store_bytes(ctx, sizeof(struct ethhdr) + sizeof(struct ipv6hdr), &compExtensionHdr, sizeof(struct compExtensionHdr_t), BPF_F_RECOMPUTE_CSUM)) {
+				#ifdef GLOWD_DEBUG
+					bpf_printk("flowd-go: error storing the extension header");
+				#endif
+
 				return TC_ACT_SHOT;
 			}
-		#endif
-
-		#ifdef GLOWD_HBH_DO_HEADERS
-			struct hopByHopDestOptsHdr_t hbhDestOptsHdrs;
-
-			// Initialise the header
-			__builtin_memset(&hbhDestOptsHdrs, 0, sizeof(hbhDestOptsHdrs));
-
-			// Fill in the Hob-by-Hop and Destination Options Headers!
-			populateHbhDoHdr(&hbhDestOptsHdrs, l3->nexthdr, *flowTag);
-
-			// Signal the next header is a Hop-by-Hop extension header
-			l3->nexthdr = NEXT_HDR_DEST_OPTS;
-
-			// Update the payload length
-			l3->payload_len = bpf_htons(bpf_ntohs(l3->payload_len) + sizeof(struct hopByHopDestOptsHdr_t));
-
-			if (bpf_skb_adjust_room(ctx, sizeof(struct hopByHopDestOptsHdr_t), BPF_ADJ_ROOM_NET, 0))
-				return TC_ACT_SHOT;
-
-			if (bpf_skb_store_bytes(ctx, sizeof(struct ethhdr) + sizeof(struct ipv6hdr), &hbhDestOptsHdrs, sizeof(struct hopByHopDestOptsHdr_t), 0))
-				return TC_ACT_SHOT;
 		#endif
 
 		return TC_ACT_OK;

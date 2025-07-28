@@ -49,6 +49,12 @@ var (
 	//go:embed progs/marker-hbh-header-dbg.bpf.o
 	hopByHopHeaderDebugBPFProg []byte
 
+	//go:embed progs/marker-do-header.bpf.o
+	destinationHeaderBPFProg []byte
+
+	//go:embed progs/marker-do-header-dbg.bpf.o
+	destinationHeaderDebugBPFProg []byte
+
 	//go:embed progs/marker-hbh-do-headers.bpf.o
 	hopByHopDestHeaderBPFProg []byte
 
@@ -174,6 +180,11 @@ func (b *EbpfBackend) Run(done <-chan struct{}, inChan <-chan glowdTypes.FlowID)
 				return
 			}
 			slog.Debug("got a flowID", "flowID", flowID)
+
+			if flowID.Family != glowdTypes.IPv6 {
+				slog.Debug("ignoring IPv4 flow")
+				continue
+			}
 
 			rawDstIPHi, rawDstIPLo := extractHalves(flowID.Dst.IP)
 			flowHash := FlowFourTuple{

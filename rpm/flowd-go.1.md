@@ -170,8 +170,9 @@ hooked on a *clsact qdisc* which only deals with egress datagrams. The loading a
   configured, otherwise flowd-go will refuse to start. Available marking strategies are:
 
     - `"flowLabel"`: The eBPF program embeds the flow information in the IPv6 header's *Flow Label* field as defined in SciTags' technical specification.
-    - `"hopByHopHeader"`: The eBPF programs adds a *Hop-by-Hop Options* extension header encoding the flow information.
-    - `"hopByHopDestHeaders"`: The eBPF programs adds a *Hop-by-Hop Options* and a *Destination Options* extension header encoding the flow information.
+    - `"hopByHop"`: The eBPF programs adds a *Hop-by-Hop Options* extension header encoding the flow information.
+    - `"destination"`: The eBPF program adds a *Destination Options* extension header encoding the flow information.
+    - `"hopByHopAndDestination"`: The eBPF programs adds a *Hop-by-Hop Options* and a *Destination Options* extension header encoding the flow information.
 
 - **debugMode [bool] {false}**: Whether to load an eBPF program compiled with debug support. This option **should be false on production** environments.
   The many calls to `bpf_printk` preset if compiled with debugging support can have an effect on performance. You have been warned!
