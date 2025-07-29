@@ -15,7 +15,7 @@ var validTags = map[string]struct{}{
 type Enrichment struct {
 	Verbosity string      `structs:"-" lean:"-"`
 	TCPInfo   *TCPInfo    `structs:"tcpInfo" lean:"tcpInfo"`
-	Cong      *Cong       `structs:"cong,omitempty" lean:"cong"`
+	Cong      *Cong       `structs:"cong,omitempty" lean:"cong,omitempty"`
 	Socket    *Socket     `structs:"skBuff,omitempty" lean:"-"`
 	BBRInfo   *TCPBBRInfo `structs:"bbr,omitempty" lean:"-"`
 	TOS       *TOS        `structs:"tos,omitempty" lean:"-"`
@@ -32,7 +32,7 @@ type Enrichment struct {
 // among any other available tags to decide what fields make it into the end
 // result. For example, `lean` will only output a small subset of fields so
 // as not to overflow the maximum firefly size of a single MTU (~ 1500 bytes).
-func (e Enrichment) MarshalJSON() ([]byte, error) {
+func (e *Enrichment) MarshalJSON() ([]byte, error) {
 	s := structs.New(e)
 
 	if e.Verbosity != "" {
