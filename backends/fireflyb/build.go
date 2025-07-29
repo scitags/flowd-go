@@ -1,51 +1,11 @@
 package fireflyb
 
 import (
-	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net"
 
 	glowdTypes "github.com/scitags/flowd-go/types"
 )
-
-func (b *FireflyBackend) buildFirefly(flowID glowdTypes.FlowID, nlInfo, ebpfInfo *glowdTypes.Enrichment) ([]byte, error) {
-	localFirefly := glowdTypes.Firefly{}
-
-	localFirefly.Version = glowdTypes.FIREFLY_VERSION
-
-	localFirefly.FlowLifecycle.State = flowID.State.String()
-
-	localFirefly.PopulateTimeStamps(flowID)
-
-	localFirefly.FlowID.AFI = flowID.Family.String()
-	localFirefly.FlowID.SrcIP = flowID.Src.IP.String()
-	localFirefly.FlowID.DstIP = flowID.Dst.IP.String()
-	localFirefly.FlowID.Protocol = flowID.Protocol.String()
-	localFirefly.FlowID.SrcPort = flowID.Src.Port
-	localFirefly.FlowID.DstPort = flowID.Dst.Port
-
-	localFirefly.Context.ExperimentID = flowID.Experiment
-	localFirefly.Context.ActivityID = flowID.Activity
-	localFirefly.Context.Application = flowID.Application
-
-	localFirefly.Netlink = nlInfo
-	localFirefly.EbpfTcpInfo = ebpfInfo
-
-	// TODO: If src IP address is private, get one through STUN!
-
-	payload, err := json.Marshal(localFirefly)
-	if err != nil {
-		return nil, fmt.Errorf("error marshalling firefly: %w", err)
-	}
-
-	if b.PrependSyslog {
-		syslogHeader := []byte(fmt.Sprintf(glowdTypes.SYSLOG_HEADER, localFirefly.FlowLifecycle.CurrentTime))
-		payload = append(syslogHeader, payload...)
-	}
-
-	return payload, nil
-}
 
 func (b *FireflyBackend) enrichEbpf(flowID glowdTypes.FlowID) {
 	auxFlowID := flowID

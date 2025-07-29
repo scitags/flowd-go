@@ -167,7 +167,8 @@ func (b *FireflyBackend) Run(done <-chan struct{}, inChan <-chan glowdTypes.Flow
 				}
 			}
 
-			payload, err := b.buildFirefly(flowID, nil, nil)
+			ff := glowdTypes.NewFirefly(flowID, nil, nil)
+			payload, err := ff.Payload(b.PrependSyslog)
 			if err != nil {
 				slog.Error("error building the firefly", "err", err)
 				continue

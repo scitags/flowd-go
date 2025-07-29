@@ -55,7 +55,8 @@ func (b *FireflyBackend) pollNetlinkStatus(done chan *glowdTypes.Enrichment, flo
 
 			nlInfo.Verbosity = b.EnrichmentVerbosity
 
-			payload, err := b.buildFirefly(flowID, nlInfo, nil)
+			ff := glowdTypes.NewFirefly(flowID, nlInfo, nil)
+			payload, err := ff.Payload(b.PrependSyslog)
 			if err != nil {
 				slog.Error("error building periodic firefly", "err", err)
 				continue
@@ -140,7 +141,8 @@ func (b *FireflyBackend) pollEbpfStatus(doneChan chan *glowdTypes.Enrichment, fl
 
 		slog.Debug("partial eBPF info")
 
-		payload, err := b.buildFirefly(flowID, nil, ebpfSnapshot)
+		ff := glowdTypes.NewFirefly(flowID, nil, ebpfSnapshot)
+		payload, err := ff.Payload(b.PrependSyslog)
 		if err != nil {
 			slog.Error("error building periodic firefly", "err", err)
 			continue

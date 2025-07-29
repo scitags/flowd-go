@@ -8,8 +8,6 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	"github.com/fatih/structs"
 )
 
 const (
@@ -75,6 +73,48 @@ type Firefly struct {
 	EbpfTcpInfo *Enrichment `json:"ebpfTcpInfo,omitempty"`
 }
 
+func NewFirefly(flowID FlowID, nlInfo, ebpfInfo *Enrichment) Firefly {
+	ff := Firefly{}
+
+	ff.Version = FIREFLY_VERSION
+
+	ff.FlowLifecycle.State = flowID.State.String()
+
+	ff.PopulateTimeStamps(flowID)
+
+	ff.FlowID.AFI = flowID.Family.String()
+	ff.FlowID.SrcIP = flowID.Src.IP.String()
+	ff.FlowID.DstIP = flowID.Dst.IP.String()
+	ff.FlowID.Protocol = flowID.Protocol.String()
+	ff.FlowID.SrcPort = flowID.Src.Port
+	ff.FlowID.DstPort = flowID.Dst.Port
+
+	ff.Context.ExperimentID = flowID.Experiment
+	ff.Context.ActivityID = flowID.Activity
+	ff.Context.Application = flowID.Application
+
+	ff.Netlink = nlInfo
+	ff.EbpfTcpInfo = ebpfInfo
+
+	// TODO: If src IP address is private, get one through STUN!
+
+	return ff
+}
+
+func (ff *Firefly) Payload(withSyslog bool) ([]byte, error) {
+	payload, err := json.Marshal(ff)
+	if err != nil {
+		return nil, fmt.Errorf("error marshalling firefly: %w", err)
+	}
+
+	if withSyslog {
+		syslogHeader := []byte(fmt.Sprintf(SYSLOG_HEADER, ff.FlowLifecycle.CurrentTime))
+		payload = append(syslogHeader, payload...)
+	}
+
+	return payload, nil
+}
+
 func (f *Firefly) PopulateTimeStamps(flowID FlowID) {
 	if !flowID.StartTs.IsZero() {
 		f.FlowLifecycle.StartTime = flowID.StartTs.Format(TIME_FORMAT)
@@ -91,18 +131,6 @@ func (f *Firefly) PopulateTimeStamps(flowID FlowID) {
 	if flowID.State == ONGOING {
 		f.FlowLifecycle.CurrentTime = time.Now().UTC().Format(TIME_FORMAT)
 	}
-}
-
-func (f *Firefly) MarshalJSON() ([]byte, error) {
-	s := structs.New(f)
-	s.TagName = "json"
-
-	enc, err := json.Marshal(s.Map())
-	if err != nil {
-		return nil, err
-	}
-
-	return enc, nil
 }
 
 // A SlimFirefly represents a firefly containing only a flow ID. This type is
