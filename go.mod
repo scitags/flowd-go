@@ -12,6 +12,7 @@ require (
 	github.com/pion/transport/v3 v3.0.7
 	github.com/prometheus/procfs v0.15.1
 	github.com/rjeczalik/notify v0.9.3
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.19.0
 	github.com/vishvananda/netlink v1.3.0
