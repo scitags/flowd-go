@@ -2,10 +2,12 @@
 
 package netlink
 
+import glowdTypes "github.com/scitags/flowd-go/types"
+
 type InetDiagTCPInfoResp struct{}
 type TCPDiagRequest struct{}
 
-func (r *TCPDiagRequest) ExecuteRequest() ([]*InetDiagTCPInfoResp, error) {
+func (r *TCPDiagRequest) ExecuteRequest() ([]*glowdTypes.Enrichment, error) {
 	return nil, nil
 }
 
