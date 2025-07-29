@@ -24,7 +24,6 @@ jobs:
           pwd
           echo "$WORKSPACE"
 
-      - name: Firefly plugin tests
+      - name: Type tests
         shell: bash
-        run: go test ./plugins/fireflyp
-
+        run: go test -v ./types
