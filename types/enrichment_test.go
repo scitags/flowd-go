@@ -36,3 +36,17 @@ func TestEnrichmentVerbosityControl(t *testing.T) {
 
 	// fmt.Printf("original: %s\n\nlean: %s\n\nwrong: %s\n", ogEnc, leanEnc, wrongEnc)
 }
+
+func TestEnrichmentCompatibility(t *testing.T) {
+	e := &Enrichment{
+		Verbosity: "compatible",
+		TCPInfo: &TCPInfo{
+			Pmtu:  1500,
+			State: 5,
+		},
+	}
+	_, err := json.Marshal(e)
+	if err != nil {
+		t.Fatalf("error marshaling the enrichment: %v", err)
+	}
+}
