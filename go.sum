@@ -1,3 +1,5 @@
+github.com/aquasecurity/libbpfgo v0.8.0-libbpf-1.5 h1:YWh+wmaGTM3+q+v+Xevi1ASkyBFozcVMpYTBLbdz4cE=
+github.com/aquasecurity/libbpfgo v0.8.0-libbpf-1.5/go.mod h1:HB2DYWHuMraOB0IFcfjL8tsxN8TcFOdWKTrNqnHrTrs=
 github.com/containerd/cgroups v1.1.0 h1:v8rEWFl6EoqHB+swVNjVoCJE8o3jX7e8nqBGPLaDFBM=
 github.com/containerd/cgroups v1.1.0/go.mod h1:6ppBcbh/NOOUU+dMKrykgaBnK9lCIBxHqJDGwsa1mIw=
 github.com/coreos/go-systemd/v22 v22.5.0 h1:RrqgGjYQKalulkV8NGVIfkXQf6YYmOyiJKk8iXXhfZs=
@@ -46,8 +48,6 @@ github.com/mitchellh/mapstructure v1.5.0 h1:jeMsZIYE/09sWLaz43PL7Gy6RuMjD2eJVyua
 github.com/mitchellh/mapstructure v1.5.0/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
 github.com/opencontainers/runtime-spec v1.2.0 h1:z97+pHb3uELt/yiAWD691HNHQIF07bE7dzrbT927iTk=
 github.com/opencontainers/runtime-spec v1.2.0/go.mod h1:jwyrGlmzljRJv/Fgzds9SsS/C5hL+LL3ko9hs6T5lQ0=
-github.com/pcolladosoto/libbpfgo v0.8.0-libbpf-1.5-001 h1:G+nOE7nu8HjxYBPDxxvjkDQVRNCQoYO7tbeyqSRdapY=
-github.com/pcolladosoto/libbpfgo v0.8.0-libbpf-1.5-001/go.mod h1:qTEinIa7wWZ23PGGCNCCYC0Q//y5sHGhl6/ZKaDGpYA=
 github.com/pelletier/go-toml/v2 v2.2.2 h1:aYUidT7k73Pcl9nb2gScu7NSrKCSHIDE89b3+6Wq+LM=
 github.com/pelletier/go-toml/v2 v2.2.2/go.mod h1:1t835xjRzz80PqgE6HHgN2JOsmgYu/h4qDAS4n929Rs=
 github.com/pion/dtls/v3 v3.0.1 h1:0kmoaPYLAo0md/VemjcrAXQiSf8U+tuU3nDYVNpEKaw=
