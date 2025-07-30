@@ -63,11 +63,11 @@ TRASH   = $(BIN_DIR)/* rpms/*.gz rpms/*.rpm
 # Default compilation flags.
 # The `-ldflags` option lets us define global variables at compile time!
 # Check https://stackoverflow.com/questions/11354518/application-auto-build-versioning
-CFLAGS := -tags ebpf -ldflags "-X main.builtCommit=$(COMMIT) -X main.baseVersion=$(VERSION)"
+CGO_EXTLDFLAGS := -tags ebpf,netgo -ldflags '-X main.builtCommit=$(COMMIT) -X main.baseVersion=$(VERSION) -w -extldflags "-static"'
 
 # Disable VCS stamping when building the RPMs: the .git directory won't be there!
 ifdef BUILDING_RPM
-CFLAGS := $(CFLAGS) -buildvcs=false
+CGO_EXTLDFLAGS := $(CGO_EXTLDFLAGS) -buildvcs=false
 endif
 
 # Path to the different directories containing eBPF sources needed by flowd-go. Make will be
@@ -83,16 +83,9 @@ ifeq ($(OS),Linux)
 # Include the bpf headers from the kernel!
 ENV_FLAGS := $(ENV_FLAGS) CGO_CFLAGS="-I/usr/include/bpf"
 
-# Maybe we need the -L? Check it!
-# Check the output binary has no dependency on libbpf with
-# ldd(1) when linking to the static library. Also, note the version
-# of libbpfgo we're working with expects libbpf 1.4.3 whilst the
-# one bundled with AlmaLinux is 1.3.2. As long as we don't call into
-# new methods this should be okay, but it's something to keep in mind...
-# Maybe the best solution is to simply link into the libbpf version
-# bundled with libbpfgo instead of the one we're using now which is
-# provided by the libbpf-static package?
-ENV_FLAGS := $(ENV_FLAGS) CGO_LDFLAGS="/usr/lib64/libbpf.a"
+
+ENV_FLAGS := $(ENV_FLAGS) CGO_LDFLAGS="-L./deps/elfutils-0.193/libelf -L./deps/zstd-1.5.5/lib -static -lelf -lz -lzstd -lbpf"
+# ENV_FLAGS := $(ENV_FLAGS) --verbose"
 ENV_FLAGS := $(ENV_FLAGS) CC="$(CC)"
 
 # This is not really needed, but we'd rather be explicit!
@@ -171,7 +164,7 @@ help:
 build: $(SOURCES) ebpf-progs
 	@mkdir -p bin
 	@echo "TARGET_ARCH: $(TARGET_ARCH)"
-	$(ENV_FLAGS) $(GOC) build $(CFLAGS) -o $(BIN_DIR)/$(BIN_NAME) $(MAIN_PACKAGE)
+	$(ENV_FLAGS) $(GOC) build $(CFLAGS) -o $(BIN_DIR)/$(BIN_NAME) $(CGO_EXTLDFLAGS) $(MAIN_PACKAGE)
 
 # We'll only compile the eBPF program if we're on Linux
 ifeq ($(OS),Linux)

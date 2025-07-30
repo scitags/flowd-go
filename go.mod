@@ -3,10 +3,10 @@ module github.com/scitags/flowd-go
 go 1.23.9
 
 require (
-	github.com/aquasecurity/libbpfgo v0.8.0-libbpf-1.5
 	github.com/containerd/cgroups v1.1.0
 	github.com/cpuguy83/go-md2man/v2 v2.0.4
 	github.com/labstack/echo/v4 v4.12.0
+	github.com/pcolladosoto/libbpfgo v0.8.0-libbpf-1.5-001
 	github.com/pion/stun/v3 v3.0.0
 	github.com/pion/transport/v3 v3.0.7
 	github.com/prometheus/procfs v0.15.1

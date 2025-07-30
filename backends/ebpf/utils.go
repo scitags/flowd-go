@@ -12,7 +12,7 @@ import (
 	"strings"
 	"syscall"
 
-	bpf "github.com/aquasecurity/libbpfgo"
+	bpf "github.com/pcolladosoto/libbpfgo"
 )
 
 func (b *EbpfBackend) chooseBPFProgram() []byte {

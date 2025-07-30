@@ -11,7 +11,7 @@ import (
 
 	"math/rand"
 
-	bpf "github.com/aquasecurity/libbpfgo"
+	bpf "github.com/pcolladosoto/libbpfgo"
 	glowdTypes "github.com/scitags/flowd-go/types"
 )
 

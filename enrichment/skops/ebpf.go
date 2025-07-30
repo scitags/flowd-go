@@ -12,7 +12,7 @@ import (
 	"strings"
 	"syscall"
 
-	libbpf "github.com/aquasecurity/libbpfgo"
+	libbpf "github.com/pcolladosoto/libbpfgo"
 )
 
 const PROG_NAME string = "connTracker"

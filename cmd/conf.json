@@ -6,13 +6,9 @@
         "stun:stun.services.mozilla.org:3478"
     ],
     "plugins": {
-        "firefly": {
-            "deadline": 0
-        }
+        "api": {}
     },
     "backends": {
-        "firefly": {
-            "fireflyDestinationPort": 10515
-        }
+        "ebpf": {}
     }
 }

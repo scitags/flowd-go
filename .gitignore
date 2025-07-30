@@ -54,3 +54,6 @@ vendor/
 
 # Ignore clangd configuration files
 compile_commands.json
+
+# Ignore dependencies
+deps/
