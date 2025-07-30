@@ -88,6 +88,11 @@ the Markdown-formatted manpage on `rpms/flowd-go.1.md` to get a list of availabl
 All the documentation regarding how to make a release can be found on [`rpm/README.md`](./rpm/README.md). The bottom line is that both
 a regular GitHub-CI-based release and a CERN Koji-based release will be made.
 
+## Statically compiling everything
+Be sure to check [`doc/building.md`](./doc/building.md) for a wealth of information regarding how to statically compile `flowd-go`
+so as to have no runtime dependencies at all. It also goes into what dependencies are implicitly pulled in by `libbpf`
+and co.
+
 ### Not so quickstart
 One can also leverage Docker containers to run `flowd-go`. However, given we'll be making use of some rather advanced technologies in the sense that
 they are not for every day use, we'll need to do some convincing so that the containers can actually run as expected. In order to maintain a sane
