@@ -2,7 +2,7 @@
 CC := clang
 
 # Compiler flgas we'll use no matter what
-CFLAGS := -g -O2 -target bpf -D__TARGET_ARCH_x86_64 -I . -c
+CFLAGS := -g -O2 -target bpf -D__TARGET_ARCH_x86_64 -I . -c -D FLOWD_DEBUG -D FLOWD_POLL
 
 # The files to eliminate when cleaning up
 TRASH := *.o vmlinux.h .cache
@@ -13,6 +13,10 @@ sk_ops.bpf.o: *.bpf.c vmlinux.h
 # Generate the kernel headers
 vmlinux.h:
 	bpftool btf dump file /sys/kernel/btf/vmlinux format c > vmlinux.h
+
+# Generate a correct compile_commands.json for clangd
+compile_commands.json:
+	@bear -- make
 
 # Let us remember how to inspect an object in a week's time!
 .PHONY: objdump

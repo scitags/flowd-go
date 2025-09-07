@@ -5,22 +5,22 @@ import (
 	"strings"
 	"time"
 
-	"github.com/scitags/flowd-go/enrichment/netlink"
 	"golang.org/x/sys/unix"
 )
 
 type FlowID struct {
-	State      FlowState
-	Protocol   Protocol
-	Family     Family
-	Src        IPPort
-	Dst        IPPort
-	Experiment uint32
-	Activity   uint32
-	StartTs    time.Time
-	EndTs      time.Time
-	CurrentTs  time.Time
-	NetLink    netlink.InetDiagTCPInfoResp
+	State       FlowState
+	Protocol    Protocol
+	Family      Family
+	Src         IPPort
+	Dst         IPPort
+	Experiment  uint32
+	Activity    uint32
+	StartTs     time.Time
+	EndTs       time.Time
+	CurrentTs   time.Time
+	Enrichment  Enrichment
+	Application string
 }
 
 type IPPort struct {
@@ -40,6 +40,7 @@ const (
 
 	START FlowState = iota
 	END
+	ONGOING
 
 	IPv4 Family = unix.AF_INET
 	IPv6 Family = unix.AF_INET6
@@ -54,18 +55,20 @@ var (
 	}
 
 	locotorpMap = map[Protocol]string{
-		TCP: "TCP",
-		UDP: "UDP",
+		TCP: "tcp",
+		UDP: "udp",
 	}
 
 	flowMap = map[string]FlowState{
-		"START": START,
-		"END":   END,
+		"START":   START,
+		"END":     END,
+		"ONGOING": ONGOING,
 	}
 
 	wolfMap = map[FlowState]string{
-		START: "START",
-		END:   "END",
+		START:   "start",
+		END:     "end",
+		ONGOING: "ongoing",
 	}
 
 	familyMap = map[string]Family{

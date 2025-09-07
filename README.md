@@ -27,6 +27,20 @@ The documentation accompanying `flowd-go` is shipped as a series of Markdown fil
 
 Be sure to give those a read for information not covered in this document: we didn't want to make it too long...
 
+## Dependencies
+Flowd-go has no dependencies in the sense that `libbpf` is included through a statically compiled binary. However, `libbpf` does depend on
+both `libz` and `libelf` for working as set forth in the [kernel documentation](https://www.kernel.org/doc/html/v5.14/bpf/libbpf/libbpf_build.html)
+and in the [`libbpf` mirror](https://github.com/libbpf/libbpf) itself.
+
+These dependencies are taken into account in the RPM (i.e. installing `flowd-go` through an RPM) so that you don't have to worry about a thing.
+However, these dependencies are rather common and chances are they're already present on the system as they're required by the likes of
+`dnf(8)` and `systemd(1)`.
+
+### Running on non-RHEL distributions
+In order to successfully run `fowd-go` on non-RHEL systems (i.e. Ubuntu and co.) you must ensure the dependencies outlined above are met. You'll
+need to manually install them in case they're missing but, again, chances are they're already present. You can check whether that's the case
+by leveraging `ldd(1)` to find any missing dependencies.
+
 ## Quickstart
 The golden rule is that 'if something can be done, then a `make` target can be leveraged for it'. This basically means that compiling, running,
 generating the documentation and all those common tasks can be accomplished by simply issuing the appropriate `make <target>`. To get an
@@ -48,8 +62,11 @@ AlmaLinux 9.4, where the following installs all needed dependencies:
     # Install libbpf together with headers and the static library (i.e. *.a), llvm, clang and the auxiliary bpftool
     $ yum install libbpf-devel libbpf-static clang llvm bpftool
 
-If you want to create the manpage you'll also need to install [`go-md2man`](https://github.com/cpuguy83/go-md2man), which will convert the Markdown-formatted
-manpage into a Roff-formatted one:
+    # If you want to leverage clangd and bear(1) to enable the LSP server for eBPF programs you can also install
+    $ yum install clang-tools-extra bear
+
+If you want to create the manpage you'll also need to install [`go-md2man`](https://github.com/cpuguy83/go-md2man), which will convert the
+Markdown-formatted manpage into a Roff-formatted one:
 
     # We can install the tool like any other one. Just bear in mind you should
     # include Go's binary installation directory in your PATH. You can also

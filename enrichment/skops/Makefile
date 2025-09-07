@@ -26,3 +26,7 @@ test: $(SOURCES) ebpf-progs
 
 ebpf-progs:
 	$(MAKE) -C progs
+
+.PHONY: integration-test
+integration-test:
+	@sudo DST_IP=::1 CONG_ALG=cubic RUNTIME_SEC=60 ./test -test.run TestGatherFirefly
