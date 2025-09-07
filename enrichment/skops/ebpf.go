@@ -19,6 +19,9 @@ import (
 const PROG_NAME string = "connTracker"
 const RINGBUFF_NAME string = "tcpStats"
 const MAP_NAME string = "flowsToFollow"
+
+// Timeout to block the polling goroutine. This polling goroutine does not
+// belong to flowd-go and is instead managed by libbpfgo itself.
 const POLL_INTERVAL_MS int = 300
 
 var (
@@ -105,6 +108,10 @@ func NewEnricher(pollingInterval uint64) (*EbpfEnricher, error) {
 	e.ringBuff = rb
 
 	return &e, nil
+}
+
+func (e *EbpfEnricher) Poll(timeout int) {
+	e.ringBuff.Poll(timeout)
 }
 
 func (e *EbpfEnricher) Run(done <-chan struct{}, outChan chan<- TcpInfo) {
