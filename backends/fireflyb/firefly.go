@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"net"
 	"time"
-	"unsafe"
 
 	"github.com/scitags/flowd-go/enrichment/skops"
 	glowdTypes "github.com/scitags/flowd-go/types"
@@ -116,16 +115,11 @@ func (b *FireflyBackend) Run(done <-chan struct{}, inChan <-chan glowdTypes.Flow
 			slog.Debug("got a flowID")
 
 			if b.PeriodicFireflies && b.ebpfEnricher != nil {
-				fSpec := skops.FlowSpec{
-					DstPort: uint32(flowID.Dst.Port),
-					SrcPort: uint32(flowID.Src.Port),
-				}
-				flowSpecPtr := unsafe.Pointer(&fSpec)
-
 				if flowID.State == glowdTypes.START {
-					var dummy byte = 1
-					dummyPtr := unsafe.Pointer(&dummy)
-					if err := b.ebpfEnricher.FlowMap.Update(flowSpecPtr, dummyPtr); err != nil {
+					if err := b.ebpfEnricher.WatchFlow(skops.FlowSpec{
+						DstPort: uint32(flowID.Dst.Port),
+						SrcPort: uint32(flowID.Src.Port),
+					}); err != nil {
 						slog.Error("error inserting value into flow map: %w, stats will not be collected", err)
 					}
 				} else {

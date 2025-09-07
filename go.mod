@@ -3,13 +3,11 @@ module github.com/scitags/flowd-go
 go 1.23.9
 
 require (
-	github.com/aquasecurity/libbpfgo v0.8.0-libbpf-1.5
 	github.com/cilium/ebpf v0.12.3
 	github.com/containerd/cgroups v1.1.0
 	github.com/cpuguy83/go-md2man/v2 v2.0.4
 	github.com/fatih/structs v1.1.0
 	github.com/florianl/go-tc v0.4.5
-	github.com/jsimonetti/rtnetlink v1.4.2
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/mdlayher/netlink v1.8.0
 	github.com/pion/stun/v3 v3.0.0
@@ -20,7 +18,6 @@ require (
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.19.0
 	github.com/vishvananda/netlink v1.3.0
-	github.com/vishvananda/netns v0.0.4
 	golang.org/x/sys v0.35.0
 )
 
@@ -34,6 +31,7 @@ require (
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/josharian/native v1.1.0 // indirect
+	github.com/jsimonetti/rtnetlink v1.4.2 // indirect
 	github.com/labstack/gommon v0.4.2 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
@@ -52,9 +50,11 @@ require (
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/stretchr/testify v1.10.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
+	github.com/vishvananda/netns v0.0.4 // indirect
 	github.com/wlynxg/anet v0.0.3 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect

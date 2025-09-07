@@ -1,4 +1,4 @@
-//go:build linux && cgo
+//go:build linux
 
 package skops_test
 
@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/scitags/flowd-go/backends/fireflyb"
-	"github.com/scitags/flowd-go/enrichment/skops"
 	glowdTypes "github.com/scitags/flowd-go/types"
 )
 
@@ -75,12 +74,6 @@ func init() {
 	CONG_ALG, ok = os.LookupEnv("CONG_ALG")
 	if !ok {
 		CONG_ALG = "cubic"
-	}
-}
-
-func TestEbpfAttach(t *testing.T) {
-	if err := skops.Init(); err != nil {
-		t.Errorf("error attaching the program: %v\n", err)
 	}
 }
 
@@ -232,56 +225,4 @@ func TestGatherFirefly(t *testing.T) {
 
 	slog.Debug("waiting for everything to finish...")
 	wg.Wait()
-}
-
-func TestBlockingPoll(t *testing.T) {
-	fireflyBackend := fireflyb.FireflyBackend{
-		PrependSyslog: false,
-
-		SendToCollector:  true,
-		CollectorAddress: "127.0.0.1",
-		CollectorPort:    4321,
-
-		AddNetlinkContext: false,
-		AddBPFContext:     true,
-
-		PeriodicFireflies: true,
-		Period:            500,
-
-		EnrichmentVerbosity: "lean",
-	}
-
-	if err := fireflyBackend.Init(); err != nil {
-		t.Logf("couldn't initialise the firefly plugin: %v\n", err)
-		t.Fail()
-	}
-	defer func() {
-		if err := fireflyBackend.Cleanup(); err != nil {
-			t.Logf("error cleaning up the firefly plugin: %v\n", err)
-		}
-	}()
-
-	flowdIdChan := make(chan glowdTypes.FlowID)
-	doneChan := make(chan struct{})
-
-	go fireflyBackend.Run(doneChan, flowdIdChan)
-
-	e, err := skops.NewEnricher(500)
-	if err != nil {
-		t.Fatalf("error getting the enricher: %v", err)
-	}
-
-	e.Poll(-1)
-
-	dummyFlow := glowdTypes.FlowID{
-		State:       glowdTypes.START,
-		Family:      glowdTypes.IPv6,
-		Src:         glowdTypes.IPPort{IP: net.ParseIP("::"), Port: 2345},
-		Dst:         glowdTypes.IPPort{IP: net.ParseIP("::"), Port: 5777},
-		Experiment:  0,
-		Activity:    0,
-		Application: "iperf3Tests",
-	}
-
-	flowdIdChan <- dummyFlow
 }

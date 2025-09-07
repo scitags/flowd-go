@@ -7,9 +7,6 @@
 # The Go compiler to use
 GOC = go
 
-# The compiler to use for the BPF side of things
-CC = clang
-
 # Please note this environment variable will only be defined when running
 # the %build scriptlet of a SPEC file during the building of RPM packages.
 # Given the context in which those builds run IS NOT that of a full-fledged
@@ -70,34 +67,18 @@ ifdef BUILDING_RPM
 CFLAGS := $(CFLAGS) -buildvcs=false
 endif
 
+# Let's find the OS to decide whether to build eBPF programs or not
+OS := $(shell uname)
+
 # Path to the different directories containing eBPF sources needed by flowd-go. Make will be
 # invoked recursively there!
 EBPF_BACKEND_PROGS_PATH := backends/ebpf/progs
 EBPF_ENRICHMENT_PROGS_PATH := enrichment/skops/progs
 
-# Adjust GOC's environment depending on what OS we're on to deal with
-# all the BPF machinery. Note that when ENV_FLAGS is not defined on
-# Darwin everything will work as expected!
-OS := $(shell uname)
-ifeq ($(OS),Linux)
-# Include the bpf headers from the kernel!
-ENV_FLAGS := $(ENV_FLAGS) CGO_CFLAGS="-I/usr/include/bpf"
-
-# Maybe we need the -L? Check it!
-# Check the output binary has no dependency on libbpf with
-# ldd(1) when linking to the static library. Also, note the version
-# of libbpfgo we're working with expects libbpf 1.4.3 whilst the
-# one bundled with AlmaLinux is 1.3.2. As long as we don't call into
-# new methods this should be okay, but it's something to keep in mind...
-# Maybe the best solution is to simply link into the libbpf version
-# bundled with libbpfgo instead of the one we're using now which is
-# provided by the libbpf-static package?
-ENV_FLAGS := $(ENV_FLAGS) CGO_LDFLAGS="/usr/lib64/libbpf.a"
-ENV_FLAGS := $(ENV_FLAGS) CC="$(CC)"
-
-# This is not really needed, but we'd rather be explicit!
-ENV_FLAGS := $(ENV_FLAGS) CGO_ENABLED="1"
-endif
+# Prevent natively-compiled binaries from enabling CGO by default. Otherwise, the
+# C runtime (i.e. libc) and some other libraries will be symbolically linked. For
+# more information see https://pkg.go.dev/cmd/cgo
+ENV_FLAGS := CGO_ENABLED=0
 
 # Adjust the target architecture based on the TARGET_ARCH variable.
 # As this variable is populated by the {%_target} macro it can
