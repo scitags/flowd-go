@@ -40,7 +40,7 @@ static __always_inline int handleICMP(struct __sk_buff *ctx, struct ipv6hdr *l3)
 	// with compiler padding. Check that's the case...
 	__builtin_memset(&flowHash, 0, sizeof(flowHash));
 
-	#ifndef GLOWD_FLOW_LABEL_MATCH_ALL
+	#ifndef FLOWD_MATCH_ALL
 		// Hardcode the port numbers we'll 'look for': there are none in ICMP!
 		flowHash.ip6Hi = ipv6DaddrHi;
 		flowHash.ip6Lo = ipv6DaddrLo;
@@ -55,13 +55,13 @@ static __always_inline int handleICMP(struct __sk_buff *ctx, struct ipv6hdr *l3)
 	if (flowTag) {
 		bpf_printk("flowd-go: retrieved flowTag: %x", *flowTag);
 
-		#if defined(GLOWD_FLOW_LABEL) || defined(GLOWD_FLOW_LABEL_MATCH_ALL)
+		#if defined(FLOWD_LABEL) || defined(FLOWD_MATCH_ALL)
 			// Embed the configured flowTag into the IPv6 header.
 			populateFlowLbl(l3->flow_lbl, *flowTag);
 		#endif
 
 		// Plundered from https://github.com/IurmanJ/ebpf-ipv6-exthdr-injection/blob/main/tc_ipv6_eh_kern.c
-		#if defined(GLOWD_HBH_HEADER) || defined(GLOWD_DO_HEADER)
+		#if defined(FLOWD_HBH) || defined(FLOWD_DO)
 			struct extensionHdr_t extensionHdr;
 
 			// Initialise the header
@@ -70,7 +70,7 @@ static __always_inline int handleICMP(struct __sk_buff *ctx, struct ipv6hdr *l3)
 			// Fill in the Hob-by-Hop Header!
 			populateExtensionHdr(&extensionHdr, l3->nexthdr, *flowTag);
 
-			#ifdef GLOWD_HBH_HEADER
+			#ifdef FLOWD_HBH
 				// Signal the next header is a Hop-by-Hop Extension Header
 				l3->nexthdr = NEXT_HDR_HOP_BY_HOP;
 			#else
@@ -83,7 +83,7 @@ static __always_inline int handleICMP(struct __sk_buff *ctx, struct ipv6hdr *l3)
 
 			// Be sure to check available flags (i.e. BPF_F_ADJ_ROOM_*) on bpf-helpers(7).
 			if (bpf_skb_adjust_room(ctx, sizeof(struct extensionHdr_t), BPF_ADJ_ROOM_NET, 0)) {
-				#ifdef GLOWD_DEBUG
+				#ifdef FLOWD_DEBUG
 					bpf_printk("flowd-go: error making room for the extension header");
 				#endif
 
@@ -92,7 +92,7 @@ static __always_inline int handleICMP(struct __sk_buff *ctx, struct ipv6hdr *l3)
 
 			// Be sure to check available flags (i.e. BPF_F_{RECOMPUTE_CSUM,NVALIDATE_HASH}) on bpf-helpers(7).
 			if (bpf_skb_store_bytes(ctx, sizeof(struct ethhdr) + sizeof(struct ipv6hdr), &extensionHdr, sizeof(struct extensionHdr_t), BPF_F_RECOMPUTE_CSUM)) {
-				#ifdef GLOWD_DEBUG
+				#ifdef FLOWD_DEBUG
 					bpf_printk("flowd-go: error storing the extension header");
 				#endif
 
@@ -100,7 +100,7 @@ static __always_inline int handleICMP(struct __sk_buff *ctx, struct ipv6hdr *l3)
 			}
 		#endif
 
-		#ifdef GLOWD_HBHDO_HEADER
+		#ifdef FLOWD_HBHDO
 			struct compExtensionHdr_t compExtensionHdr;
 
 			// Initialise the header
@@ -116,7 +116,7 @@ static __always_inline int handleICMP(struct __sk_buff *ctx, struct ipv6hdr *l3)
 			l3->payload_len = bpf_htons(bpf_ntohs(l3->payload_len) + sizeof(struct compExtensionHdr_t));
 
 			if (bpf_skb_adjust_room(ctx, sizeof(struct compExtensionHdr_t), BPF_ADJ_ROOM_NET, 0)) {
-				#ifdef GLOWD_DEBUG
+				#ifdef FLOWD_DEBUG
 					bpf_printk("flowd-go: error making room for the extension header");
 				#endif
 
@@ -124,7 +124,7 @@ static __always_inline int handleICMP(struct __sk_buff *ctx, struct ipv6hdr *l3)
 			}
 
 			if (bpf_skb_store_bytes(ctx, sizeof(struct ethhdr) + sizeof(struct ipv6hdr), &compExtensionHdr, sizeof(struct compExtensionHdr_t), BPF_F_RECOMPUTE_CSUM)) {
-				#ifdef GLOWD_DEBUG
+				#ifdef FLOWD_DEBUG
 					bpf_printk("flowd-go: error storing the extension header");
 				#endif
 

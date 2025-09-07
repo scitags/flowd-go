@@ -16,7 +16,7 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 	if ((void *)(l4 + 1) > data_end)
 		return TC_ACT_OK;
 
-	#ifdef GLOWD_DEBUG
+	#ifdef FLOWD_DEBUG
 		bpf_printk("flowd-go:      TCP source port: %d", bpf_htons(l4->source));
 		bpf_printk("flowd-go: TCP destination port: %d", bpf_htons(l4->dest));
 	#endif
@@ -28,7 +28,7 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 	// with compiler padding. Check that's the case...
 	__builtin_memset(&flowHash, 0, sizeof(flowHash));
 
-	#ifndef GLOWD_FLOW_LABEL_MATCH_ALL
+	#ifndef FLOWD_MATCH_ALL
 		// Populate the lookup based on the incoming datagram's data
 		flowHash.ip6Hi = ipv6AddrHi(l3->daddr);
 		flowHash.ip6Lo = ipv6AddrLo(l3->daddr);
@@ -36,7 +36,7 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 		flowHash.sPort = bpf_htons(l4->source);
 	#endif
 
-	#ifdef GLOWD_DEBUG
+	#ifdef FLOWD_DEBUG
 		bpf_printk("flowd-go: IPv6                 destination address: %pI6", &l3->daddr);
 		bpf_printk("flowd-go:     IPv6 destination address Hi [127:64]: %x", flowHash.ip6Hi);
 		bpf_printk("flowd-go:     IPv6 destination address Lo   [63:0]: %x", flowHash.ip6Lo);
@@ -49,16 +49,16 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 
 	// If there's a flow configured, mark the packet
 	if (flowTag) {
-		#if defined(GLOWD_FLOW_LABEL) || defined(GLOWD_FLOW_LABEL_MATCH_ALL)
+		#if defined(FLOWD_LABEL) || defined(FLOWD_MATCH_ALL)
 
-			#ifdef GLOWD_DEBUG
+			#ifdef FLOWD_DEBUG
 				bpf_printk("flowd-go: retrieved flowTag: %x", *flowTag);
 			#endif
 
 			populateFlowLbl(l3->flow_lbl, *flowTag);
 		#endif
 
-		#if defined(GLOWD_HBH_HEADER) || defined(GLOWD_DO_HEADER)
+		#if defined(FLOWD_HBH) || defined(FLOWD_DO)
 			struct extensionHdr_t extensionHdr;
 
 			// Check we won't go overboard and overwhelm the MTU!
@@ -67,14 +67,14 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 			//   0: see https://github.com/xdp-project/bpf-examples/blob/main/MTU-tests/tc_mtu_enforce.c
 			__u32 mtuLen = 0;
 			if(bpf_check_mtu(ctx, 0, &mtuLen, sizeof(extensionHdr), 0)) {
-				#ifdef GLOWD_DEBUG
+				#ifdef FLOWD_DEBUG
 					bpf_printk("flowd-go: adding extension headers would overflow the MTU, skipping...");
 				#endif
 
 				return TC_ACT_OK;
 			}
 
-			#ifdef GLOWD_DEBUG
+			#ifdef FLOWD_DEBUG
 				bpf_printk("flowd-go: IPv6 header size increase: %d bytes", sizeof(extensionHdr));
 				bpf_printk("flowd-go: detected MTU: %d bytes", mtuLen);
 			#endif
@@ -85,7 +85,7 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 			// Fill in the Hob-by-Hop Header!
 			populateExtensionHdr(&extensionHdr, l3->nexthdr, *flowTag);
 
-			#ifdef GLOWD_HBH_HEADER
+			#ifdef FLOWD_HBH
 				// Signal the next header is a Hop-by-Hop Extension Header
 				l3->nexthdr = NEXT_HDR_HOP_BY_HOP;
 			#else
@@ -98,7 +98,7 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 
 			// Be sure to check available flags (i.e. BPF_F_ADJ_ROOM_*) on bpf-helpers(7).
 			if (bpf_skb_adjust_room(ctx, sizeof(struct extensionHdr_t), BPF_ADJ_ROOM_NET, 0)) {
-				#ifdef GLOWD_DEBUG
+				#ifdef FLOWD_DEBUG
 					bpf_printk("flowd-go: error making room for the extension header");
 				#endif
 
@@ -107,7 +107,7 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 
 			// Be sure to check available flags (i.e. BPF_F_{RECOMPUTE_CSUM,NVALIDATE_HASH}) on bpf-helpers(7).
 			if (bpf_skb_store_bytes(ctx, sizeof(struct ethhdr) + sizeof(struct ipv6hdr), &extensionHdr, sizeof(struct extensionHdr_t), BPF_F_RECOMPUTE_CSUM)) {
-				#ifdef GLOWD_DEBUG
+				#ifdef FLOWD_DEBUG
 					bpf_printk("flowd-go: error storing the extension header");
 				#endif
 
@@ -115,19 +115,19 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 			}
 		#endif
 
-		#ifdef GLOWD_HBHDO_HEADER
+		#ifdef FLOWD_HBHDO
 			struct compExtensionHdr_t compExtensionHdr;
 
 			__u32 mtuLen = 0;
 			if(bpf_check_mtu(ctx, 0, &mtuLen, sizeof(compExtensionHdr), 0)) {
-				#ifdef GLOWD_DEBUG
+				#ifdef FLOWD_DEBUG
 					bpf_printk("flowd-go: adding extension headers would overflow the MTU, skipping...");
 				#endif
 
 				return TC_ACT_OK;
 			}
 
-			#ifdef GLOWD_DEBUG
+			#ifdef FLOWD_DEBUG
 				bpf_printk("flowd-go: IPv6 header size increase: %d bytes", sizeof(compExtensionHdr));
 				bpf_printk("flowd-go: detected MTU: %d bytes", mtuLen);
 			#endif
@@ -145,7 +145,7 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 			l3->payload_len = bpf_htons(bpf_ntohs(l3->payload_len) + sizeof(struct compExtensionHdr_t));
 
 			if (bpf_skb_adjust_room(ctx, sizeof(struct compExtensionHdr_t), BPF_ADJ_ROOM_NET, 0)) {
-				#ifdef GLOWD_DEBUG
+				#ifdef FLOWD_DEBUG
 					bpf_printk("flowd-go: error making room for the extension header");
 				#endif
 
@@ -153,7 +153,7 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 			}
 
 			if (bpf_skb_store_bytes(ctx, sizeof(struct ethhdr) + sizeof(struct ipv6hdr), &compExtensionHdr, sizeof(struct compExtensionHdr_t), BPF_F_RECOMPUTE_CSUM)) {
-				#ifdef GLOWD_DEBUG
+				#ifdef FLOWD_DEBUG
 					bpf_printk("flowd-go: error storing the extension header");
 				#endif
 

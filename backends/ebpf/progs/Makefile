@@ -11,13 +11,13 @@ TRASH := *.o vmlinux.h .cache
 # This is the only variable we have to modify when adding new targets.
 # Note each item will be appended to 'marker-' so as to generate the
 # output programs.
-PROG_NAMES := flow-label flow-label-match-all hbh-header do-header hbh-do-headers
+PROG_NAMES := label hbh do hbhdo
 
 # Derive the constants the program depends on for conditionally compiling
-# it. We simple add the GLOWD_ prefix and translate each element of PROG_NAMES
+# it. We simply add the FLOWD_ prefix and translate each element of PROG_NAMES
 # with tr(1) so that we transform '-' to '_' and make lower case letters
 # uppercase. We do really on a shell for that, but echo and tr are usually there!
-PROG_DEFS := $(addprefix GLOWD_, $(shell echo $(PROG_NAMES) | tr 'a-z-' 'A-Z_'))
+PROG_DEFS := $(addprefix FLOWD_, $(shell echo $(PROG_NAMES) | tr 'a-z-' 'A-Z_'))
 
 # We use seq(1) to generate the indices to then index both PROG_NAMES and
 # PROG_DEFS. Like before, seq(1) should be widely available...
@@ -31,10 +31,16 @@ INDICES := $(shell seq $(words $(PROG_NAMES)))
 #   https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html
 define targetTemplate
 marker-$(1).bpf.o: *.bpf.c *.bpf.h vmlinux.h
-	$(CC) $(CFLAGS) -D $(2)                marker.bpf.c -o $$@
+	$(CC) $(CFLAGS) -D $(2)                                   marker.bpf.c -o $$@
 
 marker-$(1)-dbg.bpf.o: *.bpf.c *.bpf.h vmlinux.h
-	$(CC) $(CFLAGS) -D $(2) -D GLOWD_DEBUG marker.bpf.c -o $$@
+	$(CC) $(CFLAGS) -D $(2) -D FLOWD_DEBUG                    marker.bpf.c -o $$@
+
+marker-$(1)-all.bpf.o: *.bpf.c *.bpf.h vmlinux.h
+	$(CC) $(CFLAGS) -D $(2) -D FLOWD_MATCH_ALL                marker.bpf.c -o $$@
+
+marker-$(1)-all-dbg.bpf.o: *.bpf.c *.bpf.h vmlinux.h
+	$(CC) $(CFLAGS) -D $(2) -D FLOWD_MATCH_ALL -D FLOWD_DEBUG marker.bpf.c -o $$@
 endef
 
 # Just check it's working. Simply uncomment the line below to get a glimpse into what
@@ -42,7 +48,7 @@ endef
 # $(foreach i,$(INDICES),$(info $(call targetTemplate,$(word $(i),$(PROG_NAMES)),$(word $(i),$(PROG_DEFS)))))
 
 # Simply make target all depend on all the programs
-all: $(foreach progName,$(PROG_NAMES),marker-$(progName).bpf.o marker-$(progName)-dbg.bpf.o)
+all: $(foreach progName,$(PROG_NAMES),marker-$(progName).bpf.o marker-$(progName)-dbg.bpf.o marker-$(progName)-all.bpf.o marker-$(progName)-all-dbg.bpf.o)
 
 # Generate the dynamic targets. This must be done AFTER defining the all target as
 # otherwise the default target becomes the first dynamic target. The idea for getting

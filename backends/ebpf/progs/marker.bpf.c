@@ -35,7 +35,7 @@ static __always_inline int handleDatagram(struct __sk_buff *ctx, struct ipv6hdr 
 	// If running in debug mode we'll handle ICMP messages as well
 	// as TCP segments. That way we can leverage ping(8) to easily
 	// generate traffic...
-	#ifdef GLOWD_DEBUG
+	#ifdef FLOWD_DEBUG
 		if (l3->nexthdr == PROTO_IPV6_ICMP)
 			return handleICMP(ctx, l3);
 	#endif
@@ -85,7 +85,7 @@ int marker(struct __sk_buff *ctx) {
 	// We'll also need to be careful with the network's endianness, hence the call
 	// to bpf_htons. This helper function is defined on libbpf's bpf_endian.h.
 	if (ctx->protocol == bpf_htons(ETH_P_IPV6)) {
-		#ifdef GLOWD_DEBUG
+		#ifdef FLOWD_DEBUG
 			// Check https://docs.ebpf.io/linux/helper-function/bpf_trace_printk/
 			bpf_printk("flowd-go: got an Ethernet frame");
 		#endif
@@ -103,7 +103,7 @@ int marker(struct __sk_buff *ctx) {
 		if ((void *)(l3 + 1) > data_end)
 			return TC_ACT_OK;
 	} else if (ctx->protocol == bpf_htons(ETH_P_8021Q)) {
-		#ifdef GLOWD_DEBUG
+		#ifdef FLOWD_DEBUG
 			bpf_printk("flowd-go: got a 802.1Q frame");
 		#endif
 

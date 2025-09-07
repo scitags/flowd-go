@@ -32,12 +32,14 @@
 #define NEXT_HDR_HOP_BY_HOP 0x0
 #define NEXT_HDR_DEST_OPTS 60
 
-// The keys for our hash maps. Should we maybe combine the ports into a __u32?
+// The keys for our hash maps. Note ports are encoded as __u32 because the
+// struct itself is 8-byte aligned given the initial __u64s representing the
+// IPv6 address.
 struct fourTuple {
 	__u64 ip6Hi;
 	__u64 ip6Lo;
-	__u16 dPort;
-	__u16 sPort;
+	__u32 dPort;
+	__u32 sPort;
 };
 
 // Let's define our map. Note it'll be included in

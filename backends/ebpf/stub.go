@@ -1,9 +1,21 @@
-//go:build darwin || !cgo
+//go:build !linux
 
 package ebpf
 
 import (
 	glowdTypes "github.com/scitags/flowd-go/types"
+)
+
+type MarkingStrategy string
+
+const (
+	Label               MarkingStrategy = "label"
+	HopByHop                            = "hopByHop"
+	Destination                         = "destination"
+	HopByHopDestination                 = "hopByHopDestination"
+
+	PROG_NAME string = "marker"
+	MAP_NAME  string = "flowLabels"
 )
 
 type EbpfBackend struct {

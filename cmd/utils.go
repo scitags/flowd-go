@@ -41,8 +41,9 @@ func pluginBackendDependencies(plugins []glowdTypes.Plugin, backends []glowdType
 					continue
 				}
 				slog.Warn("overriding marking strategy for the eBPF backend",
-					"previous", ebpfBackend.MarkingStrategy, "new", ebpf.FlowLabelMatchAll)
-				ebpfBackend.MarkingStrategy = ebpf.FlowLabelMatchAll
+					"previous", ebpfBackend.MarkingStrategy, "new", ebpf.Label, "matchAll", true)
+				ebpfBackend.MarkingStrategy = string(ebpf.Label)
+				ebpfBackend.MatchAll = true
 			}
 		// Do nothing on default, just be exhaustive :P
 		default:

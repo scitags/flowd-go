@@ -55,7 +55,7 @@ static __always_inline void populateExtensionHdr(struct extensionHdr_t *extHdr, 
 	// Check RFC 2460 Section 4.2: https://www.rfc-editor.org/rfc/rfc2460.html#section-4.2
 	extHdr->opts[5] = 0x00;
 
-	#ifdef GLOWD_DEBUG
+	#ifdef FLOWD_DEBUG
 		bpf_printk("flowd-go: extensionHeader nextHdr: %d", extHdr->nextHdr);
 		bpf_printk("flowd-go: extensionHeader  hdrLen: %x", extHdr->hdrLen);
 		bpf_printk("flowd-go: extensionHeader opts[0]: %x", extHdr->opts[0]);
@@ -74,7 +74,7 @@ static __always_inline void populateCompExtensionHdr(struct compExtensionHdr_t *
 	// Populate the embedded Destination Options Extension Header.
 	populateExtensionHdr(&(compHdr->destOptsHdr), nextHdr, flowTag);
 
-	#ifdef GLOWD_DEBUG
+	#ifdef FLOWD_DEBUG
 		bpf_printk("flowd-go: compExtensionHeader hopByHopHdr.nextHdr: %d", compHdr->hopByHopHdr.nextHdr);
 		bpf_printk("flowd-go: compExtensionHeader  hopByHopHdr.hdrLen: %x", compHdr->hopByHopHdr.hdrLen);
 		bpf_printk("flowd-go: compExtensionHeader hopByHopHdr.opts[0]: %x", compHdr->hopByHopHdr.opts[0]);
