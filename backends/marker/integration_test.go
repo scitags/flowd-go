@@ -1,6 +1,6 @@
-//go:build linux
+//go:build linux && ebpf
 
-package ebpf
+package marker
 
 import "testing"
 

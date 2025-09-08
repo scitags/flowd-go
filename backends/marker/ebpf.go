@@ -1,6 +1,6 @@
-//go:build linux
+//go:build linux && ebpf
 
-package ebpf
+package marker
 
 import (
 	"fmt"
@@ -34,7 +34,7 @@ type FlowFourTuple struct {
 	SrcPort uint32
 }
 
-type EbpfBackend struct {
+type MarkerBackend struct {
 	coll *ebpf.Collection
 	nl   *NetlinkClient
 
@@ -49,11 +49,11 @@ type EbpfBackend struct {
 	MatchAll           bool
 }
 
-func (b *EbpfBackend) String() string {
+func (b *MarkerBackend) String() string {
 	return "marker"
 }
 
-func (b *EbpfBackend) Init() error {
+func (b *MarkerBackend) Init() error {
 	slog.Debug("initialising the marker backend")
 
 	// If we need to discover interfaces with public IPv6 addresses simply
@@ -123,7 +123,7 @@ func (b *EbpfBackend) Init() error {
 	return nil
 }
 
-func (b *EbpfBackend) Run(done <-chan struct{}, inChan <-chan glowdTypes.FlowID) {
+func (b *MarkerBackend) Run(done <-chan struct{}, inChan <-chan glowdTypes.FlowID) {
 	slog.Debug("running the marker backend")
 
 	for {
@@ -173,7 +173,7 @@ func (b *EbpfBackend) Run(done <-chan struct{}, inChan <-chan glowdTypes.FlowID)
 	}
 }
 
-func (b *EbpfBackend) Cleanup() error {
+func (b *MarkerBackend) Cleanup() error {
 	slog.Debug("cleaning up the marker backend")
 
 	// Remove all the qdiscs and filters

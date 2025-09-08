@@ -7,8 +7,8 @@ import (
 
 	glowdTypes "github.com/scitags/flowd-go/types"
 
-	"github.com/scitags/flowd-go/backends/ebpf"
 	"github.com/scitags/flowd-go/backends/fireflyb"
+	"github.com/scitags/flowd-go/backends/marker"
 	"github.com/scitags/flowd-go/plugins/api"
 	"github.com/scitags/flowd-go/plugins/fireflyp"
 	"github.com/scitags/flowd-go/plugins/np"
@@ -25,7 +25,7 @@ type PluginConfigurations struct {
 }
 
 type BackendConfigurations struct {
-	Ebpf    ebpf.EbpfBackend
+	Marker  marker.MarkerBackend
 	Firefly fireflyb.FireflyBackend
 }
 
@@ -54,7 +54,7 @@ var (
 	}
 
 	backendDefaults = map[string]defaultConfiguration{
-		"ebpf":    ebpf.Defaults,
+		"marker":  marker.Defaults,
 		"firefly": fireflyb.Defaults,
 	}
 )
@@ -143,8 +143,8 @@ func populateBackendSlice(bConf BackendConfigurations, configured []string) ([]g
 	backends := []glowdTypes.Backend{}
 	for _, c := range configured {
 		switch strings.ToLower(c) {
-		case strings.ToLower("ebpf"):
-			backends = append(backends, &bConf.Ebpf)
+		case strings.ToLower("marker"):
+			backends = append(backends, &bConf.Marker)
 		case strings.ToLower("firefly"):
 			backends = append(backends, &bConf.Firefly)
 		default:

@@ -1,28 +1,28 @@
-//go:build linux && cgo
+//go:build linux && ebpf
 
 package subcmd
 
 import (
 	"log/slog"
 
-	"github.com/scitags/flowd-go/backends/ebpf"
+	"github.com/scitags/flowd-go/backends/marker"
 	"github.com/spf13/cobra"
 )
 
 func init() {
-	EbpfClean.PersistentFlags().StringVar(&targetInterface, "target-interface", "lo", "interface to delete the eBPF hook from")
-	EbpfClean.PersistentFlags().BoolVar(&removeQdisc, "remove-qdisc", true, "whether to remove the backing qdisc")
+	MarkerClean.PersistentFlags().StringVar(&targetInterface, "target-interface", "lo", "interface to delete the eBPF hook from")
+	MarkerClean.PersistentFlags().BoolVar(&removeQdisc, "remove-qdisc", true, "whether to remove the backing qdisc")
 }
 
 var (
 	targetInterface string
 	removeQdisc     bool
 
-	EbpfClean = &cobra.Command{
+	MarkerClean = &cobra.Command{
 		Use:   "clean",
 		Short: "Clean up flowd-go's backing eBPF hooks and qdisc.",
 		Run: func(cmd *cobra.Command, args []string) {
-			c, err := ebpf.NewNetlinkClient()
+			c, err := marker.NewNetlinkClient()
 			if err != nil {
 				slog.Error("couldn't get a netlink client", "err", err)
 				return

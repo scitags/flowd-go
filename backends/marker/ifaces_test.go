@@ -1,4 +1,6 @@
-package ebpf
+//go:build linux && ebpf
+
+package marker
 
 import (
 	"fmt"

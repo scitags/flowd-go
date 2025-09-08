@@ -1,6 +1,6 @@
-//go:build linux
+//go:build linux && ebpf
 
-package ebpf
+package marker
 
 import (
 	"fmt"
@@ -29,7 +29,7 @@ func extractHalves(ip net.IP) (uint64, uint64) {
 }
 
 // Implementation of Section 1.2 of https://docs.google.com/document/d/1x9JsZ7iTj44Ta06IHdkwpv5Q2u4U2QGLWnUeN2Zf5ts/edit?usp=sharing
-func (b *EbpfBackend) genFlowTag(experimentId, activityId uint32) uint32 {
+func (b *MarkerBackend) genFlowTag(experimentId, activityId uint32) uint32 {
 	// We'll slice this number up to get our needed 5 random bits
 	rNum := b.rGen.Uint32()
 

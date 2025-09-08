@@ -1,4 +1,4 @@
-# eBPF backend
+# Marker backend
 This backend will set the IPv6 flow label in response to *flow events*. This implies this backend is only applicable for
 IPv6-based traffic flows which, given the WLCG's prospects, should be a reality sooner rather than later in the context
 of HEP. The backed is implemented as an eBPF program adhering to the CO:RE principles so that it's portable even across
@@ -26,13 +26,14 @@ options. The following replicates the default configuration:
 ```json
 {
     "backends": {
-        "ebpf": {
+        "marker": {
             "targetInterfaces": ["lo"],
             "discoverInterfaces": false,
             "removeQdisc": true,
             "programPath": "",
-            "markingStrategy": "flowLabel",
-            "debugMode": true
+            "markingStrategy": "label",
+            "debugMode": true,
+            "matchAll": false
         }
     }
 }

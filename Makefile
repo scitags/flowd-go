@@ -60,7 +60,7 @@ TRASH   = $(BIN_DIR)/* rpms/*.gz rpms/*.rpm
 # Default compilation flags.
 # The `-ldflags` option lets us define global variables at compile time!
 # Check https://stackoverflow.com/questions/11354518/application-auto-build-versioning
-CFLAGS := -tags ebpf -ldflags "-X main.builtCommit=$(COMMIT) -X main.baseVersion=$(VERSION)"
+CFLAGS := -ldflags "-X main.builtCommit=$(COMMIT) -X main.baseVersion=$(VERSION)"
 
 # Disable VCS stamping when building the RPMs: the .git directory won't be there!
 ifdef BUILDING_RPM
@@ -72,7 +72,7 @@ OS := $(shell uname)
 
 # Path to the different directories containing eBPF sources needed by flowd-go. Make will be
 # invoked recursively there!
-EBPF_BACKEND_PROGS_PATH := backends/ebpf/progs
+EBPF_BACKEND_PROGS_PATH := backends/marker/progs
 EBPF_ENRICHMENT_PROGS_PATH := enrichment/skops/progs
 
 # Prevent natively-compiled binaries from enabling CGO by default. Otherwise, the
@@ -104,6 +104,8 @@ help:
 	@echo "                    with DEBUG=yes to include debugging information"
 	@echo "                    on the eBPF program. To do that you can simply"
 	@echo "                    invoke make with 'make DEBUG=yes'."
+	@echo "     build-no-ebpf: build the binary with no eBPF support. This is especially"
+	@echo "                    useful for automated compilation checks and portability."
 	@echo ""
 	@echo "           rpm-dbg: show the value of variables leveraged when building"
 	@echo "                    the RPMs."
@@ -152,6 +154,9 @@ help:
 build: $(SOURCES) ebpf-progs
 	@mkdir -p bin
 	@echo "TARGET_ARCH: $(TARGET_ARCH)"
+	$(ENV_FLAGS) $(GOC) build $(CFLAGS) -tags ebpf -o $(BIN_DIR)/$(BIN_NAME) $(MAIN_PACKAGE)
+
+build-no-ebpf: $(SOURCES) ebpf-progs
 	$(ENV_FLAGS) $(GOC) build $(CFLAGS) -o $(BIN_DIR)/$(BIN_NAME) $(MAIN_PACKAGE)
 
 # We'll only compile the eBPF program if we're on Linux

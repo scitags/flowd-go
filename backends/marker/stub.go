@@ -1,6 +1,6 @@
-//go:build !linux
+//go:build !linux || !ebpf
 
-package ebpf
+package marker
 
 import (
 	glowdTypes "github.com/scitags/flowd-go/types"
@@ -18,26 +18,32 @@ const (
 	MAP_NAME  string = "flowLabels"
 )
 
-type EbpfBackend struct {
-	MarkingStrategy MarkingStrategy
+var Defaults = map[string]interface{}{}
+
+// TODO: consider a shared definition
+type MarkerBackend struct {
+	TargetInterfaces   []string
+	DiscoverInterfaces bool
+	RemoveQdisc        bool
+	ProgramPath        string
+	MarkingStrategy    string
+	DebugMode          bool
+	MatchAll           bool
 }
 
-type EbpfBackendConf struct {
-}
-
-func (b *EbpfBackend) String() string {
+func (b *MarkerBackend) String() string {
 	return "eBPF stub"
 }
 
 // Just implement the glowd.Backend interface
-func (b *EbpfBackend) Init() error {
+func (b *MarkerBackend) Init() error {
 	return nil
 }
 
-func (b *EbpfBackend) Run(<-chan struct{}, <-chan glowdTypes.FlowID) {
+func (b *MarkerBackend) Run(<-chan struct{}, <-chan glowdTypes.FlowID) {
 }
 
-func (b *EbpfBackend) Cleanup() error {
+func (b *MarkerBackend) Cleanup() error {
 	return nil
 }
 

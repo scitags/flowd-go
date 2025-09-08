@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	glowd "github.com/scitags/flowd-go"
-	"github.com/scitags/flowd-go/backends/ebpf"
+	"github.com/scitags/flowd-go/backends/marker"
 	"github.com/scitags/flowd-go/plugins/perfsonar"
 	glowdTypes "github.com/scitags/flowd-go/types"
 )
@@ -36,14 +36,14 @@ func pluginBackendDependencies(plugins []glowdTypes.Plugin, backends []glowdType
 		switch plugin.(type) {
 		case *perfsonar.PerfsonarPlugin:
 			for _, backend := range backends {
-				ebpfBackend, ok := backend.(*ebpf.EbpfBackend)
+				markerBackend, ok := backend.(*marker.MarkerBackend)
 				if !ok {
 					continue
 				}
 				slog.Warn("overriding marking strategy for the eBPF backend",
-					"previous", ebpfBackend.MarkingStrategy, "new", ebpf.Label, "matchAll", true)
-				ebpfBackend.MarkingStrategy = string(ebpf.Label)
-				ebpfBackend.MatchAll = true
+					"previous", markerBackend.MarkingStrategy, "new", marker.Label, "matchAll", true)
+				markerBackend.MarkingStrategy = string(marker.Label)
+				markerBackend.MatchAll = true
 			}
 		// Do nothing on default, just be exhaustive :P
 		default:
@@ -92,7 +92,7 @@ func logReplacements(groups []string, a slog.Attr) slog.Attr {
 
 	// Format the flow hashes
 	if a.Key == glowd.FlowHashKey {
-		flowHash, ok := a.Value.Any().(ebpf.FlowFourTuple)
+		flowHash, ok := a.Value.Any().(marker.FlowFourTuple)
 		if ok {
 			return slog.Attr{Key: a.Key, Value: slog.StringValue(
 				fmt.Sprintf("%s(%#x|%#x);%d;%d", net.IP([]byte{

@@ -1,5 +1,5 @@
 ---
-name: Check stuff builds (without cgo)
+name: Check stuff builds (without eBPF support)
 
 on:
   push:
@@ -21,4 +21,4 @@ jobs:
     needs: test
     uses: ./.github/workflows/build.yml
     with:
-      cgo: false
+      ebpf: false

@@ -70,9 +70,9 @@ var (
 		},
 	}
 
-	ebpfCmd = &cobra.Command{
-		Use:   "ebpf",
-		Short: "Handle several eBPF-related thingies.",
+	markerCmd = &cobra.Command{
+		Use:   "marker",
+		Short: "Handle several marker (i.e. eBPF) thingies.",
 	}
 
 	runCmd = &cobra.Command{
@@ -189,13 +189,13 @@ func init() {
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 
 	// Add sub2-commands
-	ebpfCmd.AddCommand(subcmd.EbpfClean)
+	markerCmd.AddCommand(subcmd.MarkerClean)
 
 	// Add the different sub-commands
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(confCmd)
 	rootCmd.AddCommand(runCmd)
-	rootCmd.AddCommand(ebpfCmd)
+	rootCmd.AddCommand(markerCmd)
 }
 
 func main() {

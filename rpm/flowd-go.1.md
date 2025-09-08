@@ -9,7 +9,7 @@ flowd-go - SciTags Flowd-go Daemon
 
 # DESCRIPTION
 The flowd-go daemon will listen for flow events through its various plugins and exert the actions as defined in its several
-backends. For instance, if a new flow is defined the eBPF backend will modify the IPv6 flow label of datagrams until that
+backends. For instance, if a new flow is defined the marker backend will modify the IPv6 flow label of datagrams until that
 same flow is stopped.
 
 In the context of flowd-go a *flow* is usually represented as a 5-tuple including the source and destination IPv{4,6} addresses and
@@ -61,11 +61,12 @@ The implementation can be found at https://github.com/scitags/flowd-go.
 
 :   Run the flowd-go daemon.
 
-`ebpf`
+`marker`
 
-:   A command hosing several eBPF-related subcommands.
+:   A command hosing several marker-related subcommands. These allow for handling details about the
+    underlying eBPF machinery.
 
-## eBPF SUBCOMMANDS
+## Marker SUBCOMMANDS
 `clean`
 
 :   Clean up the backing eBPF infrastructure including qdisc, hooks and programs. This is particularly useful
@@ -119,7 +120,7 @@ relay. Be sure to check the documentation on the firelfy backend for more inform
 
 ## perfsonar
 The **perfSONAR** plugin will simply mark **all outgoing traffic** with the provided activity and experiment IDs. This plugin will override the
-chosen eBPF marking strategy if it's not set to `"flowLabelMatchAll"` and emit a warning message stating the fact.
+chosen marking strategy if it's not set to `"label"` and the `matchAll` option is set to false and emit a warning message stating the fact.
 
 - **activityId [int] {0}**: The activity ID to leverage for marking traffic.
 
@@ -130,10 +131,10 @@ This section lists the configuration options available for each of the provided 
 refer to the documentation accompanying the implementation, which can be found on the URL provided in the DESCRIPTION. The
 setting's value type is enclosed in brackets (`[]`) and its default value is enclosed in braces (`{}`).
 
-## ebpf
-The **eBPF** plugin will mark IPv6 datagrams by setting the value of the *flow label* in its header. This plugin relies on an eBPF program
+## marker
+The **marker** plugin will mark IPv6 datagrams by setting the value of the *flow label* in its header. This plugin relies on an eBPF program
 hooked on a *clsact qdisc* which only deals with egress datagrams. The loading and communication with the eBPF program is managed with
-`libbpf`. There are many more (interesting) details in the backend's documentation.
+`cilium`. There are many more (interesting) details in the backend's documentation.
 
 - **targetInterfaces [array of string] {["lo"]}**: The interfaces to hook the eBPF program on. These interfaces should normally include
   the outbound interface of the machine (i.e. the one pointed to by the default route as given by `ip-route(8)`). The provided interface
@@ -153,12 +154,6 @@ hooked on a *clsact qdisc* which only deals with egress datagrams. The loading a
 
   Where `targetInterface` is the one configured with the previous option.
 
-- **forceHookRemoval [bool] {true}**: The TC hook we attach the eBPF program to might exist before flowd-go starts up, especially if flowd-go
-  terminated abruptly last time it ran. This setting controls whether this hook should be removed regardless of whether flowd-go created it
-  or not. In cases where other processes running on the system are leveraging eBPF this setting could cause an exiting flowd-go to remove the
-  TC hooks from under them if they are attached to the same interface. In these (hopefully rare) cases this setting should be set to `false`
-  so that flowd-go doesn't conflict with any other program's backing eBPF infrastructure.
-
 - **programPath [string] {""}**: The path to an eBPF program to load instead of the one embedded into flowd-go. This program should have been compiled
   in a particular way as the loading into the kernel won't work otherwise. Please refer to the eBPF documentation bundled with the implementation
   to take a look at how the embedded program is compiled.
@@ -166,10 +161,14 @@ hooked on a *clsact qdisc* which only deals with egress datagrams. The loading a
 - **markingStrategy [string] {"flowLabel"}**: The marking strategy to leverage on the eBPF program. This option must be one of the following if
   configured, otherwise flowd-go will refuse to start. Available marking strategies are:
 
-    - `"flowLabel"`: The eBPF program embeds the flow information in the IPv6 header's *Flow Label* field as defined in SciTags' technical specification.
+    - `"label"`: The eBPF program embeds the flow information in the IPv6 header's *Flow Label* field as defined in SciTags' technical specification.
     - `"hopByHop"`: The eBPF programs adds a *Hop-by-Hop Options* extension header encoding the flow information.
     - `"destination"`: The eBPF program adds a *Destination Options* extension header encoding the flow information.
-    - `"hopByHopAndDestination"`: The eBPF programs adds a *Hop-by-Hop Options* and a *Destination Options* extension header encoding the flow information.
+    - `"hopByHopDestination"`: The eBPF programs adds a *Hop-by-Hop Options* and a *Destination Options* extension header encoding the flow information.
+
+- **matchAll [bool] {false}**: The eBPF program will only mark datagrams belonging to a given flow as defined by the source and destination IPv6 and port.
+  this option allows for the removal of these checks within the eBPF program, hence enabling marking on every outgoing datagram. Bear in mind the mark
+  will be the same for **every datagram**. This mode is deemed useful when working together with perfSONAR instances.
 
 - **debugMode [bool] {false}**: Whether to load an eBPF program compiled with debug support. This option **should be false on production** environments.
   The many calls to `bpf_printk` preset if compiled with debugging support can have an effect on performance. You have been warned!
@@ -214,13 +213,13 @@ valid configurations:
     # Apply the default settings to everything. No plugins or backends will be instantiated though...
     {}
 
-    # Use default settings for everything, but do instantiate an api plugin and the ebpf and firefly backends
+    # Use default settings for everything, but do instantiate an api plugin and the marker and firefly backends
     {
         "plugins": {
             "api: {}
         },
         "backends": {
-            "ebpf": {},
+            "marker": {},
             "firefly": {}
         }
     }
