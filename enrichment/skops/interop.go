@@ -1,3 +1,5 @@
+//go:build linux && ebpf
+
 package skops
 
 import (

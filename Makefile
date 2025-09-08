@@ -156,7 +156,7 @@ build: $(SOURCES) ebpf-progs
 	@echo "TARGET_ARCH: $(TARGET_ARCH)"
 	$(ENV_FLAGS) $(GOC) build $(CFLAGS) -tags ebpf -o $(BIN_DIR)/$(BIN_NAME) $(MAIN_PACKAGE)
 
-build-no-ebpf: $(SOURCES) ebpf-progs
+build-no-ebpf: $(SOURCES)
 	$(ENV_FLAGS) $(GOC) build $(CFLAGS) -o $(BIN_DIR)/$(BIN_NAME) $(MAIN_PACKAGE)
 
 # We'll only compile the eBPF program if we're on Linux
