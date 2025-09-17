@@ -1,14 +1,16 @@
 package fireflyb
 
 import (
+	"errors"
 	"fmt"
-	"hash/maphash"
 	"log/slog"
 	"net"
 	"time"
 
+	"github.com/scitags/flowd-go/enrichment"
+	"github.com/scitags/flowd-go/enrichment/netlink"
 	"github.com/scitags/flowd-go/enrichment/skops"
-	glowdTypes "github.com/scitags/flowd-go/types"
+	"github.com/scitags/flowd-go/types"
 )
 
 var (
@@ -46,16 +48,9 @@ type FireflyBackend struct {
 
 	EnrichmentVerbosity string `json:"enrichmentVerbosity"`
 
-	ebpfEnricher *skops.EbpfEnricher
-
-	tcpInfoChan chan skops.TcpInfo
-
 	collectorConn net.Conn
 
-	hashGen maphash.Hash
-
-	ongoingNetlinkConnections *connectionCache
-	ongoingEbpfConnections    *connectionCache
+	enrichers map[types.Flavour]enrichment.Enricher
 }
 
 func (b *FireflyBackend) String() string {
@@ -66,14 +61,6 @@ func (b *FireflyBackend) String() string {
 func (b *FireflyBackend) Init() error {
 	slog.Debug("initialising the firefly backend")
 
-	slog.Debug("initialising the ongoing connection maps")
-	b.ongoingNetlinkConnections = NewConnectionCache(100)
-	// b.ongoingEbpfConnections = NewEbpfConnectionCache(100)
-	b.ongoingEbpfConnections = NewConnectionCache(100)
-
-	slog.Debug("initialising the hash generator")
-	b.hashGen = maphash.Hash{}
-
 	if b.SendToCollector {
 		conn, err := net.Dial("udp", parseCollectorAddress(b.CollectorAddress, b.CollectorPort))
 		if err != nil {
@@ -83,26 +70,46 @@ func (b *FireflyBackend) Init() error {
 		b.collectorConn = conn
 	}
 
-	if b.PeriodicFireflies || b.AddBPFContext {
-		slog.Debug("initialising the eBPF enricher")
-		enricher, err := skops.NewEnricher(uint64(b.Period) * glowdTypes.NS_PER_MS)
-		if err != nil {
-			slog.Warn("couldn't get an eBPF enricher, running without it", "err", err)
-		} else {
-			b.ebpfEnricher = enricher
+	if b.PeriodicFireflies {
+		slog.Debug("setting up enrichers")
+		b.enrichers = make(map[types.Flavour]enrichment.Enricher)
+
+		if b.AddBPFContext {
+			slog.Debug("initialising the eBPF enricher")
+
+			enricher, err := skops.NewEnricher(uint64(b.Period) * skops.NS_PER_MS)
+			if err != nil {
+				return fmt.Errorf("couldn't get an eBPF enricher: %w", err)
+			}
+
+			b.enrichers[types.Ebpf] = enricher
+		}
+
+		if b.AddNetlinkContext {
+			slog.Debug("initiallising the netlink enricher")
+
+			conf := netlink.DefaultConfig
+			conf.Period = b.Period
+			enricher, err := netlink.NewEnricher(&conf)
+			if err != nil {
+				return fmt.Errorf("couldn't get a netlink enricher: %w", err)
+			}
+
+			b.enrichers[types.Netlink] = enricher
 		}
 	}
 
 	return nil
 }
 
-func (b *FireflyBackend) Run(done <-chan struct{}, inChan <-chan glowdTypes.FlowID) {
+func (b *FireflyBackend) Run(done <-chan struct{}, inChan <-chan types.FlowID) {
 	slog.Debug("running the firefly backend")
 
-	if b.PeriodicFireflies && b.ebpfEnricher != nil {
-		b.tcpInfoChan = make(chan skops.TcpInfo)
-		go b.ebpfEnricher.Run(done, b.tcpInfoChan)
-		go b.dispatchTCPStats()
+	doneChans := make([]chan struct{}, len(b.enrichers))
+	for _, v := range b.enrichers {
+		doneChan := make(chan struct{})
+		go v.Run(doneChan)
+		doneChans = append(doneChans, doneChan)
 	}
 
 	for {
@@ -112,56 +119,26 @@ func (b *FireflyBackend) Run(done <-chan struct{}, inChan <-chan glowdTypes.Flow
 				slog.Warn("somebody closed the input channel!")
 				return
 			}
-			slog.Debug("got a flowID")
-
-			if b.PeriodicFireflies && b.ebpfEnricher != nil {
-				if flowID.State == glowdTypes.START {
-					if err := b.ebpfEnricher.WatchFlow(skops.FlowSpec{
-						DstPort: uint32(flowID.Dst.Port),
-						SrcPort: uint32(flowID.Src.Port),
-					}); err != nil {
-						slog.Error("error inserting value into flow map: %w, stats will not be collected", err)
-					}
-				} else {
-					slog.Warn("wrong state for the flow ID", "state", flowID.State)
-				}
-			}
+			slog.Debug("got a flowID", "flowID.Src", flowID.Src, "flowID.Dst", flowID.Dst)
 
 			// Insert the times before doing anything else
 			switch flowID.State {
-			case glowdTypes.START:
+			case types.START:
 				flowID.StartTs = time.Now().UTC()
-			case glowdTypes.END:
+				b.PeriodicFFs(flowID)
+
+			case types.END:
 				flowID.EndTs = time.Now().UTC()
 
-				auxFlowID := flowID
-				// Zero out the addresses to not take them into account when hashing
-				auxFlowID.Src.IP = net.IP{}
-				auxFlowID.Dst.IP = net.IP{}
-
-				flowHash := b.hashFlowID(auxFlowID)
-				entry, ok := b.ongoingEbpfConnections.Get(flowHash)
-				if !ok {
-					slog.Warn("non-existent cache entry", "hash", flowHash)
-					break
-				}
-				slog.Debug("adding start ts", "startTs", entry.startTs)
-
-				flowID.StartTs = entry.startTs
+				startTs := b.RemoveFlow(flowID)
+				slog.Debug("adding start ts", "startTs", startTs)
+				flowID.StartTs = startTs
 			default:
 				slog.Warn("received flowID with wrong state", "state", flowID.State)
 			}
 
-			if b.PeriodicFireflies {
-				if b.AddNetlinkContext {
-					b.enrichNetlink(flowID)
-				}
-				if b.AddBPFContext {
-					b.enrichEbpf(flowID)
-				}
-			}
-
-			ff := glowdTypes.NewFirefly(flowID, nil, nil)
+			// Send START and END FFs
+			ff := types.NewFirefly(flowID, nil, nil)
 			payload, err := ff.Payload(b.PrependSyslog)
 			if err != nil {
 				slog.Error("error building the firefly", "err", err)
@@ -182,16 +159,18 @@ func (b *FireflyBackend) Run(done <-chan struct{}, inChan <-chan glowdTypes.Flow
 func (b *FireflyBackend) Cleanup() error {
 	slog.Debug("cleaning up the firefly backend")
 
+	var err error = nil
 	if b.SendToCollector {
-		if err := b.collectorConn.Close(); err != nil {
-			return fmt.Errorf("error closing UDP socket: %w", err)
+		if e := b.collectorConn.Close(); e != nil {
+			err = fmt.Errorf("error closing UDP socket: %w", e)
 		}
 	}
 
-	if b.tcpInfoChan != nil {
-		slog.Debug("cleaning closing the TCP Info eBPF channel")
-		close(b.tcpInfoChan)
+	for i, v := range b.enrichers {
+		if e := v.Cleanup(); e != nil {
+			err = errors.Join(err, fmt.Errorf("error closing enricher %d: %w", i, e))
+		}
 	}
 
-	return nil
+	return err
 }
