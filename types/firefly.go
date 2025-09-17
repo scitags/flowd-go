@@ -69,11 +69,11 @@ type Firefly struct {
 		ActivityID   uint32 `json:"activity-id"`
 		Application  string `json:"application"`
 	} `json:"context"`
-	Netlink     *Enrichment `json:"netlink,omitempty"`
-	EbpfTcpInfo *Enrichment `json:"ebpfTcpInfo,omitempty"`
+	Netlink     *FlowInfo `json:"netlink,omitempty"`
+	EbpfTcpInfo *FlowInfo `json:"ebpfTcpInfo,omitempty"`
 }
 
-func NewFirefly(flowID FlowID, nlInfo, ebpfInfo *Enrichment) Firefly {
+func NewFirefly(flowID FlowID, nlInfo, ebpfInfo *FlowInfo) Firefly {
 	ff := Firefly{}
 
 	ff.Version = FIREFLY_VERSION

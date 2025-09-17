@@ -19,7 +19,7 @@ type FlowID struct {
 	StartTs     time.Time
 	EndTs       time.Time
 	CurrentTs   time.Time
-	Enrichment  Enrichment
+	Info        FlowInfo
 	Application string
 }
 

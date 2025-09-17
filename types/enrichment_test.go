@@ -6,7 +6,7 @@ import (
 )
 
 func TestEnrichmentVerbosityControl(t *testing.T) {
-	e := &Enrichment{
+	e := &FlowInfo{
 		TCPInfo: &TCPInfo{
 			Pmtu:  1500,
 			State: 5,
@@ -38,7 +38,7 @@ func TestEnrichmentVerbosityControl(t *testing.T) {
 }
 
 func TestEnrichmentCompatibility(t *testing.T) {
-	e := &Enrichment{
+	e := &FlowInfo{
 		Verbosity: "compatible",
 		TCPInfo: &TCPInfo{
 			Pmtu:  1500,
