@@ -7,9 +7,9 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"io"
 
-	glowdTypes "github.com/scitags/flowd-go/types"
+	"github.com/josharian/native"
+	"github.com/scitags/flowd-go/types"
 )
 
 type TcpState uint8
@@ -79,28 +79,28 @@ const (
 
 func (a CaAlgorithm) String() string {
 	str, ok := map[CaAlgorithm]string{
-		UNK:        "UNK",
-		BBR:        "BBR",
-		BIC:        "BIC",
-		CDG:        "CDG",
-		RENO:       "RENO",
-		CUBIC:      "CUBIC",
-		DCTCP:      "DCTCP",
-		DCTCP_RENO: "DCTCP_RENO",
-		HIGHSPEED:  "HIGHSPEED",
-		HTCP:       "HTCP",
-		HYBLA:      "HYBLA",
-		ILLINOIS:   "ILLINOIS",
-		LP:         "LP",
-		NV:         "NV",
-		SCALABLE:   "SCALABLE",
-		VEGAS:      "VEGAS",
-		VENO:       "VENO",
-		WESTWOOD:   "WESTWOOD",
-		YEAH:       "YEAH",
+		UNK:        "unk",
+		BBR:        "bbr",
+		BIC:        "bic",
+		CDG:        "cdg",
+		RENO:       "reno",
+		CUBIC:      "cubic",
+		DCTCP:      "dctcp",
+		DCTCP_RENO: "dctcp_reno",
+		HIGHSPEED:  "highspeed",
+		HTCP:       "htcp",
+		HYBLA:      "hybla",
+		ILLINOIS:   "illinois",
+		LP:         "lp",
+		NV:         "nv",
+		SCALABLE:   "scalable",
+		VEGAS:      "vegas",
+		VENO:       "veno",
+		WESTWOOD:   "westwood",
+		YEAH:       "yeah",
 	}[a]
 	if !ok {
-		return fmt.Sprintf("UNKNOWN (%d)", a)
+		return fmt.Sprintf("unknown (%d)", a)
 	}
 	return str
 }
@@ -142,8 +142,8 @@ type TcpInfo struct {
 	SrcPort uint16
 	DstPort uint16
 
-	State                  TcpState
-	NewState               TcpState
+	NewState               uint32
+	State                  uint8
 	Retransmits            uint8
 	Probes                 uint8
 	Backoff                uint8
@@ -224,72 +224,6 @@ type TcpInfo struct {
 	CaPriv  [13]uint64
 }
 
-func (i TcpInfo) ToTCPInfoResp() *glowdTypes.Enrichment {
-	return &glowdTypes.Enrichment{
-		TCPInfo: &glowdTypes.TCPInfo{
-			State:                     uint8(i.State),
-			Ca_state:                  uint8(i.CaState),
-			Retransmits:               i.Retransmits,
-			Probes:                    i.Probes,
-			Backoff:                   i.Backoff,
-			Options:                   i.Options,
-			Snd_wscale:                i.SndWscale,
-			Rcv_wscale:                i.RcvWscale,
-			Delivery_rate_app_limited: i.DeliveryRateAppLimited,
-			Fastopen_client_fail:      uint8(i.FastopenClientFail),
-			Rto:                       i.Rto,
-			Ato:                       i.Ato,
-			Snd_mss:                   i.SndMss,
-			Rcv_mss:                   i.RcvMss,
-			Unacked:                   i.Unacked,
-			Lost:                      i.Lost,
-			Retrans:                   i.Retrans,
-			Fackets:                   i.Fackets,
-
-			Pmtu:            i.Pmtu,
-			Rcv_ssthresh:    i.RcvSsthresh,
-			Rtt:             i.Rtt,
-			Rttvar:          i.Rttvar,
-			Snd_ssthresh:    i.SndSsthresh,
-			Snd_cwnd:        i.SndCwnd,
-			Advmss:          i.Advmss,
-			Reordering:      i.Reordering,
-			Rcv_rtt:         i.RcvRtt,
-			Rcv_space:       i.RcvSpace,
-			Total_retrans:   uint32(i.TotalRetrans),
-			Pacing_rate:     i.PacingRate,
-			Max_pacing_rate: i.Max_pacingRate,
-
-			Bytes_acked:    i.BytesAcked,
-			Bytes_received: i.BytesReceived,
-			Segs_out:       i.SegsOut,
-			Segs_in:        i.SegsIn,
-			Notsent_bytes:  i.NotsentBytes,
-			Min_rtt:        i.MinRtt,
-			Data_segs_in:   i.DataSegsIn,
-			Data_segs_out:  i.DataSegsOut,
-			Delivery_rate:  i.DeliveryRate,
-
-			Busy_time:      i.BusyTime,
-			Rwnd_limited:   i.RwndLimited,
-			Sndbuf_limited: i.SndbufLimited,
-
-			Delivered:    i.Delivered,
-			Delivered_ce: i.DeliveredCe,
-
-			Bytes_sent:    i.BytesSent,
-			Bytes_retrans: i.BytesRetrans,
-			Dsack_dups:    i.DsackDups,
-			Reord_seen:    i.ReordSeen,
-			Rcv_ooopack:   i.RcvOoopack,
-			Snd_wnd:       i.SndWnd,
-		},
-		Cong: &glowdTypes.Cong{
-			Algorithm: i.CaAlg.String(),
-		},
-	}
-}
-
 func (i TcpInfo) String() string {
 	enc, err := json.MarshalIndent(i, "", "    ")
 	if err != nil {
@@ -298,366 +232,95 @@ func (i TcpInfo) String() string {
 	return string(enc)
 }
 
-// func (i TcpInfo) MarshalBinary() ([]byte, error) {
-// 	enc := append([]byte{}, f.Src.IP...)
-// 	enc = append(enc, f.Dst.IP...)
-// 	binary.LittleEndian.AppendUint16(enc, f.Src.Port)
-// 	binary.LittleEndian.AppendUint16(enc, f.Dst.Port)
-// 	return enc, nil
-// }
-
-func checkDeserErr(err error) error {
-	if err == io.EOF {
-		return nil
+func (i *TcpInfo) UnmarshalBinary(data []byte) error {
+	b := bytes.NewReader(data)
+	if b.Len() != TcpInfoSize {
+		return fmt.Errorf("available data (%d) != %d", b.Len(), TcpInfoSize)
 	}
-	return err
+	return binary.Read(b, native.Endian, i)
 }
 
-func (i *TcpInfo) UnmarshalBinary(data []byte) error {
-	buff := bytes.NewBuffer(data)
-	if buff.Len() != TcpInfoSize {
-		return fmt.Errorf("available data (%d, %d) != %d", buff.Len(), buff.Available(), TcpInfoSize)
-	}
+func tcpInfoToFlowInfo(ti TcpInfo) types.FlowInfo {
+	return types.FlowInfo{
+		Socket: &types.Socket{
+			ID: types.SockID{
+				SPort: ti.SrcPort,
+				DPort: ti.DstPort,
+			},
+		},
+		TCPInfo: &types.TCPInfo{
+			State:                     ti.State,
+			Ca_state:                  uint8(ti.CaState),
+			Retransmits:               ti.Retransmits,
+			Probes:                    ti.Probes,
+			Backoff:                   ti.Backoff,
+			Options:                   ti.Options,
+			Snd_wscale:                ti.SndWscale,
+			Rcv_wscale:                ti.RcvWscale,
+			Delivery_rate_app_limited: ti.DeliveryRateAppLimited,
+			Fastopen_client_fail:      uint8(ti.FastopenClientFail),
 
-	next := buff.Next(2)
-	if len(next) == 0 {
-		return nil
-	}
-	i.SrcPort = binary.NativeEndian.Uint16(next)
+			Rto:     ti.Rto,
+			Ato:     ti.Ato,
+			Snd_mss: ti.SndMss,
+			Rcv_mss: ti.RcvMss,
 
-	next = buff.Next(2)
-	if len(next) == 0 {
-		return nil
-	}
-	i.DstPort = binary.NativeEndian.Uint16(next)
+			Unacked: ti.Unacked,
+			Sacked:  ti.Sacked,
+			Lost:    ti.Lost,
+			Retrans: ti.Retrans,
+			Fackets: ti.Fackets,
 
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.NewState = TcpState(binary.NativeEndian.Uint32(next))
+			Last_data_sent: ti.LastDataSent,
+			Last_ack_sent:  ti.LastAckSent,
+			Last_data_recv: ti.LastDataRecv,
+			Last_ack_recv:  ti.LastAckRecv,
 
-	stateRaw, err := buff.ReadByte()
-	if err != nil {
-		return checkDeserErr(err)
-	}
-	i.State = TcpState(stateRaw)
+			Pmtu:         ti.Pmtu,
+			Rcv_ssthresh: ti.RcvSsthresh,
+			Rtt:          ti.Rtt,
+			Rttvar:       ti.Rttvar,
+			Snd_ssthresh: ti.SndSsthresh,
+			Snd_cwnd:     ti.SndCwnd,
+			Advmss:       ti.Advmss,
+			Reordering:   ti.Reordering,
 
-	i.Retransmits, err = buff.ReadByte()
-	if err != nil {
-		return checkDeserErr(err)
-	}
-	i.Probes, err = buff.ReadByte()
-	if err != nil {
-		return checkDeserErr(err)
-	}
-	i.Backoff, err = buff.ReadByte()
-	if err != nil {
-		return checkDeserErr(err)
-	}
-	i.Options, err = buff.ReadByte()
-	if err != nil {
-		return checkDeserErr(err)
-	}
-	i.SndWscale, err = buff.ReadByte()
-	if err != nil {
-		return checkDeserErr(err)
-	}
-	i.RcvWscale, err = buff.ReadByte()
-	if err != nil {
-		return checkDeserErr(err)
-	}
-	i.DeliveryRateAppLimited, err = buff.ReadByte()
-	if err != nil {
-		return checkDeserErr(err)
-	}
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.FastopenClientFail = binary.NativeEndian.Uint32(next)
+			Rcv_rtt:   ti.RcvRtt,
+			Rcv_space: ti.RcvSpace,
 
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.Rto = binary.NativeEndian.Uint32(next)
+			Total_retrans: uint32(ti.TotalRetrans),
 
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.Ato = binary.NativeEndian.Uint32(next)
+			Pacing_rate:     ti.PacingRate,
+			Max_pacing_rate: ti.Max_pacingRate,
+			Bytes_acked:     ti.BytesAcked,
+			Bytes_received:  ti.BytesReceived,
+			Segs_out:        ti.SegsOut,
+			Segs_in:         ti.SegsIn,
 
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.SndMss = binary.NativeEndian.Uint32(next)
+			Notsent_bytes: ti.NotsentBytes,
+			Min_rtt:       ti.MinRtt,
+			Data_segs_in:  ti.DataSegsIn,
+			Data_segs_out: ti.DataSegsOut,
 
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.RcvMss = binary.NativeEndian.Uint32(next)
+			Delivery_rate: ti.DeliveryRate,
 
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.Unacked = binary.NativeEndian.Uint32(next)
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.Sacked = binary.NativeEndian.Uint32(next)
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.Lost = binary.NativeEndian.Uint32(next)
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.Retrans = binary.NativeEndian.Uint32(next)
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.Fackets = binary.NativeEndian.Uint32(next)
+			Busy_time:      ti.BusyTime,
+			Rwnd_limited:   ti.RwndLimited,
+			Sndbuf_limited: ti.SndbufLimited,
 
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.LastDataSent = binary.NativeEndian.Uint32(next)
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.LastAckSent = binary.NativeEndian.Uint32(next)
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.LastDataRecv = binary.NativeEndian.Uint32(next)
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.LastAckRecv = binary.NativeEndian.Uint32(next)
+			Delivered:    ti.Delivered,
+			Delivered_ce: ti.DeliveredCe,
 
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.Pmtu = binary.NativeEndian.Uint32(next)
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.RcvSsthresh = binary.NativeEndian.Uint32(next)
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.Rtt = binary.NativeEndian.Uint32(next)
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.Rttvar = binary.NativeEndian.Uint32(next)
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.SndSsthresh = binary.NativeEndian.Uint32(next)
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.SndCwnd = binary.NativeEndian.Uint32(next)
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.Advmss = binary.NativeEndian.Uint32(next)
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.Reordering = binary.NativeEndian.Uint32(next)
+			Bytes_sent:    ti.BytesSent,
+			Bytes_retrans: ti.BytesRetrans,
+			Dsack_dups:    ti.DsackDups,
+			Reord_seen:    ti.ReordSeen,
 
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
+			Rcv_ooopack: ti.RcvOoopack,
+			Snd_wnd:     ti.SndWnd,
+		},
+		Cong: &types.Cong{
+			Algorithm: ti.CaAlg.String(),
+		},
 	}
-	i.RcvRtt = binary.NativeEndian.Uint32(next)
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.RcvSpace = binary.NativeEndian.Uint32(next)
-
-	next = buff.Next(8)
-	if len(next) == 0 {
-		return nil
-	}
-	i.TotalRetrans = binary.NativeEndian.Uint64(next)
-	// fmt.Printf("offset @ PacingRate: %d\n", TcpInfoSize-buff.Len())
-
-	next = buff.Next(8)
-	if len(next) == 0 {
-		return nil
-	}
-	i.PacingRate = binary.NativeEndian.Uint64(next)
-	next = buff.Next(8)
-	if len(next) == 0 {
-		return nil
-	}
-	i.Max_pacingRate = binary.NativeEndian.Uint64(next)
-	next = buff.Next(8)
-	if len(next) == 0 {
-		return nil
-	}
-	i.BytesAcked = binary.NativeEndian.Uint64(next)
-	next = buff.Next(8)
-	if len(next) == 0 {
-		return nil
-	}
-	i.BytesReceived = binary.NativeEndian.Uint64(next)
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.SegsOut = binary.NativeEndian.Uint32(next)
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.SegsIn = binary.NativeEndian.Uint32(next)
-
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.NotsentBytes = binary.NativeEndian.Uint32(next)
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.MinRtt = binary.NativeEndian.Uint32(next)
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.DataSegsIn = binary.NativeEndian.Uint32(next)
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.DataSegsOut = binary.NativeEndian.Uint32(next)
-
-	next = buff.Next(8)
-	if len(next) == 0 {
-		return nil
-	}
-	i.DeliveryRate = binary.NativeEndian.Uint64(next)
-
-	next = buff.Next(8)
-	if len(next) == 0 {
-		return nil
-	}
-	i.BusyTime = binary.NativeEndian.Uint64(next)
-	next = buff.Next(8)
-	if len(next) == 0 {
-		return nil
-	}
-	i.RwndLimited = binary.NativeEndian.Uint64(next)
-	next = buff.Next(8)
-	if len(next) == 0 {
-		return nil
-	}
-	i.SndbufLimited = binary.NativeEndian.Uint64(next)
-
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.Delivered = binary.NativeEndian.Uint32(next)
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.DeliveredCe = binary.NativeEndian.Uint32(next)
-
-	next = buff.Next(8)
-	if len(next) == 0 {
-		return nil
-	}
-	i.BytesSent = binary.NativeEndian.Uint64(next)
-	next = buff.Next(8)
-	if len(next) == 0 {
-		return nil
-	}
-	i.BytesRetrans = binary.NativeEndian.Uint64(next)
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.DsackDups = binary.NativeEndian.Uint32(next)
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.ReordSeen = binary.NativeEndian.Uint32(next)
-
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.RcvOoopack = binary.NativeEndian.Uint32(next)
-
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.SndWnd = binary.NativeEndian.Uint32(next)
-
-	// fmt.Printf("offset: %d\n", TcpInfoSize-buff.Len())
-	next = buff.Next(2)
-	if len(next) == 0 {
-		return nil
-	}
-	i.CaAlg = CaAlgorithm(binary.NativeEndian.Uint16(next))
-	// fmt.Printf("offset: %d\n", TcpInfoSize-buff.Len())
-	next = buff.Next(2)
-	if len(next) == 0 {
-		return nil
-	}
-	i.CaState = CaState(binary.NativeEndian.Uint16(next))
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.CaKey = binary.NativeEndian.Uint32(next)
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	next = buff.Next(4)
-	if len(next) == 0 {
-		return nil
-	}
-	i.CaFlags = binary.NativeEndian.Uint32(next)
-	for j := 0; j < 13; j++ {
-		next = buff.Next(8)
-		if len(next) == 0 {
-			return nil
-		}
-		i.CaPriv[j] = binary.NativeEndian.Uint64(next)
-	}
-
-	return nil
 }

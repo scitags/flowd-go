@@ -1,23 +1,25 @@
-//go:build darwin || !ebpf
+//go:build !linux
 
 package skops
 
-type FlowSpec struct {
-	DstPort uint32
-	SrcPort uint32
-}
+import (
+	"time"
 
-type TcpInfo struct{}
+	"github.com/scitags/flowd-go/enrichment"
+	"github.com/scitags/flowd-go/types"
+)
 
-type FlowMap struct{}
-
-func (fm *FlowMap) Update(foo, fee interface{}) interface{} { return nil }
-
-type EbpfEnricher struct {
-	FlowMap FlowMap
-}
+type EbpfEnricher struct{}
 
 func NewEnricher(pollingInterval uint64) (*EbpfEnricher, error) { return nil, nil }
 
-func (e *EbpfEnricher) Run(done <-chan struct{}, outChan chan<- TcpInfo) {}
-func (e *EbpfEnricher) WatchFlow(flow FlowSpec) error                    { return nil }
+func (e *EbpfEnricher) String() string {
+	return "eBPF enricher stub"
+}
+
+func (e *EbpfEnricher) Run(done <-chan struct{}) {}
+func (e *EbpfEnricher) WatchFlow(flowID types.FlowID) (*enrichment.Poller, error) {
+	return nil, nil
+}
+func (e *EbpfEnricher) ForgetFlow(flowID types.FlowID) (time.Time, bool) { return time.Time{}, nil }
+func (e *EbpfEnricher) Cleanup() error                                   { return nil }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 
 	"github.com/containerd/cgroups"
 	"github.com/prometheus/procfs"
@@ -39,5 +40,7 @@ func GetCgroupInfo() (string, error) {
 		return "", fmt.Errorf("the process belongs to more than one cgroup: we can't handle it")
 	}
 
-	return cgroups[0].Path, nil
+	cgroupPath := strings.Split(cgroups[0].Path, "/")
+
+	return strings.Join(cgroupPath[:len(cgroupPath)-1], "/"), nil
 }

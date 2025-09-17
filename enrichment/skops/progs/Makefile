@@ -7,7 +7,7 @@ CFLAGS := -g -O2 -target bpf -D__TARGET_ARCH_x86_64 -I . -c -D FLOWD_DEBUG -D FL
 # The files to eliminate when cleaning up
 TRASH := *.o vmlinux.h .cache
 
-sk_ops.bpf.o: *.bpf.c vmlinux.h
+sk_ops.bpf.o: *.bpf.c *.bpf.h vmlinux.h
 	$(CC) $(CFLAGS) sk_ops.bpf.c -o $@
 
 # Generate the kernel headers
@@ -26,12 +26,12 @@ objdump: sk_ops.bpf.o
 .PHONY: load
 load: sk_ops.bpf.o
 	sudo bpftool prog load sk_ops.bpf.o /sys/fs/bpf/sk_ops
-	sudo bpftool cgroup attach /sys/fs/cgroup/user.slice/user-1000.slice/session-1152.scope sock_ops pinned /sys/fs/bpf/sk_ops
+	sudo bpftool cgroup attach /sys/fs/cgroup/user.slice/user-1000.slice/session-582.scope sock_ops pinned /sys/fs/bpf/sk_ops
 
 .PHONY: unload
 unload:
-	sudo bpftool cgroup detach /sys/fs/cgroup/user.slice/user-1000.slice/session-1152.scope sock_ops pinned /sys/fs/bpf/sk_ops
-	sudo rm -rf /sys/fs/bpf/sck_ops
+	sudo bpftool cgroup detach /sys/fs/cgroup/user.slice/user-1000.slice/session-582.scope sock_ops pinned /sys/fs/bpf/sk_ops
+	sudo rm -rf /sys/fs/bpf/sk_ops
 
 .PHONY: list
 list:

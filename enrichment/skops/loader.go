@@ -15,6 +15,17 @@ const PROG_NAME string = "connTracker"
 const RINGBUFF_NAME string = "tcpStats"
 const MAP_NAME string = "flowsToFollow"
 
+func setGlobalVariable(coll *ebpf.CollectionSpec, gvar string, val any) error {
+	v, ok := coll.Variables[gvar]
+	if !ok {
+		return fmt.Errorf("couldn't find %q variable", gvar)
+	}
+	slog.Debug("setting global variable", "gvar", gvar, "val", val)
+	v.Set(val)
+
+	return nil
+}
+
 // consider unifying this function with the one from the eBPF backend!
 func loadProg(rawProg []byte, pollingInterval uint64) (*ebpf.Collection, error) {
 	progSpec, err := ebpf.LoadCollectionSpecFromReader(bytes.NewReader(rawProg))
@@ -22,11 +33,11 @@ func loadProg(rawProg []byte, pollingInterval uint64) (*ebpf.Collection, error) 
 		return nil, fmt.Errorf("error parsing the eBPF program: %w", err)
 	}
 
-	// Set up the polling interval
-	if err := progSpec.RewriteConstants(map[string]interface{}{
-		"POLLING_INTERVAL_NS": pollingInterval,
-	}); err != nil {
-		return nil, fmt.Errorf("error rewriting the 'POLLING_INTERVAL_NS' constant: %w", err)
+	if err := setGlobalVariable(progSpec, "POLLING_INTERVAL_NS", pollingInterval); err != nil {
+		return nil, err
+	}
+	if err := setGlobalVariable(progSpec, "CONFIG_HZ", getConfigHz()); err != nil {
+		return nil, err
 	}
 
 	// Time to load the program and assorted resources!

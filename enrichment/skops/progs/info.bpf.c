@@ -9,13 +9,6 @@
  *   0: https://elixir.bootlin.com/linux/v5.14/source/kernel/time/time.c#L374
  */
 static __always_inline __u64 jiffies_to_msecs(__u64 j) {
-	/*
-	 * If we didn't manage to read the value of CONFIG_HZ from Kconfig
-	 * variables (i.e. it's a 0) assume HZ is 1000 which it'll probably
-	 * be anyway...
-	 */
-	if (!CONFIG_HZ)
-		return (MSEC_PER_SEC / DEFAULT_HZ) * j;
 	return (MSEC_PER_SEC / (__u32) CONFIG_HZ) * j;
 }
 
@@ -24,13 +17,6 @@ static __always_inline __u64 jiffies_to_msecs(__u64 j) {
  *   0: https://elixir.bootlin.com/linux/v5.14/source/kernel/time/time.c#L391
  */
  static __always_inline __u64 jiffies_to_usecs(__u64 j) {
-	/*
-	 * If we didn't manage to read the value of CONFIG_HZ from Kconfig
-	 * variables (i.e. it's a 0) assume HZ is 1000 which it'll probably
-	 * be anyway...
-	 */
-	if (!CONFIG_HZ)
-		return (USEC_PER_SEC / DEFAULT_HZ) * j;
 	return (USEC_PER_SEC / (__u32) CONFIG_HZ) * j;
 }
 
@@ -67,15 +53,11 @@ static __always_inline void tcp_get_info_chrono_stats(const struct tcp_sock *tp,
 	__u64 stats[__TCP_CHRONO_MAX], total = 0;
 	enum tcp_chrono i;
 
-	__u64 hz = DEFAULT_HZ;
-	if (CONFIG_HZ)
-		hz = CONFIG_HZ;
-
 	for (i = TCP_CHRONO_BUSY; i < __TCP_CHRONO_MAX; ++i) {
 		stats[i] = BPF_CORE_READ(tp, chrono_stat[i - 1]);
 		if (i == BPF_CORE_READ_BITFIELD_PROBED(tp, chrono_type))
 			stats[i] += bpf_jiffies64() - BPF_CORE_READ(tp, chrono_start);
-		stats[i] *= USEC_PER_SEC / hz;
+		stats[i] *= USEC_PER_SEC / CONFIG_HZ;
 		total += stats[i];
 	}
 

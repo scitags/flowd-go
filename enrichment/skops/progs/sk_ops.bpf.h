@@ -116,24 +116,16 @@ enum {
 #define FLOWD_TCPI_CA_PRIV_SIZE 13
 
 /*
- * The kernel's HZ value. Be sure to check [0] and [1] for more information on how
- * libbpf-enabled programs can access these kernel configuration settings. The use
- * of HZ is allowing us to convert kernel jiffies into meaningful (i.e. ms) times.
- * The __weak attribute allows for the loading of the eBPF program even if the value
- * of CONFIG_HZ cannot be determined. In that case, CONFIG_HZ would be set to 0,
- * something we handle in the function converting jiffies to ms. An example of how
- * to convert jiffies to time values can be seen on [2].
- *   0: https://nakryiko.com/posts/bpf-core-reference-guide/#kconfig-extern-variables
- *   1: https://www.man7.org/linux/man-pages/man5/proc_config.gz.5.html
- *   2: https://nakryiko.com/posts/bpf-portability-and-co-re/
+ * The kernel's HZ value. The use of HZ is allowing us to convert kernel jiffies into
+ * meaningful (i.e. ms) times. Libbpf supports the __weak attribute paired with
+ * __kconfig to read the current kernel's HZ value and to set this to a default value
+ * should the setting [0] not be available. This is not supported by cilium though,
+ * so we're just manually configuring the value before loading the program. An example
+ * of how to convert jiffies to time values can be seen on [1].
+ *   0: https://www.man7.org/linux/man-pages/man5/proc_config.gz.5.html
+ *   1: https://nakryiko.com/posts/bpf-portability-and-co-re/
  */
-extern int CONFIG_HZ __kconfig __weak;
-
-/*
- * In case we cannot read the value of he CONFIG_HZ Kconfig variable, we'll use a default
- * value of 1000, which will (very) likely be the configured value anyway...
- */
-#define DEFAULT_HZ 1000L
+const volatile unsigned long long CONFIG_HZ = 0;
 
 /*
  * How many ms (i.e. milliseconds) are there in a second? This constant has been
