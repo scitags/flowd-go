@@ -12,6 +12,8 @@ jobs:
   build-no-ebpf:
     name: "Build it without eBPF support!"
     runs-on: ubuntu-latest
+    env:
+      GOPRIVATE: 'github.com/scitags/*'
     steps:
       - uses: actions/checkout@v4
 
@@ -29,6 +31,8 @@ jobs:
   build-ebpf:
     name: "Build it with eBPF support!"
     runs-on: ubuntu-latest
+    env:
+      GOPRIVATE: 'github.com/scitags/*'
     container:
         image: ghcr.io/scitags/flowd-go:rpm-v2.1
     steps:
