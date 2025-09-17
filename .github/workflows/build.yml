@@ -19,13 +19,13 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: 1.23.9
+          go-version: '1.24'
 
         # We disable CGO to avoid including any eBPF-induced
         # dependencies so as to keep stuff fast.
       - name: Check we can build the project
         shell: bash
-        run: CGO_ENABLED=0 go build -o foo ./cmd
+        run: go build -o foo ./cmd
     if: ${{ ! inputs.ebpf }}
 
   build-ebpf:
