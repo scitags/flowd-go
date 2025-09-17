@@ -1,4 +1,4 @@
-//go:build !linux
+//go:build !linux || !ebpf
 
 package skops
 
@@ -21,5 +21,5 @@ func (e *EbpfEnricher) Run(done <-chan struct{}) {}
 func (e *EbpfEnricher) WatchFlow(flowID types.FlowID) (*enrichment.Poller, error) {
 	return nil, nil
 }
-func (e *EbpfEnricher) ForgetFlow(flowID types.FlowID) (time.Time, bool) { return time.Time{}, nil }
+func (e *EbpfEnricher) ForgetFlow(flowID types.FlowID) (time.Time, bool) { return time.Time{}, false }
 func (e *EbpfEnricher) Cleanup() error                                   { return nil }
