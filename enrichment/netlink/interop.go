@@ -3,8 +3,8 @@
 package netlink
 
 import (
+	"github.com/florianl/go-diag"
 	"github.com/scitags/flowd-go/types"
-	"github.com/scitags/go-diag"
 )
 
 func inetDiagToFlowInfo(no diag.NetObject) types.FlowInfo {

@@ -7,9 +7,9 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/florianl/go-diag"
 	"github.com/scitags/flowd-go/enrichment"
 	"github.com/scitags/flowd-go/types"
-	"github.com/scitags/go-diag"
 	"golang.org/x/sys/unix"
 )
 

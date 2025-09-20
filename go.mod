@@ -7,6 +7,7 @@ require (
 	github.com/containerd/cgroups v1.1.0
 	github.com/cpuguy83/go-md2man/v2 v2.0.4
 	github.com/fatih/structs v1.1.0
+	github.com/florianl/go-diag v0.0.3
 	github.com/florianl/go-tc v0.4.5
 	github.com/google/go-cmp v0.7.0
 	github.com/josharian/native v1.1.0
@@ -17,7 +18,6 @@ require (
 	github.com/prometheus/procfs v0.15.1
 	github.com/rjeczalik/notify v0.9.3
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
-	github.com/scitags/go-diag v1.0.0
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.19.0
 	golang.org/x/sys v0.36.0
