@@ -10,46 +10,17 @@ import (
 	"github.com/florianl/go-diag"
 	"github.com/scitags/flowd-go/enrichment"
 	"github.com/scitags/flowd-go/types"
-	"golang.org/x/sys/unix"
 )
 
 type NetlinkEnricher struct {
-	conn *diag.Diag
+	Config
 
-	protocol uint8
-	ext      uint8
-	state    uint32
-
+	conn  *diag.Diag
 	cache *enrichment.FlowCache
-
-	period int
 }
 
 func (e NetlinkEnricher) String() string {
 	return "netlink enricher"
-}
-
-type Config struct {
-	Protocol      uint8
-	Ext           uint8
-	State         uint32
-	CacheCapacity int
-	Period        int
-}
-
-var DefaultConfig = Config{
-	Protocol: unix.IPPROTO_TCP,
-	Ext: 1<<(INET_DIAG_MEMINFO-1) |
-		1<<(INET_DIAG_INFO-1) |
-		1<<(INET_DIAG_VEGASINFO-1) |
-		1<<(INET_DIAG_CONG-1) |
-		1<<(INET_DIAG_TOS-1) |
-		1<<(INET_DIAG_TCLASS-1) |
-		1<<(INET_DIAG_SKMEMINFO-1) |
-		1<<(INET_DIAG_SHUTDOWN-1),
-	State:         types.TCP_ALL_FLAGS & ^(1 << uint(types.TCP_LISTEN)),
-	CacheCapacity: 10,
-	Period:        1000,
 }
 
 func (e *NetlinkEnricher) Cleanup() error {
@@ -68,12 +39,9 @@ func NewEnricher(config *Config) (*NetlinkEnricher, error) {
 	}
 
 	return &NetlinkEnricher{
-		conn:     nl,
-		protocol: config.Protocol,
-		ext:      config.Ext,
-		state:    config.State,
-		cache:    enrichment.NewFlowCache(config.CacheCapacity),
-		period:   config.Period,
+		Config: *config,
+		conn:   nl,
+		cache:  enrichment.NewFlowCache(config.CacheCapacity),
 	}, nil
 }
 
@@ -99,7 +67,7 @@ func (e *NetlinkEnricher) WatchFlow(flowID types.FlowID) (*enrichment.Poller, er
 				slog.Debug("cleanly exiting polling goroutine", "hash", hash)
 				e.cache.Remove(hash)
 				return
-			case <-time.Tick(time.Duration(e.period) * time.Millisecond):
+			case <-time.Tick(time.Duration(e.Period) * time.Millisecond):
 				for _, fi := range e.GetFlowInfo(flowID) {
 					poller.DataChan <- &fi
 				}
@@ -119,9 +87,9 @@ func (e *NetlinkEnricher) ForgetFlow(flowID types.FlowID) (time.Time, bool) {
 func (e *NetlinkEnricher) GetFlowInfo(flowID types.FlowID) []types.FlowInfo {
 	res, err := e.conn.NetDump(&diag.NetOption{
 		Family:   uint8(flowID.Family),
-		Protocol: e.protocol,
-		Ext:      e.ext,
-		State:    e.state,
+		Protocol: e.Protocol,
+		Ext:      e.Ext,
+		State:    e.State,
 		ID: diag.SockID{
 			// As seen on [0], there are no mentions to r->id.idiag_src or r->id.idiag_dst so it looks like
 			// filtering on IP addresses has no effect whatsoever. The same goes for interfaces and cookies.

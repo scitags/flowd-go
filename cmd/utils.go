@@ -3,20 +3,81 @@ package main
 import (
 	"fmt"
 	"log/slog"
-	"net"
-	"path/filepath"
 
+	"github.com/scitags/flowd-go/backends/fireflyb"
 	"github.com/scitags/flowd-go/backends/marker"
+	"github.com/scitags/flowd-go/plugins/api"
+	"github.com/scitags/flowd-go/plugins/fireflyp"
+	"github.com/scitags/flowd-go/plugins/np"
 	"github.com/scitags/flowd-go/plugins/perfsonar"
-	glowdTypes "github.com/scitags/flowd-go/types"
+	"github.com/scitags/flowd-go/types"
 )
 
-const (
-	FlowTagKey  string = "flowTag"
-	FlowHashKey string = "flowHash"
-)
+func createPlugins(c *Config) ([]types.Plugin, error) {
+	plugins := []types.Plugin{}
 
-func initPlugins(plugins []glowdTypes.Plugin) error {
+	if c.Plugins != nil {
+		if c.Plugins.Api != nil {
+			p, err := api.NewApiPlugin(c.Plugins.Api)
+			if err != nil {
+				return nil, fmt.Errorf("error initialising the api plugin: %w", err)
+			}
+			plugins = append(plugins, p)
+		}
+
+		if c.Plugins.Firefly != nil {
+			p, err := fireflyp.NewFireflyPlugin(c.Plugins.Firefly)
+			if err != nil {
+				return nil, fmt.Errorf("error initialising the firefly plugin: %w", err)
+			}
+			plugins = append(plugins, p)
+		}
+
+		if c.Plugins.Np != nil {
+			p, err := np.NewNamedPipePlugin(c.Plugins.Np)
+			if err != nil {
+				return nil, fmt.Errorf("error initialising the perfsonar plugin: %w", err)
+			}
+			plugins = append(plugins, p)
+		}
+
+		if c.Plugins.Perfsonar != nil {
+			p, err := perfsonar.NewPerfsonarPlugin(c.Plugins.Perfsonar)
+			if err != nil {
+				return nil, fmt.Errorf("error initialising the perfsonar plugin: %w", err)
+			}
+			plugins = append(plugins, p)
+		}
+	}
+
+	return plugins, nil
+}
+
+func createBackends(c *Config) ([]types.Backend, error) {
+	backends := []types.Backend{}
+
+	if c.Backends != nil {
+		if c.Backends.Marker != nil {
+			b, err := marker.NewMarkerBackend(c.Backends.Marker)
+			if err != nil {
+				return nil, fmt.Errorf("error initialising the marker backend: %w", err)
+			}
+			backends = append(backends, b)
+		}
+
+		if c.Backends.Firefly != nil {
+			b, err := fireflyb.NewFireflyBackend(c.Backends.Firefly)
+			if err != nil {
+				return nil, fmt.Errorf("error initialising the firefly backend: %w", err)
+			}
+			backends = append(backends, b)
+		}
+	}
+
+	return backends, nil
+}
+
+func initPlugins(plugins []types.Plugin) error {
 	for _, plugin := range plugins {
 		if err := plugin.Init(); err != nil {
 			return fmt.Errorf("error setting up plugin %s: %w", plugin, err)
@@ -25,7 +86,7 @@ func initPlugins(plugins []glowdTypes.Plugin) error {
 	return nil
 }
 
-func initBackends(backends []glowdTypes.Backend) error {
+func initBackends(backends []types.Backend) error {
 	for _, backend := range backends {
 		if err := backend.Init(); err != nil {
 			return fmt.Errorf("error setting up backend %s: %w", backend, err)
@@ -35,7 +96,7 @@ func initBackends(backends []glowdTypes.Backend) error {
 }
 
 // Are there any plugin-backend dependencies we should be aware of?
-func pluginBackendDependencies(plugins []glowdTypes.Plugin, backends []glowdTypes.Backend) error {
+func pluginBackendDependencies(plugins []types.Plugin, backends []types.Backend) error {
 	for _, plugin := range plugins {
 		switch plugin.(type) {
 		case *perfsonar.PerfsonarPlugin:
@@ -46,17 +107,17 @@ func pluginBackendDependencies(plugins []glowdTypes.Plugin, backends []glowdType
 				}
 				slog.Warn("overriding marking strategy for the eBPF backend",
 					"previous", markerBackend.MarkingStrategy, "new", marker.Label, "matchAll", true)
-				markerBackend.MarkingStrategy = string(marker.Label)
+				markerBackend.MarkingStrategy = marker.Label
 				markerBackend.MatchAll = true
 			}
-		// Do nothing on default, just be exhaustive :P
+		// Do nothing by default, just be exhaustive :P
 		default:
 		}
 	}
 	return nil
 }
 
-func cleanupPlugins(plugins []glowdTypes.Plugin) {
+func cleanupPlugins(plugins []types.Plugin) {
 	for _, plugin := range plugins {
 		if err := plugin.Cleanup(); err != nil {
 			slog.Error("error cleaning up plugin", "plugin", plugin, "err", err)
@@ -64,62 +125,10 @@ func cleanupPlugins(plugins []glowdTypes.Plugin) {
 	}
 }
 
-func cleanupBackends(backends []glowdTypes.Backend) {
+func cleanupBackends(backends []types.Backend) {
 	for _, backend := range backends {
 		if err := backend.Cleanup(); err != nil {
 			slog.Error("error cleaning up backend", "backend", backend, "err", err)
 		}
 	}
-}
-
-func logReplacements(groups []string, a slog.Attr) slog.Attr {
-	// Remove time.
-	if a.Key == slog.TimeKey && len(groups) == 0 && !logTimeFlag {
-		return slog.Attr{}
-	}
-
-	// Remove the directory from the source's filename.
-	if a.Key == slog.SourceKey {
-		source := a.Value.Any().(*slog.Source)
-		source.File = filepath.Base(source.File)
-	}
-
-	// Format the flow tag as both a binary and hex number
-	if a.Key == FlowTagKey {
-		// When slog gobbles the flow tag it becomes a uint64 instead of a uint32
-		// apparently...
-		flowLabel, ok := a.Value.Any().(uint64)
-		if ok {
-			return slog.Attr{Key: a.Key, Value: slog.StringValue(fmt.Sprintf("%#x;(%#020b)", flowLabel, flowLabel))}
-		}
-	}
-
-	// Format the flow hashes
-	if a.Key == FlowHashKey {
-		flowHash, ok := a.Value.Any().(marker.FlowFourTuple)
-		if ok {
-			return slog.Attr{Key: a.Key, Value: slog.StringValue(
-				fmt.Sprintf("%s(%#x|%#x);%d;%d", net.IP([]byte{
-					byte(flowHash.IPv6Hi & (0xFF << 7) >> 7),
-					byte(flowHash.IPv6Hi & (0xFF << 6) >> 6),
-					byte(flowHash.IPv6Hi & (0xFF << 5) >> 5),
-					byte(flowHash.IPv6Hi & (0xFF << 4) >> 4),
-					byte(flowHash.IPv6Hi & (0xFF << 3) >> 3),
-					byte(flowHash.IPv6Hi & (0xFF << 2) >> 2),
-					byte(flowHash.IPv6Hi & (0xFF << 1) >> 1),
-					byte(flowHash.IPv6Hi & 0xFF),
-					byte(flowHash.IPv6Lo & (0xFF << 7) >> 7),
-					byte(flowHash.IPv6Lo & (0xFF << 6) >> 6),
-					byte(flowHash.IPv6Lo & (0xFF << 5) >> 5),
-					byte(flowHash.IPv6Lo & (0xFF << 4) >> 4),
-					byte(flowHash.IPv6Lo & (0xFF << 3) >> 3),
-					byte(flowHash.IPv6Lo & (0xFF << 2) >> 2),
-					byte(flowHash.IPv6Lo & (0xFF << 1) >> 1),
-					byte(flowHash.IPv6Lo & 0xFF),
-				}), flowHash.IPv6Hi, flowHash.IPv6Lo, flowHash.SrcPort, flowHash.DstPort),
-			)}
-		}
-	}
-
-	return a
 }

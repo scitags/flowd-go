@@ -24,8 +24,6 @@ import (
 	"github.com/scitags/flowd-go/types"
 )
 
-const EBPF_PROGRAM_PATH string = "skops-.bpf.o"
-
 type EbpfEnricher struct {
 	coll   *ebpf.Collection
 	link   link.Link

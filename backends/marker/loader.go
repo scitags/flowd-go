@@ -13,29 +13,15 @@ import (
 	"github.com/scitags/flowd-go/internal/progs"
 )
 
-type MarkingStrategy string
-
 const (
-	Label               MarkingStrategy = "label"
-	HopByHop                            = "hopByHop"
-	Destination                         = "destination"
-	HopByHopDestination                 = "hopByHopDestination"
-
 	PROG_NAME string = "marker"
 	MAP_NAME  string = "flowLabels"
 )
 
-var markingStrategyMap = map[string]MarkingStrategy{
-	strings.ToLower("label"): Label,
-	strings.ToLower("hbh"):   HopByHop,
-	strings.ToLower("do"):    Destination,
-	strings.ToLower("hbhdo"): HopByHopDestination,
-}
-
-func craftProgramPath(strategy MarkingStrategy, matchAll bool, debug bool) string {
+func craftProgramPath(strategy Strategy, matchAll bool, debug bool) string {
 	progPath := "marker-"
 
-	for k, v := range markingStrategyMap {
+	for k, v := range strategyMap {
 		if v == strategy {
 			progPath += k
 			break
@@ -57,7 +43,7 @@ func craftProgramPath(strategy MarkingStrategy, matchAll bool, debug bool) strin
 	return progPath
 }
 
-func chooseProgram(strategy MarkingStrategy, matchAll bool, debug bool) ([]byte, error) {
+func chooseProgram(strategy Strategy, matchAll bool, debug bool) ([]byte, error) {
 	return progs.GetMarkerProgram(craftProgramPath(strategy, matchAll, debug))
 }
 

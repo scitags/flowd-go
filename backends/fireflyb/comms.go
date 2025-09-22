@@ -59,7 +59,7 @@ func (b *FireflyBackend) sendToDestination(family glowdTypes.Family, destIP net.
 	if family == glowdTypes.IPv4 {
 		addressFmt = "%s:%d"
 	}
-	conn, err := net.Dial("udp", fmt.Sprintf(addressFmt, destIP, b.FireflyDestinationPort))
+	conn, err := net.Dial("udp", fmt.Sprintf(addressFmt, destIP, b.DestinationPort))
 	if err != nil {
 		return fmt.Errorf("couldn't initialize UDP socket: %w", err)
 	}

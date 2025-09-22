@@ -9,8 +9,7 @@ import (
 	"syscall"
 
 	"github.com/scitags/flowd-go/cmd/subcmd"
-	"github.com/scitags/flowd-go/settings"
-	glowdTypes "github.com/scitags/flowd-go/types"
+	"github.com/scitags/flowd-go/types"
 
 	"github.com/spf13/cobra"
 )
@@ -57,7 +56,7 @@ var (
 		Use:   "conf",
 		Short: "Dump the configuration we're running with.",
 		Run: func(cmd *cobra.Command, args []string) {
-			conf, err := settings.ReadConf(confPath)
+			conf, err := ReadConf(confPath)
 			if err != nil {
 				slog.Error("couldn't read the configuration", "err", err)
 				return
@@ -79,60 +78,69 @@ var (
 		Use:   "run",
 		Short: "Time to show what glowd can do!",
 		Run: func(cmd *cobra.Command, args []string) {
-			conf, err := settings.ReadConf(confPath)
+			conf, err := ReadConf(confPath)
 			if err != nil {
 				slog.Error("couldn't read the configuration", "err", err)
 				return
 			}
-			slog.Debug("read configuration", "conf", conf)
 
-			if err := pluginBackendDependencies(conf.Plugins, conf.Backends); err != nil {
+			plugins, err := createPlugins(conf)
+			if err != nil {
+				slog.Error("couldn't create the plugins", "err", err)
+			}
+
+			backends, err := createBackends(conf)
+			if err != nil {
+				slog.Error("couldn't create the backends", "err", err)
+			}
+
+			if err := pluginBackendDependencies(plugins, backends); err != nil {
 				slog.Error("couldn't fulfill the plugin-backend dependencies", "err", err)
 				return
 			}
 
-			if err := os.WriteFile(conf.General.PIDPath, []byte(fmt.Sprintf("%d\n", os.Getpid())), 0644); err != nil {
-				slog.Error("couldn't create the PID file", "path", conf.General.PIDPath, "err", err)
+			if err := os.WriteFile(conf.PidPath, []byte(fmt.Sprintf("%d\n", os.Getpid())), 0644); err != nil {
+				slog.Error("couldn't create the PID file", "path", conf.PidPath, "err", err)
 			}
-			defer os.Remove(conf.General.PIDPath)
+			defer os.Remove(conf.PidPath)
 
-			if err := initPlugins(conf.Plugins); err != nil {
+			if err := initPlugins(plugins); err != nil {
 				slog.Error("couldn't initialise the plugins", "err", err)
 				return
 			}
-			defer cleanupPlugins(conf.Plugins)
+			defer cleanupPlugins(plugins)
 
-			if err := initBackends(conf.Backends); err != nil {
+			if err := initBackends(backends); err != nil {
 				slog.Error("couldn't initialise the backends", "err", err)
 				return
 			}
-			defer cleanupBackends(conf.Backends)
+			defer cleanupBackends(backends)
 
 			// Set up the necessary channels, one per plugin and per backend
-			pluginChans := make([]chan glowdTypes.FlowID, 0, len(conf.Plugins))
-			backendChans := make([]chan glowdTypes.FlowID, 0, len(conf.Backends))
+			pluginChans := make([]chan types.FlowID, 0, len(plugins))
+			backendChans := make([]chan types.FlowID, 0, len(backends))
 
 			// Set up the broadcast channel for exiting cleanly
 			doneChan := make(chan struct{})
 
 			// Dispatch the producers (i.e. plugins)
-			for i, plugin := range conf.Plugins {
-				pluginChans = append(pluginChans, make(chan glowdTypes.FlowID))
+			for i, plugin := range plugins {
+				pluginChans = append(pluginChans, make(chan types.FlowID))
 				go plugin.Run(doneChan, pluginChans[i])
 			}
 
 			// Dispatch the consumers (i.e. backends)
-			for i, backend := range conf.Backends {
-				backendChans = append(backendChans, make(chan glowdTypes.FlowID))
+			for i, backend := range backends {
+				backendChans = append(backendChans, make(chan types.FlowID))
 				go backend.Run(doneChan, backendChans[i])
 			}
 
 			// Funnel plugin flowIDs into an aggregate channel.
 			// Buffer the channel so that consumers (i.e. backends)
 			// can have some wiggle room if under pressuer.
-			agg := make(chan glowdTypes.FlowID)
+			agg := make(chan types.FlowID)
 			for i, ch := range pluginChans {
-				go func(c chan glowdTypes.FlowID, i int) {
+				go func(c chan types.FlowID, i int) {
 					slog.Debug("began listening for plugin flowIDs", "i", i)
 					for flowID := range c {
 						slog.Debug("funneling flowID", "i", i)
@@ -175,13 +183,6 @@ var (
 	logTimeFlag  bool
 	builtCommit  string
 	baseVersion  string
-
-	logLevelMap = map[string]slog.Level{
-		"debug": slog.LevelDebug,
-		"info":  slog.LevelInfo,
-		"warn":  slog.LevelWarn,
-		"error": slog.LevelError,
-	}
 )
 
 func init() {

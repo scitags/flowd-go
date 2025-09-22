@@ -10,7 +10,7 @@ import (
 
 func TestEmbeddedProgs(t *testing.T) {
 	tests := []struct {
-		s    MarkingStrategy
+		s    Strategy
 		all  bool
 		dbg  bool
 		want string

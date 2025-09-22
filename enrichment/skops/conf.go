@@ -1,6 +1,10 @@
 package skops
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/goccy/go-yaml"
+)
 
 //go:generate go tool golang.org/x/tools/cmd/stringer -type=Strategy
 
@@ -8,26 +12,48 @@ type Config struct {
 	// eBPF program's polling interval in ns. Note that if
 	// the loaded program's not polling, this option's
 	// silently ignored.
-	PollingInterval uint64
+	PollingInterval uint64 `yaml:"-"`
 
 	// Path to the cgroup to attach the eBPF program to.
 	// If left empty, the cgroup flowd-go's PID belongs
 	// to will be used.
-	CgroupPath string
+	CgroupPath string `yaml:"cgroupPath"`
 
 	// Path to an eBPF program to leverage for gathering data.
 	// If left empty, an embedded program will be used instead.
-	ProgramPath string
+	ProgramPath string `yaml:"programPath"`
 
 	// Data acquisition strategy. Check the documentation for
 	// an up-to-date list of available options.
-	Strategy Strategy
+	Strategy Strategy `yaml:"-"` // Parsed strategy
 
 	// Whether to enable debugging output of the eBPF program
 	// to query with bpftool(8) and similar tools. Beware that
 	// leveraging this option causes a noticeable performance
 	// degradation.
-	DebugMode bool
+	DebugMode bool `yaml:"debugMode"`
+
+	// Internal cache capacity. Increasing this value for a large
+	// number of expected connections can reduce allocation overhead
+	// as the number of connections increases.
+	CacheCapacity int `yaml:"-"`
+
+	RawStrategy string `yaml:"strategy"`
+}
+
+func (c *Config) UnmarshalYAML(b []byte) error {
+	// Needed to break recursive calls into UnmarshalYAML
+	type config Config
+
+	def := config(DefaultConfig)
+
+	if err := yaml.Unmarshal(b, &def); err != nil {
+		return err
+	}
+
+	*c = Config(def)
+
+	return nil
 }
 
 // DefaultConfig provides sane defaults for EbpfEnrichers.
@@ -46,6 +72,11 @@ var DefaultConfig = Config{
 
 	// Don't printk information
 	DebugMode: false,
+
+	// Give us a 10 connection head start
+	CacheCapacity: 10,
+
+	RawStrategy: "Poll",
 }
 
 type Strategy int

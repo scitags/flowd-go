@@ -1,0 +1,5 @@
+# Check enricher defaults are correctly enabled
+backends:
+  firefly:
+    netlink: {}
+    skops: {}

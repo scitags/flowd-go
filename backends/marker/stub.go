@@ -3,32 +3,16 @@
 package marker
 
 import (
-	glowdTypes "github.com/scitags/flowd-go/types"
+	"github.com/scitags/flowd-go/types"
 )
-
-type MarkingStrategy string
-
-const (
-	Label               MarkingStrategy = "label"
-	HopByHop                            = "hopByHop"
-	Destination                         = "destination"
-	HopByHopDestination                 = "hopByHopDestination"
-
-	PROG_NAME string = "marker"
-	MAP_NAME  string = "flowLabels"
-)
-
-var Defaults = map[string]interface{}{}
 
 // TODO: consider a shared definition
 type MarkerBackend struct {
-	TargetInterfaces   []string
-	DiscoverInterfaces bool
-	RemoveQdisc        bool
-	ProgramPath        string
-	MarkingStrategy    string
-	DebugMode          bool
-	MatchAll           bool
+	Config
+}
+
+func NewMarkerBackend(c *Config) (*MarkerBackend, error) {
+	return nil, nil
 }
 
 func (b *MarkerBackend) String() string {
@@ -40,7 +24,7 @@ func (b *MarkerBackend) Init() error {
 	return nil
 }
 
-func (b *MarkerBackend) Run(<-chan struct{}, <-chan glowdTypes.FlowID) {
+func (b *MarkerBackend) Run(<-chan struct{}, <-chan types.FlowID) {
 }
 
 func (b *MarkerBackend) Cleanup() error {

@@ -57,10 +57,15 @@ ifndef RPM_PACKAGE_NAME
 endif
 
 # Simply build flowd-go
-build: $(wildcard *.go) ebpf-progs
+build: $(wildcard *.go) ebpf-progs generate
 	@mkdir -p bin
 	@echo "TARGET_ARCH: $(TARGET_ARCH)"
 	$(ENV_FLAGS) $(GOC) build $(CFLAGS) -o $(BIN_DIR)/flowd-go ./cmd
+
+# We're leveraging golang.org/x/tools/cmd/stringer
+.PHONY: generate
+generate:
+	$(GOC) generate ./...
 
 # We'll only compile the eBPF programs if explicitly told to do so
 ifndef NO_EBPF

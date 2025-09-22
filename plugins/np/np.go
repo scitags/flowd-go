@@ -15,18 +15,13 @@ import (
 	glowdTypes "github.com/scitags/flowd-go/types"
 )
 
-var (
-	Defaults = map[string]interface{}{
-		"maxReaders": 5,
-		"buffSize":   1000,
-		"pipePath":   "np",
-	}
-)
-
 type NamedPipePlugin struct {
-	MaxReaders int    `json:"maxReaders"`
-	BuffSize   int    `json:"buffSize"`
-	PipePath   string `json:"pipePath"`
+	Config
+}
+
+func NewNamedPipePlugin(c *Config) (*NamedPipePlugin, error) {
+	p := NamedPipePlugin{Config: *c}
+	return &p, nil
 }
 
 func (np *NamedPipePlugin) String() string {

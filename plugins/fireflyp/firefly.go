@@ -11,27 +11,15 @@ import (
 	glowdTypes "github.com/scitags/flowd-go/types"
 )
 
-const (
-	minRecvBufferSize uint32 = 2048
-)
-
-var (
-	Defaults = map[string]interface{}{
-		"bindAddress": "127.0.0.1",
-		"bindPort":    10514,
-		"bufferSize":  2 * minRecvBufferSize,
-		"deadline":    0,
-	}
-)
-
 type FireflyPlugin struct {
-	BindAddress     string `json:"bindAddress"`
-	BindPort        uint16 `json:"bindPort"`
-	BufferSize      uint32 `json:"bufferSize"`
-	Deadline        uint32 `json:"deadline"`
-	HasSyslogHeader bool   `json:"hasSyslogHeader"`
+	Config
 
 	listener *net.UDPConn
+}
+
+func NewFireflyPlugin(c *Config) (*FireflyPlugin, error) {
+	p := FireflyPlugin{Config: *c}
+	return &p, nil
 }
 
 func (p *FireflyPlugin) String() string {

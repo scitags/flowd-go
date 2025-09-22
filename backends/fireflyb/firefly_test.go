@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/scitags/flowd-go/enrichment/netlink"
+	"github.com/scitags/flowd-go/enrichment/skops"
 	"github.com/scitags/flowd-go/types"
 )
 
@@ -117,7 +119,7 @@ func TestPeriodicFirefly(t *testing.T) {
 	}
 	defer conn.Close()
 
-	fireflyBackend := FireflyBackend{
+	fireflyBackend, err := NewFireflyBackend(&Config{
 		PrependSyslog: false,
 
 		SendToCollector:  true,
@@ -128,11 +130,15 @@ func TestPeriodicFirefly(t *testing.T) {
 		Period:              100,
 		EnrichmentVerbosity: "lean",
 
-		AddNetlinkContext: true,
+		Netlink: &netlink.DefaultConfig,
 
-		AddBPFContext: true,
-		Strategy:      "poll",
-		DebugMode:     true,
+		SkOps: &skops.Config{
+			Strategy:  skops.Poll,
+			DebugMode: true,
+		},
+	})
+	if err != nil {
+		t.Fatalf("error initialising backend: %v", err)
 	}
 
 	if err := fireflyBackend.Init(); err != nil {

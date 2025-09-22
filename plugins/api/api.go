@@ -10,18 +10,15 @@ import (
 	glowdTypes "github.com/scitags/flowd-go/types"
 )
 
-var (
-	Defaults = map[string]interface{}{
-		"bindAddress": "127.0.0.1",
-		"bindPort":    7777,
-	}
-)
-
 type ApiPlugin struct {
-	server *echo.Echo
+	Config
 
-	BindAddress string `json:"bindAddress"`
-	BindPort    int    `json:"bindPort"`
+	server *echo.Echo
+}
+
+func NewApiPlugin(c *Config) (*ApiPlugin, error) {
+	p := ApiPlugin{Config: *c}
+	return &p, nil
 }
 
 func (p *ApiPlugin) String() string {

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"strings"
 	"time"
 
 	"math/rand"
@@ -14,16 +13,6 @@ import (
 	"github.com/cilium/ebpf"
 	glowdTypes "github.com/scitags/flowd-go/types"
 )
-
-var Defaults = map[string]interface{}{
-	"targetInterfaces":   []string{"lo"},
-	"discoverInterfaces": false,
-	"RemoveQdisc":        true,
-	"programPath":        "",
-	"markingStrategy":    Label,
-	"debugMode":          false,
-	"matchAll":           false,
-}
 
 // Note ports are 32 bits because the struct (and its eBPF counterpart)
 // are 8 bytes aligned given the internal uint64s!
@@ -35,18 +24,16 @@ type FlowFourTuple struct {
 }
 
 type MarkerBackend struct {
+	Config
+
 	coll *ebpf.Collection
 	nl   *NetlinkClient
-
 	rGen *rand.Rand
+}
 
-	TargetInterfaces   []string
-	DiscoverInterfaces bool
-	RemoveQdisc        bool
-	ProgramPath        string
-	MarkingStrategy    string
-	DebugMode          bool
-	MatchAll           bool
+func NewMarkerBackend(c *Config) (*MarkerBackend, error) {
+	b := MarkerBackend{Config: *c}
+	return &b, nil
 }
 
 func (b *MarkerBackend) String() string {
@@ -76,12 +63,6 @@ func (b *MarkerBackend) Init() error {
 	}
 	b.nl = nl
 
-	strategy, ok := markingStrategyMap[strings.ToLower(b.MarkingStrategy)]
-	if !ok {
-		slog.Warn("specified marking strategy not available, defaulting to label marking", "specified", b.MarkingStrategy)
-		strategy = Label
-	}
-
 	var prog []byte
 	if b.ProgramPath != "" {
 		slog.Debug("loading the provided eBPF program", "path", b.ProgramPath)
@@ -90,7 +71,7 @@ func (b *MarkerBackend) Init() error {
 			return fmt.Errorf("error reading user provided program: %w", err)
 		}
 	} else {
-		prog, err = chooseProgram(strategy, b.MatchAll, b.DebugMode)
+		prog, err = chooseProgram(b.MarkingStrategy, b.MatchAll, b.DebugMode)
 		if err != nil {
 			return fmt.Errorf("error choosing an embedded eBPF program: %w", err)
 		}

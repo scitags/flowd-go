@@ -14,34 +14,19 @@ import (
 )
 
 type FireflyBackend struct {
-	FireflyDestinationPort uint16 `json:"fireflyDestinationPort"`
-	PrependSyslog          bool   `json:"prependSyslog"`
-
-	SendToCollector  bool   `json:"sendToCollector"`
-	CollectorAddress string `json:"collectorAddress"`
-	CollectorPort    int    `json:"collectorPort"`
-
-	PeriodicFireflies   bool   `json:"periodicFireflies"`
-	Period              int    `json:"period"`
-	EnrichmentVerbosity string `json:"enrichmentVerbosity"`
-
-	// Netlink enrichment configuration
-	AddNetlinkContext bool `json:"addNetlinkContext"`
-
-	// SkOps enrichment configuration
-	AddBPFContext bool `json:"addBPFContext"`
-	CgroupPath    string
-	Strategy      string
-	ProgramPath   string
-	DebugMode     bool
+	Config
 
 	collectorConn net.Conn
-
-	enrichers map[types.Flavour]enrichment.Enricher
+	enrichers     map[types.Flavour]enrichment.Enricher
 }
 
 func (b *FireflyBackend) String() string {
 	return "Firefly"
+}
+
+func NewFireflyBackend(c *Config) (*FireflyBackend, error) {
+	b := FireflyBackend{Config: *c}
+	return &b, nil
 }
 
 // Just implement the glowd.Backend interface
@@ -61,21 +46,10 @@ func (b *FireflyBackend) Init() error {
 		slog.Debug("setting up enrichers")
 		b.enrichers = make(map[types.Flavour]enrichment.Enricher)
 
-		if b.AddBPFContext {
+		if b.SkOps != nil {
 			slog.Debug("initialising the eBPF enricher")
 
-			strategy, ok := skops.ParseStrategy(b.Strategy)
-			if !ok {
-				return fmt.Errorf("wrong eBPF strategy specified: %q", b.Strategy)
-			}
-
-			enricher, err := skops.NewEnricher(&skops.Config{
-				PollingInterval: uint64(b.Period) * skops.NS_PER_MS,
-				CgroupPath:      b.CgroupPath,
-				Strategy:        strategy,
-				ProgramPath:     b.ProgramPath,
-				DebugMode:       b.DebugMode,
-			})
+			enricher, err := skops.NewEnricher(b.SkOps)
 			if err != nil {
 				return fmt.Errorf("couldn't get an eBPF enricher: %w", err)
 			}
@@ -83,12 +57,10 @@ func (b *FireflyBackend) Init() error {
 			b.enrichers[types.Ebpf] = enricher
 		}
 
-		if b.AddNetlinkContext {
+		if b.Netlink != nil {
 			slog.Debug("initiallising the netlink enricher")
 
-			conf := netlink.DefaultConfig
-			conf.Period = b.Period
-			enricher, err := netlink.NewEnricher(&conf)
+			enricher, err := netlink.NewEnricher(b.Netlink)
 			if err != nil {
 				return fmt.Errorf("couldn't get a netlink enricher: %w", err)
 			}
