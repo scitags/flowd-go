@@ -80,7 +80,7 @@ rpm-dbg:
 	@echo "       SRPM_PATH: $(SRPM_PATH)"
 
 # Files to include in the SRPM
-RPM_FILES := backends cmd enrichment plugins settings rpm stun types const.go go.mod go.sum Makefile vendor commit
+RPM_FILES := backends cmd enrichment plugins settings rpm stun types go.mod go.sum Makefile vendor commit
 
 # This target will bundle all the source files so that we can easily create a SRPM with our SPEC file.
 # We'll also bundle vmlinux.h so as to avoid having to generate that on the machine we might generate
@@ -105,7 +105,7 @@ ifeq ($(SRC_GEN_MODE),go)
 
 	@# Try to use a 'normally' installed Go release and, if not, use the one we should've already installed.
 	go mod vendor || /tmp/go/bin/go mod vendor
-	go generate   || /tmp/go/bin/go generate
+	go generate cmd/doc.go || /tmp/go/bin/go generate cmd/doc.go
 	gzip --force rpm/$(SPECFILE_NAME).1
 
 	@# Record the current commit so that it can be embedded in the resulting binary.

@@ -6,10 +6,14 @@ import (
 	"net"
 	"path/filepath"
 
-	glowd "github.com/scitags/flowd-go"
 	"github.com/scitags/flowd-go/backends/marker"
 	"github.com/scitags/flowd-go/plugins/perfsonar"
 	glowdTypes "github.com/scitags/flowd-go/types"
+)
+
+const (
+	FlowTagKey  string = "flowTag"
+	FlowHashKey string = "flowHash"
 )
 
 func initPlugins(plugins []glowdTypes.Plugin) error {
@@ -81,7 +85,7 @@ func logReplacements(groups []string, a slog.Attr) slog.Attr {
 	}
 
 	// Format the flow tag as both a binary and hex number
-	if a.Key == glowd.FlowTagKey {
+	if a.Key == FlowTagKey {
 		// When slog gobbles the flow tag it becomes a uint64 instead of a uint32
 		// apparently...
 		flowLabel, ok := a.Value.Any().(uint64)
@@ -91,7 +95,7 @@ func logReplacements(groups []string, a slog.Attr) slog.Attr {
 	}
 
 	// Format the flow hashes
-	if a.Key == glowd.FlowHashKey {
+	if a.Key == FlowHashKey {
 		flowHash, ok := a.Value.Any().(marker.FlowFourTuple)
 		if ok {
 			return slog.Attr{Key: a.Key, Value: slog.StringValue(

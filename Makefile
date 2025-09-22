@@ -55,7 +55,7 @@ MAIN_PACKAGE = ./cmd
 SOURCES = $(wildcard *.go)
 
 # What to remove when cleaning up
-TRASH   = $(BIN_DIR)/* rpms/*.gz rpms/*.rpm
+TRASH   = $(BIN_DIR)/* rpms/*.gz rpms/*.rpm *.tar.gz commit vendor
 
 # Default compilation flags.
 # The `-ldflags` option lets us define global variables at compile time!
