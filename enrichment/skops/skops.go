@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"sync"
 	"syscall"
@@ -19,11 +20,11 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/scitags/flowd-go/enrichment"
+	"github.com/scitags/flowd-go/internal/progs"
 	"github.com/scitags/flowd-go/types"
 )
 
-//go:embed progs/sk_ops.bpf.o
-var skOpsBPFProg []byte
+const EBPF_PROGRAM_PATH string = "skops-.bpf.o"
 
 type EbpfEnricher struct {
 	coll   *ebpf.Collection
@@ -51,17 +52,42 @@ func (e *EbpfEnricher) Cleanup() error {
 	return nil
 }
 
-func NewEnricher(pollingInterval uint64) (*EbpfEnricher, error) {
+func NewEnricher(conf *Config) (*EbpfEnricher, error) {
 	slog.Debug("initialising the eBPF backend")
 
 	e := EbpfEnricher{}
 
-	cgroupPath, err := GetCgroupInfo()
-	if err != nil {
-		return nil, fmt.Errorf("couldn't get cgroup information: %w", err)
+	var err error
+	cgroupPath := ""
+	if conf.CgroupPath != "" {
+		cgroupPath = conf.CgroupPath
+	} else {
+		cp, err := GetCgroupInfo()
+		if err != nil {
+			return nil, fmt.Errorf("couldn't get cgroup information: %w", err)
+		}
+		cgroupPath = "/sys/fs/cgroup" + cp
 	}
 
-	coll, err := loadProg(skOpsBPFProg, pollingInterval)
+	var prog []byte
+	if conf.ProgramPath != "" {
+		slog.Debug("loading the provided eBPF program", "path", conf.ProgramPath)
+		prog, err = os.ReadFile(conf.ProgramPath)
+		if err != nil {
+			return nil, fmt.Errorf("error reading user provided program: %w", err)
+		}
+	} else {
+		progPath, err := craftProgramPath(conf.Strategy, conf.DebugMode)
+		if err != nil {
+			return nil, fmt.Errorf("error crafting the embedded program's path: %w", err)
+		}
+		prog, err = progs.GetSkopsProgram(progPath)
+		if err != nil {
+			return nil, fmt.Errorf("error choosing an embedded eBPF program: %w", err)
+		}
+	}
+
+	coll, err := loadProg(prog, conf.PollingInterval)
 	if err != nil {
 		return nil, fmt.Errorf("error loading the eBPF program: %w", err)
 	}
@@ -74,12 +100,9 @@ func NewEnricher(pollingInterval uint64) (*EbpfEnricher, error) {
 	}
 	e.reader = rd
 
-	fullCgroupPath := fmt.Sprintf("/sys/fs/cgroup%s", cgroupPath)
-	slog.Debug("attaching program", "cgroup", fullCgroupPath)
-
+	slog.Debug("attaching program", "cgroup", cgroupPath)
 	link, err := link.AttachCgroup(link.CgroupOptions{
-		// Path:    "/sys/fs/cgroup", // A catch-all cgroup!
-		Path:    fullCgroupPath,
+		Path:    cgroupPath,
 		Program: e.coll.Programs[PROG_NAME],
 		Attach:  ebpf.AttachCGroupSockOps,
 	})

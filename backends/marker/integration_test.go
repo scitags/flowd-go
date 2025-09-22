@@ -2,7 +2,11 @@
 
 package marker
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/scitags/flowd-go/internal/progs"
+)
 
 const TARGET_INTERFACE = "lo"
 
@@ -17,7 +21,7 @@ func TestBootstrap(t *testing.T) {
 		t.Fatalf("error creating the qdisc: %v", err)
 	}
 
-	rawProg, err := progs.ReadFile("progs/marker-label.bpf.o")
+	rawProg, err := progs.GetMarkerProgram("marker-label.bpf.o")
 	if err != nil {
 		t.Fatalf("error reading the raw eBPF program: %v", err)
 	}

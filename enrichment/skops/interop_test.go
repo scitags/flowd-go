@@ -33,7 +33,11 @@ func TestParsing(t *testing.T) {
 }
 
 func TestInterop(t *testing.T) {
-	enricher, err := NewEnricher(100 * NS_PER_MS)
+	enricher, err := NewEnricher(&Config{
+		PollingInterval: 100 * NS_PER_MS,
+		DebugMode:       true,
+		Strategy:        Poll,
+	})
 	if err != nil {
 		t.Fatalf("error creating the enricher: %v", err)
 	}

@@ -4,16 +4,14 @@ package marker
 
 import (
 	"bytes"
-	"embed"
 	"fmt"
 	"log/slog"
 	"strings"
 
 	"github.com/cilium/ebpf"
-)
 
-//go:embed progs/*.o
-var progs embed.FS
+	"github.com/scitags/flowd-go/internal/progs"
+)
 
 type MarkingStrategy string
 
@@ -35,7 +33,7 @@ var markingStrategyMap = map[string]MarkingStrategy{
 }
 
 func craftProgramPath(strategy MarkingStrategy, matchAll bool, debug bool) string {
-	progPath := "progs/marker-"
+	progPath := "marker-"
 
 	for k, v := range markingStrategyMap {
 		if v == strategy {
@@ -60,7 +58,7 @@ func craftProgramPath(strategy MarkingStrategy, matchAll bool, debug bool) strin
 }
 
 func chooseProgram(strategy MarkingStrategy, matchAll bool, debug bool) ([]byte, error) {
-	return progs.ReadFile(craftProgramPath(strategy, matchAll, debug))
+	return progs.GetMarkerProgram(craftProgramPath(strategy, matchAll, debug))
 }
 
 func loadProg(rawProg []byte) (*ebpf.Collection, error) {

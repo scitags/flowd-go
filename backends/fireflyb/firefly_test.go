@@ -124,13 +124,15 @@ func TestPeriodicFirefly(t *testing.T) {
 		CollectorAddress: "127.0.0.1",
 		CollectorPort:    4321,
 
-		AddNetlinkContext: true,
-		AddBPFContext:     true,
-
-		PeriodicFireflies: true,
-		Period:            100,
-
+		PeriodicFireflies:   true,
+		Period:              100,
 		EnrichmentVerbosity: "lean",
+
+		AddNetlinkContext: true,
+
+		AddBPFContext: true,
+		Strategy:      "poll",
+		DebugMode:     true,
 	}
 
 	if err := fireflyBackend.Init(); err != nil {

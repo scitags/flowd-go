@@ -1,12 +1,3 @@
-# What compiler to use?
-CC := clang
-
-# Compiler flags we'll use no matter what
-CFLAGS := -g -O2 -target bpf -D__TARGET_ARCH_x86_64 -I . -c
-
-# The files to eliminate when cleaning up
-TRASH := *.o vmlinux.h .cache
-
 # Just increase seq(1)'s upper limit as new exercise sheets are added!
 # This is the only variable we have to modify when adding new targets.
 # Note each item will be appended to 'marker-' so as to generate the
@@ -30,16 +21,16 @@ INDICES := $(shell seq $(words $(PROG_NAMES)))
 #   https://www.gnu.org/software/make/manual/html_node/Multi_002dLine.html!
 #   https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html
 define targetTemplate
-marker-$(1).bpf.o: *.bpf.c *.bpf.h vmlinux.h
+marker-$(1).bpf.o: $(DEPS)
 	$(CC) $(CFLAGS) -D $(2)                                   marker.bpf.c -o $$@
 
-marker-$(1)-dbg.bpf.o: *.bpf.c *.bpf.h vmlinux.h
+marker-$(1)-dbg.bpf.o: $(DEPS)
 	$(CC) $(CFLAGS) -D $(2) -D FLOWD_DEBUG                    marker.bpf.c -o $$@
 
-marker-$(1)-all.bpf.o: *.bpf.c *.bpf.h vmlinux.h
+marker-$(1)-all.bpf.o: $(DEPS)
 	$(CC) $(CFLAGS) -D $(2) -D FLOWD_MATCH_ALL                marker.bpf.c -o $$@
 
-marker-$(1)-all-dbg.bpf.o: *.bpf.c *.bpf.h vmlinux.h
+marker-$(1)-all-dbg.bpf.o: $(DEPS)
 	$(CC) $(CFLAGS) -D $(2) -D FLOWD_MATCH_ALL -D FLOWD_DEBUG marker.bpf.c -o $$@
 endef
 
@@ -58,10 +49,6 @@ all: $(foreach progName,$(PROG_NAMES),marker-$(progName).bpf.o marker-$(progName
 #   https://www.gnu.org/software/make/manual/make.html#Foreach-Function
 #   https://www.gnu.org/software/make/manual/make.html#Text-Functions
 $(foreach i,$(INDICES),$(eval $(call targetTemplate,$(word $(i),$(PROG_NAMES)),$(word $(i),$(PROG_DEFS)))))
-
-# Generate the kernel headers
-vmlinux.h:
-	bpftool btf dump file /sys/kernel/btf/vmlinux format c > vmlinux.h
 
 compile_commands.json:
 	@bear -- make marker-flow-label.bpf.o

@@ -11,9 +11,11 @@ import (
 	"github.com/cilium/ebpf"
 )
 
-const PROG_NAME string = "connTracker"
-const RINGBUFF_NAME string = "tcpStats"
-const MAP_NAME string = "flowsToFollow"
+const (
+	PROG_NAME     string = "connTracker"
+	RINGBUFF_NAME string = "tcpStats"
+	MAP_NAME      string = "flowsToFollow"
+)
 
 func setGlobalVariable(coll *ebpf.CollectionSpec, gvar string, val any) error {
 	v, ok := coll.Variables[gvar]
@@ -87,4 +89,31 @@ func loadProg(rawProg []byte, pollingInterval uint64) (*ebpf.Collection, error) 
 	}
 
 	return coll, nil
+}
+
+func craftProgramPath(strategy Strategy, debug bool) (string, error) {
+	progPath := "skops-"
+
+	ok := false
+	for k, v := range strategyMap {
+		if v == strategy {
+			progPath += k
+			ok = true
+			break
+		}
+	}
+
+	if !ok {
+		return "", fmt.Errorf("wrong strategy: %q", strategy)
+	}
+
+	if debug {
+		progPath += "-dbg"
+	}
+
+	progPath += ".bpf.o"
+
+	slog.Debug("built program path", "path", progPath)
+
+	return progPath, nil
 }

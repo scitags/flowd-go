@@ -13,25 +13,6 @@ import (
 	"github.com/scitags/flowd-go/types"
 )
 
-var (
-	Defaults = map[string]interface{}{
-		"fireflyDestinationPort": 10514,
-		"prependSyslog":          true,
-
-		"sendToCollector":  false,
-		"collectorAddress": "127.0.0.1",
-		"collectorPort":    10514,
-
-		"periodicFireflies": false,
-		"period":            1000,
-
-		"addNetlinkContext": true,
-		"addBPFContext":     false,
-
-		"enrichmentVerbosity": "lean",
-	}
-)
-
 type FireflyBackend struct {
 	FireflyDestinationPort uint16 `json:"fireflyDestinationPort"`
 	PrependSyslog          bool   `json:"prependSyslog"`
@@ -40,13 +21,19 @@ type FireflyBackend struct {
 	CollectorAddress string `json:"collectorAddress"`
 	CollectorPort    int    `json:"collectorPort"`
 
-	AddNetlinkContext bool `json:"addNetlinkContext"`
-	AddBPFContext     bool `json:"addBPFContext"`
-
-	PeriodicFireflies bool `json:"periodicFireflies"`
-	Period            int  `json:"period"`
-
+	PeriodicFireflies   bool   `json:"periodicFireflies"`
+	Period              int    `json:"period"`
 	EnrichmentVerbosity string `json:"enrichmentVerbosity"`
+
+	// Netlink enrichment configuration
+	AddNetlinkContext bool `json:"addNetlinkContext"`
+
+	// SkOps enrichment configuration
+	AddBPFContext bool `json:"addBPFContext"`
+	CgroupPath    string
+	Strategy      string
+	ProgramPath   string
+	DebugMode     bool
 
 	collectorConn net.Conn
 
@@ -77,7 +64,18 @@ func (b *FireflyBackend) Init() error {
 		if b.AddBPFContext {
 			slog.Debug("initialising the eBPF enricher")
 
-			enricher, err := skops.NewEnricher(uint64(b.Period) * skops.NS_PER_MS)
+			strategy, ok := skops.ParseStrategy(b.Strategy)
+			if !ok {
+				return fmt.Errorf("wrong eBPF strategy specified: %q", b.Strategy)
+			}
+
+			enricher, err := skops.NewEnricher(&skops.Config{
+				PollingInterval: uint64(b.Period) * skops.NS_PER_MS,
+				CgroupPath:      b.CgroupPath,
+				Strategy:        strategy,
+				ProgramPath:     b.ProgramPath,
+				DebugMode:       b.DebugMode,
+			})
 			if err != nil {
 				return fmt.Errorf("couldn't get an eBPF enricher: %w", err)
 			}

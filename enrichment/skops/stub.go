@@ -11,7 +11,7 @@ import (
 
 type EbpfEnricher struct{}
 
-func NewEnricher(pollingInterval uint64) (*EbpfEnricher, error) { return nil, nil }
+func NewEnricher(conf *Config) (*EbpfEnricher, error) { return nil, nil }
 
 func (e *EbpfEnricher) String() string {
 	return "eBPF enricher stub"
