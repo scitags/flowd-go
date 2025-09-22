@@ -25,7 +25,7 @@ jobs:
         # dependencies so as to keep stuff fast.
       - name: Check we can build the project
         shell: bash
-        run: go build -o foo ./cmd
+        run: make build NO_EBPF=1
     if: ${{ ! inputs.ebpf }}
 
   build-ebpf:
