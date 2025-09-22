@@ -2,9 +2,7 @@ package main
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
-	"strings"
 
 	"github.com/goccy/go-yaml"
 	"github.com/scitags/flowd-go/backends/fireflyb"
@@ -21,7 +19,7 @@ type Config struct {
 	StunServers []string `yaml:"stunServers"`
 
 	Plugins *struct {
-		Np        *np.Config        `yaml:"np"`
+		Np        *np.Config        `yaml:"namedPipe"`
 		Firefly   *fireflyp.Config  `yaml:"firefly"`
 		Api       *api.Config       `yaml:"api"`
 		Perfsonar *perfsonar.Config `yaml:"perfsonar"`
@@ -69,12 +67,6 @@ func ReadConf(path string) (*Config, error) {
 	conf := Config{}
 	if err := yaml.Unmarshal(r, &conf); err != nil {
 		return nil, fmt.Errorf("error unmarshaling the configuration: %w", err)
-	}
-
-	i := 0
-	for l := range strings.Lines(conf.String()) {
-		slog.Debug("parsed configuration", "i", i, "l", l)
-		i++
 	}
 
 	return &conf, nil

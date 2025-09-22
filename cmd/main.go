@@ -6,7 +6,9 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
+	"unicode"
 
 	"github.com/scitags/flowd-go/cmd/subcmd"
 	"github.com/scitags/flowd-go/types"
@@ -82,6 +84,11 @@ var (
 			if err != nil {
 				slog.Error("couldn't read the configuration", "err", err)
 				return
+			}
+			i := 0
+			for l := range strings.Lines(conf.String()) {
+				slog.Debug("parsed configuration", "i", fmt.Sprintf("%03d", i), "l", strings.TrimRightFunc(l, unicode.IsSpace))
+				i++
 			}
 
 			plugins, err := createPlugins(conf)
