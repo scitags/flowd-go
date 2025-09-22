@@ -64,3 +64,6 @@ compile_commands.json
 
 # Ignore generated plots and images
 *.png
+
+# Ignore stringer-generate files
+*_string.go
