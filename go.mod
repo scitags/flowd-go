@@ -5,7 +5,6 @@ go 1.24.0
 require (
 	github.com/cilium/ebpf v0.19.0
 	github.com/containerd/cgroups v1.1.0
-	github.com/cpuguy83/go-md2man/v2 v2.0.4
 	github.com/fatih/structs v1.1.0
 	github.com/florianl/go-diag v0.0.3
 	github.com/florianl/go-tc v0.4.5
@@ -25,6 +24,7 @@ require (
 
 require (
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
@@ -64,3 +64,5 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+tool github.com/cpuguy83/go-md2man/v2
