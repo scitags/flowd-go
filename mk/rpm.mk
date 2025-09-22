@@ -105,7 +105,7 @@ ifeq ($(SRC_GEN_MODE),go)
 
 	@# Try to use a 'normally' installed Go release and, if not, use the one we should've already installed.
 	go mod vendor || /tmp/go/bin/go mod vendor
-	go generate cmd/doc.go || /tmp/go/bin/go generate cmd/doc.go
+	go generate ./... || /tmp/go/bin/go generate ./...
 	gzip --force rpm/$(SPECFILE_NAME).1
 
 	@# Record the current commit so that it can be embedded in the resulting binary.
