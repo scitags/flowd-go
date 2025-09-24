@@ -15,7 +15,7 @@ func (c *Config) UnmarshalYAML(b []byte) error {
 
 	def := &config{
 		BindAddress: "127.0.0.1",
-		BindPort:    10514,
+		BindPort:    7777,
 	}
 
 	if err := yaml.Unmarshal(b, def); err != nil {
