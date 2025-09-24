@@ -155,7 +155,7 @@ def plot(prefix: str, data: dict, variable: str, title: str, yLabel: str, scale:
     ax.plot(
         [sample["ts"] for sample in data['ebpf']],
         [sample["data"][variable] * getFactor(sample, variable) / scale for sample in data['ebpf']],
-        '-r', label = 'eBPF'
+        '-r', label = 'skops'
     )
 
     ax.plot(
