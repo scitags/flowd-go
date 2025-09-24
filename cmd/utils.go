@@ -8,6 +8,7 @@ import (
 	"github.com/scitags/flowd-go/backends/marker"
 	"github.com/scitags/flowd-go/plugins/api"
 	"github.com/scitags/flowd-go/plugins/fireflyp"
+	"github.com/scitags/flowd-go/plugins/iperf3"
 	"github.com/scitags/flowd-go/plugins/np"
 	"github.com/scitags/flowd-go/plugins/perfsonar"
 	"github.com/scitags/flowd-go/types"
@@ -45,6 +46,14 @@ func createPlugins(c *Config) ([]types.Plugin, error) {
 			p, err := perfsonar.NewPerfsonarPlugin(c.Plugins.Perfsonar)
 			if err != nil {
 				return nil, fmt.Errorf("error initialising the perfsonar plugin: %w", err)
+			}
+			plugins = append(plugins, p)
+		}
+
+		if c.Plugins.Iperf3 != nil {
+			p, err := iperf3.NewIperf3Plugin(c.Plugins.Iperf3)
+			if err != nil {
+				return nil, fmt.Errorf("error initialising the iperf3 plugin: %w", err)
 			}
 			plugins = append(plugins, p)
 		}

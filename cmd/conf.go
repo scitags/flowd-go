@@ -9,6 +9,7 @@ import (
 	"github.com/scitags/flowd-go/backends/marker"
 	"github.com/scitags/flowd-go/plugins/api"
 	"github.com/scitags/flowd-go/plugins/fireflyp"
+	"github.com/scitags/flowd-go/plugins/iperf3"
 	"github.com/scitags/flowd-go/plugins/np"
 	"github.com/scitags/flowd-go/plugins/perfsonar"
 )
@@ -23,6 +24,7 @@ type Config struct {
 		Firefly   *fireflyp.Config  `yaml:"firefly"`
 		Api       *api.Config       `yaml:"api"`
 		Perfsonar *perfsonar.Config `yaml:"perfsonar"`
+		Iperf3    *iperf3.Config    `yaml:"iperf3"`
 	} `yaml:"plugins"`
 
 	Backends *struct {
