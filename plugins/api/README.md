@@ -78,12 +78,9 @@ Creates a *flow end event* with hardcoded information. The created flow event is
 Please refer to the Markdown-formatted documentation at the repository's root for more information on available
 options. The following replicates the default configuration:
 
-```json
-{
-    "plugins": {
-        "api": {
-            "bindAddress": "127.0.0.1",
-            "bindPort": 7777
-        }
-    }
-}
+```yaml
+plugins:
+    api:
+        bindAddress: "127.0.0.1"
+        bindPort: 7777
+```

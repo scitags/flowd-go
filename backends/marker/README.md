@@ -23,20 +23,16 @@ looking at.
 Please refer to the Markdown-formatted documentation at the repository's root for more information on available
 options. The following replicates the default configuration:
 
-```json
-{
-    "backends": {
-        "marker": {
-            "targetInterfaces": ["lo"],
-            "discoverInterfaces": false,
-            "removeQdisc": true,
-            "programPath": "",
-            "markingStrategy": "label",
-            "debugMode": true,
-            "matchAll": false
-        }
-    }
-}
+```yaml
+backends:
+    marker:
+        targetInterfaces: ["lo"]
+        discoverInterfaces: false
+        removeQdisc: true
+        programPath: ""
+        markingStrategy: "label"
+        debugMode: true
+        matchAll: false
 ```
 
 ## Taming eBPF

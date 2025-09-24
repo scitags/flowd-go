@@ -41,13 +41,10 @@ Note how the amount of whitespace is arbitrary: it'll be completely trimmed.
 Please refer to the Markdown-formatted documentation at the repository's root for more information on available
 options. The following replicates the default configuration:
 
-```json
-{
-    "plugins": {
-        "namedPipe": {
-            "maxReaders": 5,
-            "buffSize": 1000,
-            "pipePath": "np"
-        }
-    }
-}
+```yaml
+plugins: 
+    namedPipe:
+        maxReaders: 5
+        buffSize: 1000
+        pipePath: "np"
+```

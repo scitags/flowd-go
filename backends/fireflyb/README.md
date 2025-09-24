@@ -168,15 +168,30 @@ easily be altered.
 Please refer to the Markdown-formatted documentation at the repository's root for more information on available
 options. The following replicates the default configuration:
 
-```json
-{
-    "backends": {
-        "np": {
-            "fireflyDestinationPort": 10514,
-            "prependSyslog": false
-        }
-    }
-}
+```yaml
+backends:
+    firefly:
+        destinationPort: 10514
+        prependSyslog: false
+
+        sendToCollector: false
+        collectorAddress: "127.0.0.1"
+        collectorPort: 10514
+
+        periodicFireflies: false
+        period: 1000
+        enrichmentVerbosity: "lean"
+
+        netlink:
+            protocol: 6 # TCP
+            ext: 255 # All connections
+            state: 3071 # Every state except listen
+
+        skops:
+          cgroupPath: "/sys/fs/cgroup"
+          programPath: ""
+          strategy: "poll"
+          debugMode: false
 ```
 
 <!-- REFs -->

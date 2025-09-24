@@ -11,12 +11,9 @@ wasn't the configured one, a message with level `WARN` will be shown on the log.
 Please refer to the Markdown-formatted documentation at the repository's root for more information on available
 options. The following replicates the default configuration:
 
-```json
-{
-    "plugins": {
-        "perfsonar": {
-            "activityId": 0,
-            "experimentId": 0
-        }
-    }
-}
+```yaml
+plugins:
+    perfsonar:
+        activityId: 0
+        experimentId: 0
+```
