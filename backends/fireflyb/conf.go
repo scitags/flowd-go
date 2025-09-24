@@ -20,9 +20,9 @@ type Config struct {
 	Period              int    `yaml:"period"`
 	EnrichmentVerbosity string `yaml:"enrichmentVerbosity"`
 
-	Netlink *netlink.Config
+	Netlink *netlink.Config `yaml:"netlink"`
 
-	SkOps *skops.Config
+	SkOps *skops.Config `yaml:"skops"`
 }
 
 func (c *Config) UnmarshalYAML(b []byte) error {

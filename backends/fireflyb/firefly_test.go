@@ -119,6 +119,12 @@ func TestPeriodicFirefly(t *testing.T) {
 	}
 	defer conn.Close()
 
+	// In ms
+	samplingPeriod := 500
+
+	netlinkConf := netlink.DefaultConfig
+	netlinkConf.Period = samplingPeriod
+
 	fireflyBackend, err := NewFireflyBackend(&Config{
 		PrependSyslog: false,
 
@@ -127,14 +133,15 @@ func TestPeriodicFirefly(t *testing.T) {
 		CollectorPort:    4321,
 
 		PeriodicFireflies:   true,
-		Period:              100,
+		Period:              samplingPeriod,
 		EnrichmentVerbosity: "lean",
 
-		Netlink: &netlink.DefaultConfig,
+		Netlink: &netlinkConf,
 
 		SkOps: &skops.Config{
-			Strategy:  skops.Poll,
-			DebugMode: true,
+			PollingInterval: uint64(samplingPeriod) * skops.NS_PER_MS,
+			Strategy:        skops.Poll,
+			DebugMode:       true,
 		},
 	})
 	if err != nil {
