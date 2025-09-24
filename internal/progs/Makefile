@@ -15,6 +15,7 @@ export DEPS := *.bpf.c *.bpf.h ../vmlinux.h
 all: vmlinux.h
 	$(MAKE) -C marker
 	$(MAKE) -C skops
+	$(MAKE) -C watcher
 
 # Generate the kernel headers
 vmlinux.h:
@@ -24,4 +25,5 @@ vmlinux.h:
 clean:
 	$(MAKE) -C marker clean
 	$(MAKE) -C skops clean
+	$(MAKE) -C watcher clean
 	@rm -rf $(TRASH)

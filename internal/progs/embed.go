@@ -4,6 +4,7 @@ import "embed"
 
 //go:embed marker/*.o
 //go:embed skops/*.o
+//go:embed watcher/*.o
 var ebpfPrograms embed.FS
 
 // GetMarkerProgram will return an embedded eBPF program carrying
@@ -22,4 +23,10 @@ func GetMarkerProgram(path string) ([]byte, error) {
 // from the outside.
 func GetSkopsProgram(path string) ([]byte, error) {
 	return ebpfPrograms.ReadFile("skops/" + path)
+}
+
+// GetWatcherProgram will return an embedded eBPF program carrying
+// monitoring of connections to generate flowIDs.
+func GetWatcherProgram(path string) ([]byte, error) {
+	return ebpfPrograms.ReadFile("watcher/" + path)
 }
