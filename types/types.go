@@ -1,6 +1,7 @@
 package types
 
 import (
+	"fmt"
 	"net"
 	"strings"
 	"time"
@@ -21,6 +22,13 @@ type FlowID struct {
 	CurrentTs   time.Time
 	Info        FlowInfo
 	Application string
+}
+
+func (f FlowID) String() string {
+	return fmt.Sprintf(
+		"{s: %s, f: %s, src: {i: %s, p: %d}, dst: {i: %s, p: %d}}",
+		f.State, f.Family, f.Src.IP, f.Src.Port, f.Dst.IP, f.Dst.Port,
+	)
 }
 
 type IPPort struct {
