@@ -12,8 +12,8 @@ type Config struct {
 	CollectorAddress string `yaml:"collectorAddress"`
 	CollectorPort    int    `yaml:"collectorPort"`
 
-	Enrich              bool   `yaml:"periodicFireflies"`
-	EnrichmentVerbosity string `yaml:"enrichmentVerbosity"`
+	Enrich         bool   `yaml:"enrich"`
+	EnrichmentMode string `yaml:"enrichmentMode"`
 }
 
 func (c *Config) UnmarshalYAML(b []byte) error {
@@ -28,8 +28,8 @@ func (c *Config) UnmarshalYAML(b []byte) error {
 		CollectorAddress: "127.0.0.1",
 		CollectorPort:    10514,
 
-		Enrich:              false,
-		EnrichmentVerbosity: "lean",
+		Enrich:         false,
+		EnrichmentMode: "lean",
 	}
 
 	if err := yaml.Unmarshal(b, def); err != nil {

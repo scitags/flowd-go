@@ -38,7 +38,7 @@ const (
 // particular flow. The addition of several struct tags allows for a precise
 // control over what fields are marshalled.
 type FlowInfo struct {
-	Verbosity string      `structs:"-" lean:"-"`
+	Mode      string      `structs:"-" lean:"-"`
 	TCPInfo   *TCPInfo    `structs:"tcpInfo" lean:"tcpInfo"`
 	Cong      *Cong       `structs:"cong,omitempty" lean:"cong,omitempty"`
 	Socket    *Socket     `structs:"skBuff,omitempty" lean:"-"`
@@ -63,13 +63,13 @@ type FlowInfo struct {
 func (e *FlowInfo) MarshalJSON() ([]byte, error) {
 	s := structs.New(e)
 
-	if e.Verbosity != "" {
-		_, ok := validTags[e.Verbosity]
+	if e.Mode != "" {
+		_, ok := validTags[e.Mode]
 		if ok {
-			if e.Verbosity == "compatible" {
+			if e.Mode == "compatible" {
 				return json.Marshal(NewCompatibilityEnrichment(e))
 			} else {
-				s.TagName = e.Verbosity
+				s.TagName = e.Mode
 			}
 		}
 	}
@@ -218,7 +218,7 @@ func (i *TCPInfo) String() string {
 // Cong encodes the TCP Congestion Avoidance (CA) algorithm
 // in use by a given TCP socket.
 type Cong struct {
-	Algorithm string `json:"algorithm"`
+	Algorithm string `structs:"algorithm" lean:"algorithm"`
 }
 
 func (i *Cong) String() string {

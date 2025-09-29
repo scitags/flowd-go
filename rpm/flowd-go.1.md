@@ -228,7 +228,7 @@ payload including flow information.
 
 - **enrich [bool] {false}**: Whether to send periodic fireflies containing TCP flow information.
 
-- **enrichmentVerbosity [string] {"lean"}**: The verbosity of the acquired flow information. This option must be one of:
+- **enrichmentMode [string] {"lean"}**: How to encode the enrichment information. This option must be one of:
 
     - `"lean"`: Include a subset of TCP information and the congestion algorithm.
     - `"compatible"`: Generate flowd-compatible fireflies.

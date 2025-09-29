@@ -151,8 +151,8 @@ func TestPeriodicFirefly(t *testing.T) {
 		CollectorAddress: "127.0.0.1",
 		CollectorPort:    4321,
 
-		Enrich:              true,
-		EnrichmentVerbosity: "lean",
+		Enrich:         true,
+		EnrichmentMode: "lean",
 	})
 	if err != nil {
 		t.Fatalf("error initialising backend: %v", err)

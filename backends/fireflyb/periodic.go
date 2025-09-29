@@ -12,7 +12,7 @@ func (b *FireflyBackend) periodicFFs(f types.FlowID, flavour types.Flavour, fic 
 	f.State = types.ONGOING
 
 	for fi := range fic {
-		fi.Verbosity = b.EnrichmentVerbosity
+		fi.Mode = b.EnrichmentMode
 
 		switch flavour {
 		case types.Ebpf:

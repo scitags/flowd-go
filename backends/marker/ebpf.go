@@ -139,6 +139,7 @@ func (b *MarkerBackend) Run(done <-chan struct{}, inChan <-chan glowdTypes.FlowI
 				}
 				slog.Debug("inserted map value", "flowHash", flowHash, "flowTag", flowTag)
 
+				// We need to ingest flow information not to block broadcasting!
 				for t, fc := range flowID.FlowInfoChans {
 					if fc == nil {
 						continue
