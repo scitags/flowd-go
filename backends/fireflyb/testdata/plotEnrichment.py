@@ -71,10 +71,10 @@ def loadFireflyData(lines: list[str]):
                 "data": rawJson["netlink"]["tcpInfo"]
             })
 
-        if "ebpfTcpInfo" in rawJson:
+        if "skOps" in rawJson:
             ebpfDataPoints.append({
                 "ts": datetime.datetime.fromisoformat(processTimeStamp(rawJson["flow-lifecycle"]["current-time"])),
-                "data": rawJson["ebpfTcpInfo"]["tcpInfo"]
+                "data": rawJson["skOps"]["tcpInfo"]
             })
 
     return netlinkDataPoints, ebpfDataPoints
