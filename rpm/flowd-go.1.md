@@ -225,15 +225,22 @@ payload including flow information.
 
 - **collectorPort [int] {10514}**: The port the collector is listening on for incoming fireflies.
 
-- **periodicFireflies [bool] {false}**: Whether to send periodic fireflies containing TCP flow information.
-
-- **period [int] {1000}**: Period of the, well, periodic fireflies in seconds.
+- **enrich [bool] {false}**: Whether to send periodic fireflies containing TCP flow information.
 
 - **enrichmentVerbosity [string] {"lean"}**: The verbosity of the acquired flow information. This option must be one of:
 
     - `"lean"`: Include a subset of TCP information and the congestion algorithm.
     - `"compatible"`: Generate flowd-compatible fireflies.
     - `""`: If explicitly empty, all the information will be included. Beware, the amount of information is quite large...
+
+# ENRICHERS
+TCP connections can be monitored to gain a deeper insight into their evolution. In flowd-go this information is extracted through *enrichers*.
+The gathered information is relayed to every backend so that they can handle and embed the data as they see fit. How this data is
+extracted is configured in the `enrichers` section of the configuration detailed below. For a deeper explanation please
+refer to the documentation accompanying the implementation, which can be found on the URL provided in the DESCRIPTION. The
+setting's value type is enclosed in brackets (`[]`) and its default value is enclosed in braces (`{}`).
+
+- **period [int] {1000}**: Period with which to extract information, in milliseconds. Note this period will be applied to **every** enricher.
 
 - **netlink [object]**: The configuration of the netlink enrichment source:
 
