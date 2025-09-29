@@ -48,6 +48,7 @@ func run(cmd *cobra.Command, args []string) {
 	plugins, err := createPlugins(conf)
 	if err != nil {
 		slog.Error("couldn't create the plugins", "err", err)
+		return
 	}
 	defer cleanupPlugins(plugins)
 
@@ -55,6 +56,7 @@ func run(cmd *cobra.Command, args []string) {
 	backends, err := createBackends(conf)
 	if err != nil {
 		slog.Error("couldn't create the backends", "err", err)
+		return
 	}
 	defer cleanupBackends(backends)
 
@@ -68,6 +70,7 @@ func run(cmd *cobra.Command, args []string) {
 	enrichers, err := createEnrichers(conf)
 	if err != nil {
 		slog.Error("couldn't initialise the enrichers", "err", err)
+		return
 	}
 	defer cleanupEnrichers(enrichers)
 
