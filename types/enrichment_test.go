@@ -5,8 +5,8 @@ import (
 	"testing"
 )
 
-func TestEnrichmentVerbosityControl(t *testing.T) {
-	e := &Enrichment{
+func TestEnrichmentMode(t *testing.T) {
+	e := &FlowInfo{
 		TCPInfo: &TCPInfo{
 			Pmtu:  1500,
 			State: 5,
@@ -18,13 +18,13 @@ func TestEnrichmentVerbosityControl(t *testing.T) {
 		t.Errorf("error marshalling: %v", err)
 	}
 
-	e.Verbosity = "lean"
+	e.Mode = "lean"
 	leanEnc, err := json.Marshal(e)
 	if err != nil {
 		t.Errorf("error marshalling: %v", err)
 	}
 
-	e.Verbosity = "wrong"
+	e.Mode = "wrong"
 	wrongEnc, err := json.Marshal(e)
 	if err != nil {
 		t.Errorf("error marshalling: %v", err)
@@ -38,8 +38,8 @@ func TestEnrichmentVerbosityControl(t *testing.T) {
 }
 
 func TestEnrichmentCompatibility(t *testing.T) {
-	e := &Enrichment{
-		Verbosity: "compatible",
+	e := &FlowInfo{
+		Mode: "compatible",
 		TCPInfo: &TCPInfo{
 			Pmtu:  1500,
 			State: 5,

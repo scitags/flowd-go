@@ -168,15 +168,13 @@ easily be altered.
 Please refer to the Markdown-formatted documentation at the repository's root for more information on available
 options. The following replicates the default configuration:
 
-```json
-{
-    "backends": {
-        "np": {
-            "fireflyDestinationPort": 10514,
-            "prependSyslog": false
-        }
-    }
-}
+```yaml
+backends:
+    firefly:
+        bindAddress: "127.0.01."
+        bindPort: 10514
+        deadline: 0
+        hasSyslogHeader: false
 ```
 
 <!-- REFs -->

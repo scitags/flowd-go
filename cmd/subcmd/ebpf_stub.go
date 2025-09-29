@@ -1,4 +1,4 @@
-//go:build darwin || !cgo
+//go:build !linux || !ebpf
 
 package subcmd
 
@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	EbpfClean = &cobra.Command{
+	MarkerClean = &cobra.Command{
 		Use:   "clean",
 		Short: "stubbed-out method with no effect on non-linux platforms.",
 		Run: func(cmd *cobra.Command, args []string) {

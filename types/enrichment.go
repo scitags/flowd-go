@@ -5,10 +5,11 @@ import (
 	"fmt"
 
 	"github.com/fatih/structs"
-	"github.com/vishvananda/netlink"
 )
 
-// Map validTags encodes valid struct tags allowing for
+//go:generate go tool golang.org/x/tools/cmd/stringer -type=Flavour
+
+// validTags encodes valid struct tags allowing for
 // the control of marshalling of Enrichment structs.
 var validTags = map[string]struct{}{
 	// When leveraging the lean tag a large portion of the Enrichment struct
@@ -22,11 +23,22 @@ var validTags = map[string]struct{}{
 	"compatible": {},
 }
 
-// Struct Enrichment encodes all the connection enrichment information for a
+// Flavour encodes the enrichment source (i.e. eBPF or netlink).
+type Flavour uint8
+
+const (
+	// An eBPF (i.e. sock_ops) enricher
+	Ebpf Flavour = iota
+
+	// A netlink enricher
+	Netlink
+)
+
+// Enrichment encodes all the connection enrichment information for a
 // particular flow. The addition of several struct tags allows for a precise
 // control over what fields are marshalled.
-type Enrichment struct {
-	Verbosity string      `structs:"-" lean:"-"`
+type FlowInfo struct {
+	Mode      string      `structs:"-" lean:"-"`
 	TCPInfo   *TCPInfo    `structs:"tcpInfo" lean:"tcpInfo"`
 	Cong      *Cong       `structs:"cong,omitempty" lean:"cong,omitempty"`
 	Socket    *Socket     `structs:"skBuff,omitempty" lean:"-"`
@@ -36,188 +48,6 @@ type Enrichment struct {
 	SkMemInfo *SkMemInfo  `structs:"skMemInfo,omitempty" lean:"-"`
 	VegasInfo *VegasInfo  `structs:"vegasInfo,omitempty" lean:"-"`
 	DCTCPInfo *DCTCPInfo  `structs:"dctcpInfo,omitempty" lean:"-"`
-}
-
-// Struct compatibilityEnrichment serves as a buffer between flowd-go's
-// native representation (i.e. Enrichment) and legacy flowd's structure
-// for connection enrichment data. As seen on [0], flowd's logic will
-// parse the output of ss(8) applying the transformations and names
-// specified in the `info_refine_tabl` dictionary [0]. This struct implements
-// the transformations defined through `info_refine_tabl` so as to generate
-// a compliant object encoding connection enrichment information.
-//
-// 0: https://github.com/scitags/flowd/blob/v1.1.7/scitags/netlink/pyroute_tcp.py
-type compatibilityEnrichment struct {
-	State   string `json:"state"`
-	Pmtu    uint32 `json:"pmtu"`
-	Retrans uint32 `json:"retrans"`
-	Ato     uint32 `json:"ato"`
-	Rto     uint32 `json:"rto"`
-
-	Snd_wscale   uint8  `json:"snd_wscale"`
-	Rcv_wscale   uint8  `json:"rcv_wscale"`
-	Snd_mss      uint32 `json:"snd_mss"`
-	Snd_cwnd     uint32 `json:"snd_cwnd"`
-	Snd_ssthresh uint32 `json:"snd_ssthresh"`
-
-	Rtt       uint32 `json:"rtt"`
-	Rttvar    uint32 `json:"rttvar"`
-	Rcv_rtt   uint32 `json:"rcv_rtt"`
-	Rcv_space uint32 `json:"rcv_space"`
-
-	Options []string `json:"opts"`
-
-	Last_data_sent uint32 `json:"last_data_sent"`
-
-	Rcv_ssthresh uint32 `json:"rcv_ssthresh"`
-
-	Segs_in       uint32 `json:"segs_in"`
-	Segs_out      uint32 `json:"segs_out"`
-	Data_segs_in  uint32 `json:"data_segs_in"`
-	Data_segs_out uint32 `json:"data_segs_out"`
-
-	Lost          uint32 `json:"lost"`
-	Notsent_bytes uint32 `json:"notsent_bytes"`
-
-	Rcv_mss uint32 `json:"rcv_mss"`
-
-	Pacing_rate uint64 `json:"pacing_rate"`
-	Retransmits uint8  `json:"retransmits"`
-
-	Min_rtt      uint32 `json:"min_rtt"`
-	Rwnd_limited uint64 `json:"rwnd_limited"`
-
-	Max_pacing_rate uint64 `json:"max_pacing_rate"`
-
-	Probes     uint8  `json:"probes"`
-	Reordering uint32 `json:"reordering"`
-
-	Last_data_recv uint32 `json:"last_data_recv"`
-	Bytes_received uint64 `json:"bytes_received"`
-
-	Fackets uint32 `json:"fackets"`
-
-	Last_ack_recv uint32 `json:"last_ack_recv"`
-	Last_ack_sent uint32 `json:"last_ack_sent"`
-
-	Unacked uint32 `json:"unacked"`
-	Sacked  uint32 `json:"sacked"`
-
-	Bytes_acked uint64 `json:"bytes_acked"`
-
-	Delivery_rate_app_limited uint8  `json:"delivery_rate_app_limited"`
-	Delivery_rate             uint64 `json:"delivery_rate"`
-
-	Sndbuf_limited uint64 `json:"sndbuf_limited"`
-
-	Ca_state      uint8  `json:"ca_state"`
-	Busy_time     uint64 `json:"busy_time"`
-	Total_retrans uint32 `json:"total_retrans"`
-
-	Advmss  uint32 `json:"advmss"`
-	Backoff uint8  `json:"backoff"`
-}
-
-// NewCompatibilityEnrichment populates a compatibilityEnrichment
-// struct based on the contents of the passed Enrichment struct. In doing
-// so, some fields will be (slightly) processed so as to adhere with the
-// format expected by the legacy flowd-go implementation. These transformations
-// are those that can be derived from the `info_refine_tabl` dictionary [0]
-// present in flowd's implementation.
-//
-// 0: https://github.com/scitags/flowd/blob/v1.1.7/scitags/netlink/pyroute_tcp.py
-func NewCompatibilityEnrichment(e *Enrichment) compatibilityEnrichment {
-	to1k := func(og uint32) uint32 { return og / 1000 }
-
-	processState := func(s uint8) string {
-		ss, ok := compatibleStateNames[State(s)]
-		if !ok {
-			return "invalid"
-		}
-		return ss
-	}
-
-	processOpts := func(opts uint8) []string {
-		parsed := []string{}
-
-		if opts&TCPI_OPT_TIMESTAMPS != 0 {
-			parsed = append(parsed, "ts")
-		}
-		if opts&TCPI_OPT_SACK != 0 {
-			parsed = append(parsed, "sack")
-		}
-		if opts&TCPI_OPT_ECN != 0 {
-			parsed = append(parsed, "ecn")
-		}
-
-		return parsed
-	}
-
-	ce := compatibilityEnrichment{
-		State:   processState(e.TCPInfo.State),
-		Pmtu:    e.TCPInfo.Pmtu,
-		Retrans: e.TCPInfo.Retrans,
-		Ato:     to1k(e.TCPInfo.Ato),
-		Rto: func(og uint32) uint32 {
-			if og != 3000000 {
-				return to1k(og)
-			}
-			return 0
-		}(e.TCPInfo.Rto),
-		Snd_wscale: e.TCPInfo.Snd_wscale,
-		Rcv_wscale: e.TCPInfo.Rcv_wscale,
-		Snd_mss:    e.TCPInfo.Snd_mss,
-		Snd_cwnd:   e.TCPInfo.Snd_cwnd,
-		Snd_ssthresh: func(og uint32) uint32 {
-			if og < 0xFFFF {
-				return og
-			}
-			return 0
-		}(e.TCPInfo.Snd_ssthresh),
-
-		Rtt:       to1k(e.TCPInfo.Rtt),
-		Rttvar:    to1k(e.TCPInfo.Rttvar),
-		Rcv_rtt:   to1k(e.TCPInfo.Rcv_rtt),
-		Rcv_space: e.TCPInfo.Rcv_space,
-
-		Options: processOpts(e.TCPInfo.Options),
-
-		Last_data_sent: e.TCPInfo.Last_data_sent,
-		Rcv_ssthresh:   e.TCPInfo.Rcv_ssthresh,
-
-		Segs_in:       e.TCPInfo.Segs_in,
-		Segs_out:      e.TCPInfo.Segs_out,
-		Data_segs_in:  e.TCPInfo.Data_segs_in,
-		Data_segs_out: e.TCPInfo.Data_segs_out,
-
-		Lost:                      e.TCPInfo.Lost,
-		Notsent_bytes:             e.TCPInfo.Notsent_bytes,
-		Rcv_mss:                   e.TCPInfo.Rcv_mss,
-		Pacing_rate:               e.TCPInfo.Pacing_rate,
-		Retransmits:               e.TCPInfo.Retransmits,
-		Min_rtt:                   e.TCPInfo.Min_rtt,
-		Rwnd_limited:              e.TCPInfo.Rwnd_limited,
-		Max_pacing_rate:           e.TCPInfo.Max_pacing_rate,
-		Probes:                    e.TCPInfo.Probes,
-		Reordering:                e.TCPInfo.Reordering,
-		Last_data_recv:            e.TCPInfo.Last_data_recv,
-		Bytes_received:            e.TCPInfo.Bytes_received,
-		Fackets:                   e.TCPInfo.Fackets,
-		Last_ack_recv:             e.TCPInfo.Last_ack_recv,
-		Last_ack_sent:             e.TCPInfo.Last_ack_sent,
-		Unacked:                   e.TCPInfo.Unacked,
-		Sacked:                    e.TCPInfo.Sacked,
-		Bytes_acked:               e.TCPInfo.Bytes_acked,
-		Delivery_rate_app_limited: e.TCPInfo.Delivery_rate_app_limited,
-		Delivery_rate:             e.TCPInfo.Delivery_rate,
-		Sndbuf_limited:            e.TCPInfo.Sndbuf_limited,
-		Ca_state:                  e.TCPInfo.Ca_state,
-		Busy_time:                 e.TCPInfo.Busy_time,
-		Total_retrans:             e.TCPInfo.Total_retrans,
-		Advmss:                    e.TCPInfo.Advmss,
-		Backoff:                   e.TCPInfo.Backoff,
-	}
-	return ce
 }
 
 // MarshalJSON implements the json.Marshaler interface. We'll simply leverage
@@ -230,16 +60,16 @@ func NewCompatibilityEnrichment(e *Enrichment) compatibilityEnrichment {
 // Valid tags are contained in the validTags map. The definition of the
 // validTags map contains embedded comments explaining what the purpose of each
 // tag is.
-func (e *Enrichment) MarshalJSON() ([]byte, error) {
+func (e *FlowInfo) MarshalJSON() ([]byte, error) {
 	s := structs.New(e)
 
-	if e.Verbosity != "" {
-		_, ok := validTags[e.Verbosity]
+	if e.Mode != "" {
+		_, ok := validTags[e.Mode]
 		if ok {
-			if e.Verbosity == "compatible" {
+			if e.Mode == "compatible" {
 				return json.Marshal(NewCompatibilityEnrichment(e))
 			} else {
-				s.TagName = e.Verbosity
+				s.TagName = e.Mode
 			}
 		}
 	}
@@ -247,10 +77,41 @@ func (e *Enrichment) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.Map())
 }
 
-// Socket simply embeds netlink.Socket to allow us to expose the
-// private deserialize method.
+// SockID mirrors diag.SockID so as to add struct tags for marshalling.
+// It contains information specifying the source and destination addresses
+// along some other identifiable information.
+type SockID struct {
+	// Source port in network byte order (i.e. use Ntohs())
+	SPort uint16 `structs:"srcPort" lean:"-"`
+
+	// Destination port in network byte order (i.e. use Ntohs())
+	DPort uint16 `structs:"dstPort" lean:"-"`
+
+	// Source IPv{4,6} address
+	Src [4]uint32 `structs:"srcIP" lean:"-"`
+
+	// Destination IPv{4,6} address
+	Dst [4]uint32 `structs:"dstIP" lean:"-"`
+
+	// Interface identifier
+	If uint32 `structs:"ifId" lean:"-"`
+
+	// An array of opaque identifiers. See sock_diag(7)
+	Cookie [2]uint32 `structs:"cookie" lean:"-"`
+}
+
+// Socket mirrors diag.Socket so as to add struct tags for marshalling.
 type Socket struct {
-	netlink.Socket
+	Family  uint8  `structs:"family" lean:"-"`
+	State   uint8  `structs:"state" lean:"-"`
+	Timer   uint8  `structs:"timer" lean:"-"`
+	Retrans uint8  `structs:"retrans" lean:"-"`
+	ID      SockID `structs:"id" lean:"-"`
+	Expires uint32 `structs:"expires" lean:"-"`
+	RQueue  uint32 `structs:"rQueue" lean:"-"`
+	WQueue  uint32 `structs:"wQueue" lean:"-"`
+	UID     uint32 `structs:"uid" lean:"-"`
+	INode   uint32 `structs:"iNode" lean:"-"`
 }
 
 func (i *Socket) String() string {
@@ -260,9 +121,8 @@ func (i *Socket) String() string {
 // TCPInfo is the linux defined structure returned in RouteAttr INET_DIAG_INFO messages.
 // It corresponds to the struct tcp_info in [0]. This struct definition has been plundered
 // from github.com/m-lab/tcp-info.
-// References:
 //
-//	0: https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/include/uapi/linux/tcp.h
+// 0: https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/include/uapi/linux/tcp.h
 type TCPInfo struct {
 	State       uint8 `structs:"state" lean:"-"`
 	Ca_state    uint8 `structs:"caState" lean:"-"`
@@ -355,17 +215,20 @@ func (i *TCPInfo) String() string {
 	return fmt.Sprintf("%#v", *i)
 }
 
+// Cong encodes the TCP Congestion Avoidance (CA) algorithm
+// in use by a given TCP socket.
 type Cong struct {
-	Algorithm string `json:"algorithm"`
+	Algorithm string `structs:"algorithm" lean:"algorithm"`
 }
 
 func (i *Cong) String() string {
 	return i.Algorithm
 }
 
-// State is the enumeration of TCP states.
-// https://datatracker.ietf.org/doc/draft-ietf-tcpm-rfc793bis/
-// and uapi/linux/tcp.h
+// State is the enumeration of TCP states. See [0, 1].
+//
+// 0: https://datatracker.ietf.org/doc/draft-ietf-tcpm-rfc793bis/
+// 1: https://elixir.bootlin.com/linux/v5.14/source/include/uapi/linux/tcp.h
 type State int32
 
 func (x State) String() string {
@@ -377,60 +240,71 @@ func (x State) String() string {
 }
 
 // VegasInfo implements the struct associated with INET_DIAG_VEGASINFO, corresponding with
-// linux struct tcpvegas_info in uapi/linux/inet_diag.h.
+// linux struct tcpvegas_info [0].
+// 0: https://elixir.bootlin.com/linux/v5.14/source/include/uapi/linux/inet_diag.h
 type VegasInfo struct {
-	Enabled  uint32 `json:"enabled"`
-	RTTCount uint32 `json:"rttCount"`
-	RTT      uint32 `json:"rtt"`
-	MinRTT   uint32 `json:"minRtt"`
+	Enabled  uint32 `structs:"enabled" lean:"-"`
+	RTTCount uint32 `structs:"rttCount" lean:"-"`
+	RTT      uint32 `structs:"rtt" lean:"-"`
+	MinRTT   uint32 `structs:"minRtt" lean:"-"`
 }
 
 func (i *VegasInfo) String() string {
 	return fmt.Sprintf("%#v", *i)
 }
 
-// DCTCPInfo implements the struct associated with INET_DIAG_DCTCPINFO attribute, corresponding with
-// linux struct tcp_dctcp_info in uapi/linux/inet_diag.h.
+// DCTCPInfo implements the struct associated with INET_DIAG_DCTCPINFO, corresponding with
+// linux struct tcp_dctcp_info [0].
+// 0: https://elixir.bootlin.com/linux/v5.14/source/include/uapi/linux/inet_diag.h
 type DCTCPInfo struct {
-	Enabled uint16 `json:"enabled"`
-	CEState uint16 `json:"ceState"`
-	Alpha   uint32 `json:"alpha"`
-	ABEcn   uint32 `json:"abeCn"`
-	ABTot   uint32 `json:"abTot"`
+	Enabled uint16 `structs:"enabled" lean:"-"`
+	CEState uint16 `structs:"ceState" lean:"-"`
+	Alpha   uint32 `structs:"alpha" lean:"-"`
+	ABEcn   uint32 `structs:"abeCn" lean:"-"`
+	ABTot   uint32 `structs:"abTot" lean:"-"`
 }
 
 func (i *DCTCPInfo) String() string {
 	return fmt.Sprintf("%#v", *i)
 }
 
+// TOS encodes the the TOS information associated with INET_DIAG_TOS.
 type TOS struct {
-	TOS uint8 `json:"tos"`
+	TOS uint8 `structs:"tos" lean:"-"`
 }
 
 func (i *TOS) String() string {
 	return fmt.Sprintf("%#v", *i)
 }
 
-// Taken from sock_diag(7)
+// SkMemInfo encodes the socket memory information set forth in sock_diag(7).
 type SkMemInfo struct {
 	// The amount of data in receive queue.
-	RMemAlloc uint32 `json:"rMemAlloc"`
+	RMemAlloc uint32 `structs:"rMemAlloc" lean:"-"`
+
 	// The receive socket buffer as set by SO_RCVBUF.
-	RcvBuff uint32 `json:"rcvBuff"`
+	RcvBuff uint32 `structs:"rcvBuff" lean:"-"`
+
 	// The amount of data in send queue.
-	WMemAlloc uint32 `json:"WMemAlloc"`
+	WMemAlloc uint32 `structs:"WMemAlloc" lean:"-"`
+
 	// The send socket buffer as set by SO_SNDBUF.
-	SndBuff uint32 `json:"sndBuff"`
+	SndBuff uint32 `structs:"sndBuff" lean:"-"`
+
 	// The amount of memory scheduled for future use (TCP only).
-	FwdAlloc uint32 `json:"fwdAlloc"`
+	FwdAlloc uint32 `structs:"fwdAlloc" lean:"-"`
+
 	// The amount of data queued by TCP, but not yet sent.
-	WMemQueued uint32 `json:"wMemQueued"`
+	WMemQueued uint32 `structs:"wMemQueued" lean:"-"`
+
 	// The amount of memory allocated for the socket's service needs (e.g., socket filter).
-	OptMem uint32 `json:"optMem"`
+	OptMem uint32 `structs:"optMem" lean:"-"`
+
 	// The amount of packets in the backlog (not yet processed).
-	Backlog uint32 `json:"backlog"`
+	Backlog uint32 `structs:"backlog" lean:"-"`
+
 	// Check https://manpages.debian.org/stretch/manpages/sock_diag.7.en.html
-	Drops uint32 `json:"drops"`
+	Drops uint32 `structs:"drops" lean:"-"`
 }
 
 func (i *SkMemInfo) String() string {
@@ -438,12 +312,13 @@ func (i *SkMemInfo) String() string {
 }
 
 // MemInfo implements the struct associated with INET_DIAG_MEMINFO, corresponding with
-// linux struct inet_diag_meminfo in uapi/linux/inet_diag.h.
+// linux struct inet_diag_meminfo [0].
+// 0: https://elixir.bootlin.com/linux/v5.14/source/include/uapi/linux/inet_diag.h
 type MemInfo struct {
-	RMem uint32 `json:"rMem"`
-	WMem uint32 `json:"wMem"`
-	FMem uint32 `json:"fMem"`
-	TMem uint32 `json:"tMem"`
+	RMem uint32 `structs:"rMem" lean:"-"`
+	WMem uint32 `structs:"wMem" lean:"-"`
+	FMem uint32 `structs:"fMem" lean:"-"`
+	TMem uint32 `structs:"tMem" lean:"-"`
 }
 
 func (i *MemInfo) String() string {
@@ -451,16 +326,20 @@ func (i *MemInfo) String() string {
 }
 
 // TCPBBRInfo implements the struct associated with INET_DIAG_BBRINFO attribute, corresponding with
-// linux struct tcp_bbr_info in uapi/linux/inet_diag.h.
+// linux struct tcp_bbr_info [0].
+// 0: https://elixir.bootlin.com/linux/v5.14/source/include/uapi/linux/inet_diag.h
 type TCPBBRInfo struct {
 	// Max-filtered BW (app throughput) estimate in bytes/second
-	BBRBW uint64 `json:"bbrBW"`
+	BBRBW uint64 `structs:"bbrBW" lean:"-"`
+
 	// Min-filtered RTT in uSec
-	BBRMinRTT uint32 `json:"bbrMinRTT"`
+	BBRMinRTT uint32 `structs:"bbrMinRTT" lean:"-"`
+
 	// Pacing gain shifted left 8 bits
-	BBRPacingGain uint32 `json:"bbrPacingGain"`
+	BBRPacingGain uint32 `structs:"bbrPacingGain" lean:"-"`
+
 	// Cwnd gain shifted left 8 bits
-	BBRCwndGain uint32 `json:"bbrCwndGain"`
+	BBRCwndGain uint32 `structs:"bbrCwndGain" lean:"-"`
 }
 
 func (i *TCPBBRInfo) String() string {

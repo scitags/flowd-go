@@ -1,0 +1,24 @@
+---
+name: Check stuff builds (without eBPF support)
+
+on:
+  push:
+    branches:
+      - '*'
+
+jobs:
+  base:
+    name: Prep time!
+    uses: ./.github/workflows/dbg.yml
+
+  test:
+    name: Test it!
+    needs: base
+    uses: ./.github/workflows/test.yml
+
+  build:
+    name: "Build it!"
+    needs: test
+    uses: ./.github/workflows/build.yml
+    with:
+      ebpf: false

@@ -1,6 +1,7 @@
 package types
 
 import (
+	"fmt"
 	"net"
 	"strings"
 	"time"
@@ -19,8 +20,18 @@ type FlowID struct {
 	StartTs     time.Time
 	EndTs       time.Time
 	CurrentTs   time.Time
-	Enrichment  Enrichment
+	Info        FlowInfo
 	Application string
+
+	// Internal communication fields
+	FlowInfoChans map[Flavour]chan *FlowInfo
+}
+
+func (f FlowID) String() string {
+	return fmt.Sprintf(
+		"{s: %s, f: %s, src: {i: %s, p: %d}, dst: {i: %s, p: %d}}",
+		f.State, f.Family, f.Src.IP, f.Src.Port, f.Dst.IP, f.Dst.Port,
+	)
 }
 
 type IPPort struct {
@@ -110,14 +121,12 @@ func ParseFlowState(flowState string) (FlowState, bool) {
 }
 
 type Backend interface {
-	Init() error
 	Run(<-chan struct{}, <-chan FlowID)
 	Cleanup() error
 	String() string
 }
 
 type Plugin interface {
-	Init() error
 	Run(<-chan struct{}, chan<- FlowID)
 	Cleanup() error
 	String() string

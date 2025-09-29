@@ -1,4 +1,4 @@
-flowd-go 1 "April 2025" flowd-go "General Commands Manual"
+flowd-go 1 "September 2025" flowd-go "General Commands Manual"
 ==============================================================
 
 # NAME
@@ -9,7 +9,7 @@ flowd-go - SciTags Flowd-go Daemon
 
 # DESCRIPTION
 The flowd-go daemon will listen for flow events through its various plugins and exert the actions as defined in its several
-backends. For instance, if a new flow is defined the eBPF backend will modify the IPv6 flow label of datagrams until that
+backends. For instance, if a new flow is defined the marker backend will modify the IPv6 flow label of datagrams until that
 same flow is stopped.
 
 In the context of flowd-go a *flow* is usually represented as a 5-tuple including the source and destination IPv{4,6} addresses and
@@ -32,7 +32,7 @@ The implementation can be found at https://github.com/scitags/flowd-go.
 
 `--conf CONFIG_FILE_PATH`
 
-:   Provides the path of the configuration file. If left unspecified, it will default to `/etc/flowd-go/conf.json`.
+:   Provides the path of the configuration file. If left unspecified, it will default to `/etc/flowd-go/conf.yaml`.
     The syntax of the configuration file is explained in the **CONFIGURATION** section.
 
 `--log-level=info`
@@ -61,11 +61,12 @@ The implementation can be found at https://github.com/scitags/flowd-go.
 
 :   Run the flowd-go daemon.
 
-`ebpf`
+`marker`
 
-:   A command hosing several eBPF-related subcommands.
+:   A command hosing several marker-related subcommands. These allow for handling details about the
+    underlying eBPF machinery.
 
-## eBPF SUBCOMMANDS
+## Marker SUBCOMMANDS
 `clean`
 
 :   Clean up the backing eBPF infrastructure including qdisc, hooks and programs. This is particularly useful
@@ -117,23 +118,56 @@ relay. Be sure to check the documentation on the firelfy backend for more inform
 - **deadline [int] {0}**: The deadline (in seconds) to apply to the UDP socket. If set to `0` then no deadline is applied. Please bear in mind this
   is a fine-tuning parameter that shouldn't usually be tampered with. Configure a different value at your own risk!
 
+- **hasSyslogHeader [bool] {false}**: Whether the incoming fireflies contain the syslog header or not.
+
 ## perfsonar
-The **perfSONAR** plugin will simply mark **all outgoing traffic** with the provided activity and experiment IDs. This plugin will override the
-chosen eBPF marking strategy if it's not set to `"flowLabelMatchAll"` and emit a warning message stating the fact.
+The **perfSONAR** plugin will simply mark **all outgoing traffic** with the provided activity and experiment IDs. If the `matchAll` option of
+the `marker` backend is not set to `true`, this plugin will overwrite the setting, emitting a warning in the process. This plugin is devised
+to work hand in hand with the `marker` backend.
 
 - **activityId [int] {0}**: The activity ID to leverage for marking traffic.
 
 - **experimentId [int] {0}**: The experiment ID to leverage for marking traffic.
+
+## iperf3
+The **iperf3** plugin detects TCP flows started on the machine, optionally filtering them based on provided source and destination
+port ranges. Activity and experiment IDs are read from the provided lists.
+
+- **minSourcePort [int] {0}**: The lowest source port (inclusive) to be sensitive to.
+
+- **maxSourcePort [int] {0}**: The highest source port (inclusive) to be sensitive to.
+
+- **minDestinationPort [int] {0}**: The lowest destination port (inclusive) to be sensitive to.
+
+- **maxDestinationPort [int] {0}**: The highest destination port (inclusive) to be sensitive to.
+
+- **cgroupPath [string] {/sys/fs/cgroup}**: The cgroup path to attach the backing eBPF program to.
+
+- **programPath [string] {""}**: The path to an eBPF program to load instead of the one embedded into flowd-go. This program should have been compiled
+  in a particular way as the loading into the kernel won't work otherwise. Please refer to the eBPF documentation bundled with the implementation
+  to take a look at how the embedded program is compiled.
+
+- **debugMode [bool] {false}**: Whether to load an eBPF program compiled with debug support. This option **should be false on production** environments.
+  The many calls to `bpf_printk` preset if compiled with debugging support can have an effect on performance. You have been warned!
+
+- **randomIDs [bool] {false}**: Whether to read experiment and activity IDs sequentially (default) or randomly. The generated index will be leveraged for
+  recovering both IDs.
+
+- **experimentIds [array of int] {[0, 1, 2]}**: The experiment IDs to leverage for marking traffic. Bear in mind that both `experimentIDs` and `activityIDs`
+  should have the same length.
+
+- **activityIds [array of int] {[0, 1, 2]}**: The activity IDs to leverage for marking traffic. Bear in mind that both `experimentIDs` and `activityIDs`
+  should have the same length.
 
 # BACKENDS
 This section lists the configuration options available for each of the provided backends. For a deeper explanation please
 refer to the documentation accompanying the implementation, which can be found on the URL provided in the DESCRIPTION. The
 setting's value type is enclosed in brackets (`[]`) and its default value is enclosed in braces (`{}`).
 
-## ebpf
-The **eBPF** plugin will mark IPv6 datagrams by setting the value of the *flow label* in its header. This plugin relies on an eBPF program
+## marker
+The **marker** plugin will mark IPv6 datagrams by setting the value of the *flow label* in its header. This plugin relies on an eBPF program
 hooked on a *clsact qdisc* which only deals with egress datagrams. The loading and communication with the eBPF program is managed with
-`libbpf`. There are many more (interesting) details in the backend's documentation.
+`cilium`. There are many more (interesting) details in the backend's documentation.
 
 - **targetInterfaces [array of string] {["lo"]}**: The interfaces to hook the eBPF program on. These interfaces should normally include
   the outbound interface of the machine (i.e. the one pointed to by the default route as given by `ip-route(8)`). The provided interface
@@ -153,12 +187,6 @@ hooked on a *clsact qdisc* which only deals with egress datagrams. The loading a
 
   Where `targetInterface` is the one configured with the previous option.
 
-- **forceHookRemoval [bool] {true}**: The TC hook we attach the eBPF program to might exist before flowd-go starts up, especially if flowd-go
-  terminated abruptly last time it ran. This setting controls whether this hook should be removed regardless of whether flowd-go created it
-  or not. In cases where other processes running on the system are leveraging eBPF this setting could cause an exiting flowd-go to remove the
-  TC hooks from under them if they are attached to the same interface. In these (hopefully rare) cases this setting should be set to `false`
-  so that flowd-go doesn't conflict with any other program's backing eBPF infrastructure.
-
 - **programPath [string] {""}**: The path to an eBPF program to load instead of the one embedded into flowd-go. This program should have been compiled
   in a particular way as the loading into the kernel won't work otherwise. Please refer to the eBPF documentation bundled with the implementation
   to take a look at how the embedded program is compiled.
@@ -166,10 +194,14 @@ hooked on a *clsact qdisc* which only deals with egress datagrams. The loading a
 - **markingStrategy [string] {"flowLabel"}**: The marking strategy to leverage on the eBPF program. This option must be one of the following if
   configured, otherwise flowd-go will refuse to start. Available marking strategies are:
 
-    - `"flowLabel"`: The eBPF program embeds the flow information in the IPv6 header's *Flow Label* field as defined in SciTags' technical specification.
+    - `"label"`: The eBPF program embeds the flow information in the IPv6 header's *Flow Label* field as defined in SciTags' technical specification.
     - `"hopByHop"`: The eBPF programs adds a *Hop-by-Hop Options* extension header encoding the flow information.
     - `"destination"`: The eBPF program adds a *Destination Options* extension header encoding the flow information.
-    - `"hopByHopAndDestination"`: The eBPF programs adds a *Hop-by-Hop Options* and a *Destination Options* extension header encoding the flow information.
+    - `"hopByHopDestination"`: The eBPF programs adds a *Hop-by-Hop Options* and a *Destination Options* extension header encoding the flow information.
+
+- **matchAll [bool] {false}**: The eBPF program will only mark datagrams belonging to a given flow as defined by the source and destination IPv6 and port.
+  this option allows for the removal of these checks within the eBPF program, hence enabling marking on every outgoing datagram. Bear in mind the mark
+  will be the same for **every datagram**. This mode is deemed useful when working together with perfSONAR instances.
 
 - **debugMode [bool] {false}**: Whether to load an eBPF program compiled with debug support. This option **should be false on production** environments.
   The many calls to `bpf_printk` preset if compiled with debugging support can have an effect on performance. You have been warned!
@@ -178,15 +210,12 @@ hooked on a *clsact qdisc* which only deals with egress datagrams. The loading a
 The **Firefly** backend will send UDP fireflies as defined in https://www.scitags.org. These are basically UDP datagrams including a JSON-formatted
 payload including flow information.
 
-- **fireflyDestinationPort [int] {10514}**: The destination port of the UDP fireflies. Bear in mind this value should be equal to or lower than
+- **destinationPort [int] {10514}**: The destination port of the UDP fireflies. Bear in mind this value should be equal to or lower than
   `65535` as ports are represented with 16-bit unsigned integers.
 
-- **prependSyslog [bool] {false}**: The technical specification states that an initial bit of information containing syslog-parsable information should
+- **prependSyslog [bool] {true}**: The technical specification states that an initial bit of information containing syslog-parsable information should
   be prepended to the JSON payload. When developing and debugging these payloads the header 'gets in the way' and so one can turn it off. However,
   in a production scenario this setting should be `true`.
-
-- **addNetlinkContext [bool] {true}**: The firefly backend has the capability of leveraging the `sock_diag(7)` `netlink(7)` subsystem to find information
-  on TCP{4,6} sockets with an established connections. If set to `true`, this option causes this information to be embedded into the outgoing fireflies.
 
 - **sendToCollector [bool] {false}**: Fireflies are sent to a transfer's destination address by default. In some scenarios it might be worthwhile to also
   send them to a so called *collector* (usually deployed by National Research and Education Networks) for backbone-level information gathering. It set to
@@ -197,13 +226,55 @@ payload including flow information.
 
 - **collectorPort [int] {10514}**: The port the collector is listening on for incoming fireflies.
 
-- **pollNetlink [bool] {false}**: Whether to periodically poll `netlink(7)` to acquire information regarding the flow ID that triggered this firefly.
-  This information will be logged with a `debug` log level.
+- **enrich [bool] {false}**: Whether to send periodic fireflies containing TCP flow information.
 
-- **netlinkPollingInterval [int] {5000}**: The period, in milliseconds, with which to poll netlink to acquire information as explained in the previous setting.
+- **enrichmentMode [string] {"lean"}**: How to encode the enrichment information. This option must be one of:
+
+    - `"lean"`: Include a subset of TCP information and the congestion algorithm.
+    - `"compatible"`: Generate flowd-compatible fireflies.
+    - `""`: If explicitly empty, all the information will be included. Beware, the amount of information is quite large...
+
+# ENRICHERS
+TCP connections can be monitored to gain a deeper insight into their evolution. In flowd-go this information is extracted through *enrichers*.
+The gathered information is relayed to every backend so that they can handle and embed the data as they see fit. How this data is
+extracted is configured in the `enrichers` section of the configuration detailed below. For a deeper explanation please
+refer to the documentation accompanying the implementation, which can be found on the URL provided in the DESCRIPTION. The
+setting's value type is enclosed in brackets (`[]`) and its default value is enclosed in braces (`{}`).
+
+- **period [int] {1000}**: Period with which to extract information, in milliseconds. Note this period will be applied to **every** enricher.
+
+- **netlink [object]**: The configuration of the netlink enrichment source:
+
+    - **protocol [int] {6}**: The transport protocol (either TCP or UDP) to query. The value is either `IPPROTO_TCP` (6) or
+    `IPPROTO_UDP` (17) as defined in `include/uapi/linux/in.h`.
+
+    - **ext [int] {255}**: The requested information from `sock_daig(7)`. This value is derived from `INET_DIAG_*` constants
+    as defined in `include/uapi/linux/inet_diag.h`.
+
+    - **state [int] {3071}**: The TCP states to retrieve information from. This value is derived from `TCP_*` constants
+    as defined in `include/net/tcp_states.h`.
+
+- **skops [object]**: The configuration of the skops enrichment source:
+
+    - **cgroupPath [string] {"/sys/fs/cgroup"}**: The path of the `cgroups(7)` to be sensitive to. The 'shallower' the path, the
+      more sockets we'll be sensitive to. Making the path 'deeper' reduces 'noise' at the expense of not being sensitive to
+      some sockets. Only alter this setting of you know what you're doing...
+
+    - **programPath [string] {""}**: The path to an eBPF program to load instead of the one embedded into flowd-go. This program should have been compiled
+      in a particular way as the loading into the kernel won't work otherwise. Please refer to the eBPF documentation bundled with the implementation
+      to take a look at how the embedded program is compiled.
+
+    - **debugMode [bool] {false}**: Whether to load an eBPF program compiled with debug support. This option **should be false on production** environments.
+      The many calls to `bpf_printk` preset if compiled with debugging support can have an effect on performance. You have been warned!
+
+    - **strategy [string] {"poll"}**: How to acquire information from the sockets:
+
+        - `"poll"`: Poll sockets every `period` seconds as configured in the firefly backend.
+        - `"transition"`: Only acquire information when the associated TCP state transitions. This strategy is much leaner than the
+          polling in the sense that the number of times data is gathered is independent of the duration of connections.
 
 # CONFIGURATION
-Flowd-go's configuration is defined through a JSON file which by default will be `/etc/flowd-go/conf.json`. A different
+Flowd-go's configuration is defined through a YAML file which by default will be `/etc/flowd-go/conf.yaml`. A different
 path can be specified through the `--conf` option.
 
 Please note **every** configuration parameter is optional. The configuration parsing logic can tell wether an option
@@ -211,19 +282,13 @@ has been configured and, if not, a default value is applied. Bear in mind plugin
 configuration file, but their associated options can be an empty object (i.e. `{}`). The following are examples of
 valid configurations:
 
-    # Apply the default settings to everything. No plugins or backends will be instantiated though...
-    {}
+    # Use default settings for everything, but do instantiate an api plugin and the marker and firefly backends
+    plugins:
+        api: {}
 
-    # Use default settings for everything, but do instantiate an api plugin and the ebpf and firefly backends
-    {
-        "plugins": {
-            "api: {}
-        },
-        "backends": {
-            "ebpf": {},
-            "firefly": {}
-        }
-    }
+    backends:
+        marker: {}
+        firefly: {}
 
 If setting `--log-level=debug` you will get a glimpse of what is actually parsed so that you can check whether it's what
 you expect or not.

@@ -1,0 +1,10 @@
+plugins:
+  perfsonar:
+    activityId: 0
+    experimentId: 0
+
+backends:
+  marker:
+    targetInterfaces: ["eno1"]
+    markingStrategy: hopByHopDestination
+    debugMode: false

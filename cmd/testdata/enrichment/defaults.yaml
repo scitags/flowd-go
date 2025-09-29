@@ -1,0 +1,4 @@
+# Check enricher defaults are correctly enabled
+enrichers:
+  netlink: {}
+  skops: {}

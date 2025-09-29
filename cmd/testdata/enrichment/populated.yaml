@@ -1,0 +1,20 @@
+enrichers:
+  # This period should be propagated to both enrichers
+  period: 1234
+
+  # Make sure we cannot override the cacheCapacity and period
+  netlink:
+    protocol: 255
+    ext: 255
+    state: 1234
+    cacheCapacity: 0
+    period: 0
+
+  # Make sure we cannot override the cacheCapacity and pollingInterval
+  skops:
+    pollingInterval: 0
+    cgroupPath: "/"
+    programPath: "/"
+    debugMode: true
+    cacheCapacity: 0
+    strategy: "poll"

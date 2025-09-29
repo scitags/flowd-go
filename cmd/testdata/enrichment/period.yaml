@@ -1,0 +1,3 @@
+# Check enrichers are disabled!
+enrichers:
+  period: 10

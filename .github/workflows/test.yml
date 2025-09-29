@@ -13,7 +13,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: 1.23.9
+          go-version: '1.24'
 
       - name: Show the current directory
         shell: bash

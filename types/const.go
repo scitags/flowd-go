@@ -19,8 +19,6 @@ const (
 	// TCP_ALL_FLAGS includes flag bits for all TCP connection states. It corresponds to TCPF_ALL in some linux code.
 	TCP_ALL_FLAGS = 0xFFF
 
-	NS_PER_MS uint64 = 1_000_000
-
 	// Options for the `options` member in `struct tcp_info`. See
 	// https://elixir.bootlin.com/linux/v5.14/source/include/uapi/linux/tcp.h#L166
 	// for details.
@@ -46,25 +44,5 @@ var (
 		TCP_LAST_ACK:    "LAST_ACK",
 		TCP_LISTEN:      "LISTEN",
 		TCP_CLOSING:     "CLOSING",
-	}
-
-	// Map compatibleStateNames allows for the lookup of TCP states into
-	// names compatible with the legacy flowd implementation. These names
-	// have been pulled from [0].
-	//
-	// 0: https://github.com/scitags/flowd/blob/v1.1.7/scitags/netlink/pyroute_tcp.py
-	compatibleStateNames = map[State]string{
-		TCP_INVALID:     "INVALID",
-		TCP_ESTABLISHED: "established",
-		TCP_SYN_SENT:    "syn-sent",
-		TCP_SYN_RECV:    "syn-recv",
-		TCP_FIN_WAIT1:   "fin-wait-1",
-		TCP_FIN_WAIT2:   "fin-wait-2",
-		TCP_TIME_WAIT:   "time-wait",
-		TCP_CLOSE:       "unconnected",
-		TCP_CLOSE_WAIT:  "close-wait",
-		TCP_LAST_ACK:    "last-ack",
-		TCP_LISTEN:      "listening",
-		TCP_CLOSING:     "closing",
 	}
 )

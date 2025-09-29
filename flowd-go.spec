@@ -75,7 +75,7 @@ mkdir -p %{buildroot}%{_mandir}/man1
 
 # And install the necessary files
 install -m 0775 bin/%{name}         %{buildroot}%{_bindir}/%{name}
-install -m 0644 rpm/conf.json       %{buildroot}%{_sysconfdir}/%{name}/conf.json
+install -m 0644 rpm/conf.yaml       %{buildroot}%{_sysconfdir}/%{name}/conf.yaml
 install -m 0664 rpm/%{name}.service %{buildroot}%{_unitdir}/%{name}.service
 install -m 0664 rpm/%{name}.1.gz    %{buildroot}%{_mandir}/man1/%{name}.1.gz
 
@@ -92,7 +92,7 @@ install -m 0664 rpm/%{name}.1.gz    %{buildroot}%{_mandir}/man1/%{name}.1.gz
 %files
 %defattr(-,root,root)
 %attr(755, root, root) %{_bindir}/%{name}
-%config(noreplace) %{_sysconfdir}/%{name}/conf.json
+%config(noreplace) %{_sysconfdir}/%{name}/conf.yaml
 %{_unitdir}/%{name}.service
 %doc %{_mandir}/man1/%{name}.1*
 

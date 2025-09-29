@@ -69,11 +69,11 @@ type Firefly struct {
 		ActivityID   uint32 `json:"activity-id"`
 		Application  string `json:"application"`
 	} `json:"context"`
-	Netlink     *Enrichment `json:"netlink,omitempty"`
-	EbpfTcpInfo *Enrichment `json:"ebpfTcpInfo,omitempty"`
+	Netlink *FlowInfo `json:"netlink,omitempty"`
+	SkOps   *FlowInfo `json:"skOps,omitempty"`
 }
 
-func NewFirefly(flowID FlowID, nlInfo, ebpfInfo *Enrichment) Firefly {
+func NewFirefly(flowID FlowID, nlInfo, skOps *FlowInfo) Firefly {
 	ff := Firefly{}
 
 	ff.Version = FIREFLY_VERSION
@@ -94,7 +94,7 @@ func NewFirefly(flowID FlowID, nlInfo, ebpfInfo *Enrichment) Firefly {
 	ff.Context.Application = flowID.Application
 
 	ff.Netlink = nlInfo
-	ff.EbpfTcpInfo = ebpfInfo
+	ff.SkOps = skOps
 
 	// TODO: If src IP address is private, get one through STUN!
 

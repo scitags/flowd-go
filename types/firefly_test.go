@@ -48,8 +48,8 @@ func TestFireflyValidation(t *testing.T) {
 
 	tests := []struct {
 		id         FlowID
-		nl         *Enrichment
-		ebpf       *Enrichment
+		nl         *FlowInfo
+		ebpf       *FlowInfo
 		withSyslog bool
 	}{
 		{
@@ -113,7 +113,7 @@ func TestFireflyValidation(t *testing.T) {
 				Experiment:  0,
 				Application: APPLICATION,
 			},
-			&Enrichment{Verbosity: "lean", Cong: &Cong{Algorithm: "vegas"}},
+			&FlowInfo{Mode: "lean", Cong: &Cong{Algorithm: "vegas"}},
 			nil,
 			false,
 		},
@@ -130,7 +130,7 @@ func TestFireflyValidation(t *testing.T) {
 				Application: APPLICATION,
 			},
 			nil,
-			&Enrichment{Verbosity: "lean", Cong: &Cong{Algorithm: "vegas"}},
+			&FlowInfo{Mode: "lean", Cong: &Cong{Algorithm: "vegas"}},
 			false,
 		},
 		{
@@ -145,8 +145,8 @@ func TestFireflyValidation(t *testing.T) {
 				Experiment:  0,
 				Application: APPLICATION,
 			},
-			&Enrichment{Verbosity: "lean", Cong: &Cong{Algorithm: "vegas"}},
-			&Enrichment{Verbosity: "lean", Cong: &Cong{Algorithm: "vegas"}},
+			&FlowInfo{Mode: "lean", Cong: &Cong{Algorithm: "vegas"}},
+			&FlowInfo{Mode: "lean", Cong: &Cong{Algorithm: "vegas"}},
 			false,
 		},
 	}

@@ -4,31 +4,23 @@ import (
 	"log/slog"
 	"net"
 
-	glowdTypes "github.com/scitags/flowd-go/types"
-)
-
-var (
-	Defaults = map[string]interface{}{
-		"experimentId": 0,
-		"activityId":   0,
-	}
+	"github.com/scitags/flowd-go/types"
 )
 
 type PerfsonarPlugin struct {
-	ExperimentId int `json:"experimentId"`
-	ActivityId   int `json:"activityId"`
+	Config
 }
 
 func (p *PerfsonarPlugin) String() string {
 	return "perfSONAR"
 }
 
-func (p *PerfsonarPlugin) Init() error {
-	slog.Debug("initialising the perfSONAR plugin")
-	return nil
+func NewPerfsonarPlugin(c *Config) (*PerfsonarPlugin, error) {
+	p := PerfsonarPlugin{Config: *c}
+	return &p, nil
 }
 
-func (p *PerfsonarPlugin) Run(done <-chan struct{}, outChan chan<- glowdTypes.FlowID) {
+func (p *PerfsonarPlugin) Run(done <-chan struct{}, outChan chan<- types.FlowID) {
 	slog.Debug("running the perfSONAR plugin")
 
 	/*
@@ -38,9 +30,11 @@ func (p *PerfsonarPlugin) Run(done <-chan struct{}, outChan chan<- glowdTypes.Fl
 	 * 0 disables checks within the eBPF program.
 	 */
 	slog.Debug("kicking off packet marking")
-	outChan <- glowdTypes.FlowID{State: glowdTypes.START,
-		Src:        glowdTypes.IPPort{IP: net.ParseIP("::"), Port: 0},
-		Dst:        glowdTypes.IPPort{IP: net.ParseIP("::"), Port: 0},
+	outChan <- types.FlowID{
+		State:      types.START,
+		Family:     types.IPv6,
+		Src:        types.IPPort{IP: net.ParseIP("::"), Port: 0},
+		Dst:        types.IPPort{IP: net.ParseIP("::"), Port: 0},
 		Experiment: uint32(p.ExperimentId),
 		Activity:   uint32(p.ActivityId),
 	}
