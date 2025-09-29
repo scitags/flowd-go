@@ -121,9 +121,28 @@ func TestPeriodicFirefly(t *testing.T) {
 
 	// In ms
 	samplingPeriod := 500
+	doneChan := make(chan struct{})
 
+	// Create the enrichers
 	netlinkConf := netlink.DefaultConfig
 	netlinkConf.Period = samplingPeriod
+	ne, err := netlink.NewEnricher(&netlinkConf)
+	if err != nil {
+		t.Fatalf("error setting up the netlink enricher: %v", err)
+	}
+	defer ne.Cleanup()
+	go ne.Run(doneChan)
+
+	se, err := skops.NewEnricher(&skops.Config{
+		PollingInterval: uint64(samplingPeriod) * skops.NS_PER_MS,
+		Strategy:        skops.Poll,
+		DebugMode:       true,
+	})
+	if err != nil {
+		t.Fatalf("error setting up the skops enricher: %v", err)
+	}
+	defer se.Cleanup()
+	go se.Run(doneChan)
 
 	fireflyBackend, err := NewFireflyBackend(&Config{
 		PrependSyslog: false,
@@ -132,17 +151,8 @@ func TestPeriodicFirefly(t *testing.T) {
 		CollectorAddress: "127.0.0.1",
 		CollectorPort:    4321,
 
-		PeriodicFireflies:   true,
-		Period:              samplingPeriod,
+		Enrich:              true,
 		EnrichmentVerbosity: "lean",
-
-		Netlink: &netlinkConf,
-
-		SkOps: &skops.Config{
-			PollingInterval: uint64(samplingPeriod) * skops.NS_PER_MS,
-			Strategy:        skops.Poll,
-			DebugMode:       true,
-		},
 	})
 	if err != nil {
 		t.Fatalf("error initialising backend: %v", err)
@@ -159,7 +169,6 @@ func TestPeriodicFirefly(t *testing.T) {
 	}()
 
 	flowdIdChan := make(chan types.FlowID)
-	doneChan := make(chan struct{})
 
 	go fireflyBackend.Run(doneChan, flowdIdChan)
 
@@ -170,7 +179,21 @@ func TestPeriodicFirefly(t *testing.T) {
 		Dst:         types.IPPort{IP: net.ParseIP("::"), Port: 5777},
 		Experiment:  0,
 		Activity:    0,
-		Application: "ipef3Tests",
+		Application: "iperf3Tests",
+	}
+
+	// Watch the flow...
+	pn, err := ne.WatchFlow(dummyFlow)
+	if err != nil {
+		t.Fatalf("error watching flow on netlink: %v", err)
+	}
+	ps, err := se.WatchFlow(dummyFlow)
+	if err != nil {
+		t.Fatalf("error watching flow on skOps: %v", err)
+	}
+	dummyFlow.FlowInfoChans = map[types.Flavour]chan *types.FlowInfo{
+		types.Netlink: pn.DataChan,
+		types.Ebpf:    ps.DataChan,
 	}
 
 	// Simply track a specific flow. We're creating them with:
@@ -218,6 +241,12 @@ func TestPeriodicFirefly(t *testing.T) {
 		defer wg.Done()
 		time.Sleep(time.Duration(*runtimeSec+10) * time.Second)
 		dummyFlow.State = types.END
+
+		// Stop watching the flows; both timestamps should be the same
+		ts, _ := ne.ForgetFlow(dummyFlow)
+		se.ForgetFlow(dummyFlow)
+
+		dummyFlow.StartTs = ts
 		flowdIdChan <- dummyFlow
 
 		slog.Debug("closing the done channel in 20 seconds")

@@ -138,6 +138,17 @@ func (b *MarkerBackend) Run(done <-chan struct{}, inChan <-chan glowdTypes.FlowI
 					continue
 				}
 				slog.Debug("inserted map value", "flowHash", flowHash, "flowTag", flowTag)
+
+				for t, fc := range flowID.FlowInfoChans {
+					if fc == nil {
+						continue
+					}
+					go func() {
+						for fi := range fc {
+							slog.Debug("got flow info", "fi.Cong", fi.Cong, "t", t)
+						}
+					}()
+				}
 			case glowdTypes.END:
 				if err := b.coll.Maps[MAP_NAME].Delete(flowHash); err != nil {
 					slog.Error("error deleting map key", "err", err, "flowHash", flowHash)
