@@ -172,7 +172,7 @@ var (
 			// them to the backends. Another option could be reflect.Select,
 			// although it's much less performing... Could a point-to-point
 			// (i.e. mesh) architecture be better?
-			slog.Info("let's go!", "nPlugins", len(pluginChans), "nBackends", len(backendChans))
+			slog.Info("let's go!", "nPlugins", len(pluginChans), "nBackends", len(backendChans), "nEnrichers", len(enrichers))
 			for {
 				select {
 				case flowID, ok := <-agg:
@@ -201,8 +201,6 @@ var (
 							}
 
 							go broadcastEnrichment(sourceChans, dispatchChans)
-
-							flowID.FlowInfoChans = make(map[types.Flavour]chan *types.FlowInfo, 2)
 						}
 
 					case types.END:
@@ -222,9 +220,9 @@ var (
 					slog.Debug("dispatching flowID to backends")
 					for i, ch := range backendChans {
 						if flowID.State == types.START && len(enrichers) > 0 {
-							flowID.FlowInfoChans = map[types.Flavour]chan *types.FlowInfo{
-								types.Ebpf:    dispatchChans[types.Ebpf][i],
-								types.Netlink: dispatchChans[types.Netlink][i],
+							flowID.FlowInfoChans = make(map[types.Flavour]chan *types.FlowInfo, len(enrichers))
+							for t := range enrichers {
+								flowID.FlowInfoChans[t] = dispatchChans[t][i]
 							}
 						}
 						ch <- flowID
