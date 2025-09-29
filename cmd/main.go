@@ -123,6 +123,12 @@ var (
 			}
 			defer cleanupBackends(backends)
 
+			enrichers, err := createEnrichers(conf)
+			if err != nil {
+				slog.Error("couldn't initialise the enrichers", "err", err)
+			}
+			defer cleanupEnrichers(enrichers)
+
 			// Set up the necessary channels, one per plugin and per backend
 			pluginChans := make([]chan types.FlowID, 0, len(plugins))
 			backendChans := make([]chan types.FlowID, 0, len(backends))
@@ -173,11 +179,76 @@ var (
 						slog.Warn("somebody closed the aggregated channel!")
 						return
 					}
+
+					flowInfoChans := map[types.Flavour][]chan *types.FlowInfo{
+						types.Ebpf:    make([]chan *types.FlowInfo, len(backendChans)),
+						types.Netlink: make([]chan *types.FlowInfo, len(backendChans)),
+					}
+					for i := range flowInfoChans {
+						for j := range len(backendChans) {
+							flowInfoChans[i][j] = make(chan *types.FlowInfo)
+						}
+					}
+
+					var eBPFChan chan *types.FlowInfo
+					var netlinkChan chan *types.FlowInfo
+
+					switch flowID.State {
+					case types.START:
+						if true {
+							p, err := enrichers[types.Ebpf].WatchFlow(flowID)
+							if err != nil {
+								slog.Error("error getting watching flow on eBPF", "err", err)
+							}
+							eBPFChan = p.DataChan
+						}
+
+						if true {
+							p, err := enrichers[types.Netlink].WatchFlow(flowID)
+							if err != nil {
+								slog.Error("error getting watching flow on netlink", "err", err)
+							}
+							netlinkChan = p.DataChan
+						}
+
+						go broadcastEnrichment(map[types.Flavour]chan *types.FlowInfo{
+							types.Ebpf:    eBPFChan,
+							types.Netlink: netlinkChan,
+						}, flowInfoChans)
+
+						flowID.FlowInfoChans = make(map[types.Flavour]chan *types.FlowInfo, 2)
+
+					case types.END:
+						if true {
+							ts, ok := enrichers[types.Ebpf].ForgetFlow(flowID)
+							if !ok {
+								slog.Warn("tried to forget a non-existent flow", "flowID", flowID)
+							}
+							flowID.StartTs = ts
+						}
+
+						if true {
+							ts, ok := enrichers[types.Netlink].ForgetFlow(flowID)
+							if !ok {
+								slog.Warn("tried to forget a non-existent flow", "flowID", flowID)
+							}
+							flowID.StartTs = ts
+						}
+					}
+
 					slog.Debug("dispatching flowID to backends")
-					for _, ch := range backendChans {
+					for i, ch := range backendChans {
+						if flowID.State == types.START {
+							flowID.FlowInfoChans[types.Ebpf] = flowInfoChans[types.Ebpf][i]
+							flowID.FlowInfoChans[types.Netlink] = flowInfoChans[types.Netlink][i]
+						}
 						ch <- flowID
 					}
 				case <-sigChan:
+					for t, e := range enrichers {
+						slog.Debug("closing enricher channel", "type", t)
+						close(e.doneChan)
+					}
 					close(doneChan)
 					return
 				}

@@ -7,6 +7,8 @@ import (
 	"github.com/fatih/structs"
 )
 
+//go:generate go tool golang.org/x/tools/cmd/stringer -type=Flavour
+
 // validTags encodes valid struct tags allowing for
 // the control of marshalling of Enrichment structs.
 var validTags = map[string]struct{}{

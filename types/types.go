@@ -22,6 +22,9 @@ type FlowID struct {
 	CurrentTs   time.Time
 	Info        FlowInfo
 	Application string
+
+	// Internal communication fields
+	FlowInfoChans map[Flavour]chan *FlowInfo
 }
 
 func (f FlowID) String() string {

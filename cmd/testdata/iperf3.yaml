@@ -10,14 +10,14 @@ plugins:
 
 backends:
   marker:
-    targetInterfaces: ["eno1"]
+    targetInterfaces: ["lo"]
     markingStrategy: "label"
     debugMode: true
 
-  firefly:
-    prependSyslog: false
-    sendToCollector: true
+  # firefly:
+  #   prependSyslog: false
+  #   sendToCollector: true
 
-    periodicFireflies: false
-    netlink: {}
-    skops: {}
+  #   periodicFireflies: false
+  #   netlink: {}
+  #   skops: {}
