@@ -16,16 +16,13 @@ type ApiPlugin struct {
 	server *echo.Echo
 }
 
-func NewApiPlugin(c *Config) (*ApiPlugin, error) {
-	p := ApiPlugin{Config: *c}
-	return &p, nil
-}
-
 func (p *ApiPlugin) String() string {
 	return "api"
 }
 
-func (p *ApiPlugin) Init() error {
+func NewApiPlugin(c *Config) (*ApiPlugin, error) {
+	p := ApiPlugin{Config: *c}
+
 	slog.Debug("initialising the api plugin")
 	p.server = echo.New()
 
@@ -39,7 +36,7 @@ func (p *ApiPlugin) Init() error {
 	p.server.HideBanner = true
 	p.server.HidePort = true
 
-	return nil
+	return &p, nil
 }
 
 func (p *ApiPlugin) Run(done <-chan struct{}, outChan chan<- glowdTypes.FlowID) {

@@ -20,23 +20,17 @@ func (b *FireflyBackend) String() string {
 
 func NewFireflyBackend(c *Config) (*FireflyBackend, error) {
 	b := FireflyBackend{Config: *c}
-	return &b, nil
-}
-
-// Just implement the glowd.Backend interface
-func (b *FireflyBackend) Init() error {
 	slog.Debug("initialising the firefly backend")
 
 	if b.SendToCollector {
 		conn, err := net.Dial("udp", parseCollectorAddress(b.CollectorAddress, b.CollectorPort))
 		if err != nil {
-			return fmt.Errorf("couldn't initialize UDP socket: %w", err)
+			return nil, fmt.Errorf("couldn't initialize UDP socket: %w", err)
 		}
-
 		b.collectorConn = conn
 	}
 
-	return nil
+	return &b, nil
 }
 
 func (b *FireflyBackend) Run(done <-chan struct{}, inChan <-chan types.FlowID) {

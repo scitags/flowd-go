@@ -11,18 +11,13 @@ type PerfsonarPlugin struct {
 	Config
 }
 
-func NewPerfsonarPlugin(c *Config) (*PerfsonarPlugin, error) {
-	p := PerfsonarPlugin{Config: *c}
-	return &p, nil
-}
-
 func (p *PerfsonarPlugin) String() string {
 	return "perfSONAR"
 }
 
-func (p *PerfsonarPlugin) Init() error {
-	slog.Debug("initialising the perfSONAR plugin")
-	return nil
+func NewPerfsonarPlugin(c *Config) (*PerfsonarPlugin, error) {
+	p := PerfsonarPlugin{Config: *c}
+	return &p, nil
 }
 
 func (p *PerfsonarPlugin) Run(done <-chan struct{}, outChan chan<- types.FlowID) {

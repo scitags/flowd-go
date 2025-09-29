@@ -17,25 +17,21 @@ type FireflyPlugin struct {
 	listener *net.UDPConn
 }
 
-func NewFireflyPlugin(c *Config) (*FireflyPlugin, error) {
-	p := FireflyPlugin{Config: *c}
-	return &p, nil
-}
-
 func (p *FireflyPlugin) String() string {
 	return "firefly"
 }
 
-// Just implement the glowd.Backend interface
-func (p *FireflyPlugin) Init() error {
+func NewFireflyPlugin(c *Config) (*FireflyPlugin, error) {
+	p := FireflyPlugin{Config: *c}
+
 	slog.Debug("initialising the firefly plugin")
 	if p.BufferSize < minRecvBufferSize {
-		return fmt.Errorf("UDP receive buffer size (%d) is too small, make it at least 2048 bytes", p.BufferSize)
+		return nil, fmt.Errorf("UDP receive buffer size (%d) is too small, make it at least 2048 bytes", p.BufferSize)
 	}
 
 	bindAddr := net.ParseIP(p.BindAddress)
 	if bindAddr == nil {
-		return fmt.Errorf("invalid IP address %q specified", p.BindAddress)
+		return nil, fmt.Errorf("invalid IP address %q specified", p.BindAddress)
 	}
 
 	listener, err := net.ListenUDP("udp", &net.UDPAddr{
@@ -43,12 +39,12 @@ func (p *FireflyPlugin) Init() error {
 		Port: int(p.BindPort),
 	})
 	if err != nil {
-		return fmt.Errorf("error setting up the UDP listener: %w", err)
+		return nil, fmt.Errorf("error setting up the UDP listener: %w", err)
 	}
 
 	p.listener = listener
 
-	return nil
+	return &p, nil
 }
 
 func (p *FireflyPlugin) Run(done <-chan struct{}, outChan chan<- glowdTypes.FlowID) {

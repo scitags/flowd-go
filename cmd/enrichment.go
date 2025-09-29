@@ -10,13 +10,8 @@ import (
 	"github.com/scitags/flowd-go/types"
 )
 
-type enricherBundle struct {
-	enrichment.Enricher
-	doneChan chan struct{}
-}
-
-func createEnrichers(c *Config) (map[types.Flavour]enricherBundle, error) {
-	enrichers := map[types.Flavour]enricherBundle{}
+func createEnrichers(c *Config) (map[types.Flavour]enrichment.Enricher, error) {
+	enrichers := map[types.Flavour]enrichment.Enricher{}
 	if c.Enrichers == nil {
 		return enrichers, nil
 	}
@@ -29,10 +24,7 @@ func createEnrichers(c *Config) (map[types.Flavour]enricherBundle, error) {
 			return nil, fmt.Errorf("couldn't get an eBPF enricher: %w", err)
 		}
 
-		doneChan := make(chan struct{})
-		go enricher.Run(doneChan)
-
-		enrichers[types.Ebpf] = enricherBundle{enricher, doneChan}
+		enrichers[types.Ebpf] = enricher
 	}
 
 	if c.Enrichers.Netlink != nil {
@@ -43,16 +35,13 @@ func createEnrichers(c *Config) (map[types.Flavour]enricherBundle, error) {
 			return nil, fmt.Errorf("couldn't get a netlink enricher: %w", err)
 		}
 
-		doneChan := make(chan struct{})
-		go enricher.Run(doneChan)
-
-		enrichers[types.Netlink] = enricherBundle{enricher, doneChan}
+		enrichers[types.Netlink] = enricher
 	}
 
 	return enrichers, nil
 }
 
-func cleanupEnrichers(ee map[types.Flavour]enricherBundle) {
+func cleanupEnrichers(ee map[types.Flavour]enrichment.Enricher) {
 	for t, e := range ee {
 		slog.Debug("cleaning enricher", "type", t)
 		if err := e.Cleanup(); err != nil {

@@ -121,14 +121,12 @@ func ParseFlowState(flowState string) (FlowState, bool) {
 }
 
 type Backend interface {
-	Init() error
 	Run(<-chan struct{}, <-chan FlowID)
 	Cleanup() error
 	String() string
 }
 
 type Plugin interface {
-	Init() error
 	Run(<-chan struct{}, chan<- FlowID)
 	Cleanup() error
 	String() string

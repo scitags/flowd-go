@@ -31,17 +31,13 @@ type MarkerBackend struct {
 	rGen *rand.Rand
 }
 
-func NewMarkerBackend(c *Config) (*MarkerBackend, error) {
-	b := MarkerBackend{Config: *c}
-	return &b, nil
-}
-
 func (b *MarkerBackend) String() string {
 	return "marker"
 }
 
-func (b *MarkerBackend) Init() error {
+func NewMarkerBackend(c *Config) (*MarkerBackend, error) {
 	slog.Debug("initialising the marker backend")
+	b := MarkerBackend{Config: *c}
 
 	// If we need to discover interfaces with public IPv6 addresses simply
 	// pull the rug form underneath the configuration.
@@ -52,14 +48,14 @@ func (b *MarkerBackend) Init() error {
 
 		targetInterfaces, err := discoverInterfaces()
 		if err != nil {
-			return fmt.Errorf("couldn't discover target interfaces: %w", err)
+			return nil, fmt.Errorf("couldn't discover target interfaces: %w", err)
 		}
 		b.TargetInterfaces = targetInterfaces
 	}
 
 	nl, err := NewNetlinkClient()
 	if err != nil {
-		return fmt.Errorf("error opening the netlink client: %w", err)
+		return nil, fmt.Errorf("error opening the netlink client: %w", err)
 	}
 	b.nl = nl
 
@@ -68,19 +64,19 @@ func (b *MarkerBackend) Init() error {
 		slog.Debug("loading the provided eBPF program", "path", b.ProgramPath)
 		prog, err = os.ReadFile(b.ProgramPath)
 		if err != nil {
-			return fmt.Errorf("error reading user provided program: %w", err)
+			return nil, fmt.Errorf("error reading user provided program: %w", err)
 		}
 	} else {
 		prog, err = chooseProgram(b.MarkingStrategy, b.MatchAll, b.DebugMode)
 		if err != nil {
-			return fmt.Errorf("error choosing an embedded eBPF program: %w", err)
+			return nil, fmt.Errorf("error choosing an embedded eBPF program: %w", err)
 		}
 	}
 
 	// Time to load the program into the kernel
 	coll, err := loadProg(prog)
 	if err != nil {
-		return fmt.Errorf("error loading the eBPF program: %w", err)
+		return nil, fmt.Errorf("error loading the eBPF program: %w", err)
 	}
 	b.coll = coll
 
@@ -88,12 +84,12 @@ func (b *MarkerBackend) Init() error {
 	for _, iface := range b.TargetInterfaces {
 		if err := b.nl.CreateFilterQdisc(iface); err != nil {
 			b.Cleanup()
-			return fmt.Errorf("error creating the clsact qdisc for interface %q: %w", iface, err)
+			return nil, fmt.Errorf("error creating the clsact qdisc for interface %q: %w", iface, err)
 		}
 
 		if err := b.nl.AttachEbpfProgram(iface, coll.Programs[PROG_NAME], true); err != nil {
 			b.Cleanup()
-			return fmt.Errorf("error attaching the eBPF program to %q: %w", iface, err)
+			return nil, fmt.Errorf("error attaching the eBPF program to %q: %w", iface, err)
 		}
 	}
 
@@ -101,7 +97,7 @@ func (b *MarkerBackend) Init() error {
 	slog.Debug("initialising the random number generator")
 	b.rGen = rand.New(rand.NewSource(time.Now().UnixNano()))
 
-	return nil
+	return &b, nil
 }
 
 func (b *MarkerBackend) Run(done <-chan struct{}, inChan <-chan glowdTypes.FlowID) {

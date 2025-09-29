@@ -60,15 +60,6 @@ func createPlugins(c *Config) ([]types.Plugin, error) {
 	return plugins, nil
 }
 
-func initPlugins(plugins []types.Plugin) error {
-	for _, plugin := range plugins {
-		if err := plugin.Init(); err != nil {
-			return fmt.Errorf("error setting up plugin %s: %w", plugin, err)
-		}
-	}
-	return nil
-}
-
 func cleanupPlugins(plugins []types.Plugin) {
 	for _, plugin := range plugins {
 		if err := plugin.Cleanup(); err != nil {

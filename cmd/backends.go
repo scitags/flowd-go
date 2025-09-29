@@ -33,15 +33,6 @@ func createBackends(c *Config) ([]types.Backend, error) {
 	return backends, nil
 }
 
-func initBackends(backends []types.Backend) error {
-	for _, backend := range backends {
-		if err := backend.Init(); err != nil {
-			return fmt.Errorf("error setting up backend %s: %w", backend, err)
-		}
-	}
-	return nil
-}
-
 func cleanupBackends(backends []types.Backend) {
 	for _, backend := range backends {
 		if err := backend.Cleanup(); err != nil {

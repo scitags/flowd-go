@@ -155,12 +155,7 @@ func TestPeriodicFirefly(t *testing.T) {
 		EnrichmentMode: "lean",
 	})
 	if err != nil {
-		t.Fatalf("error initialising backend: %v", err)
-	}
-
-	if err := fireflyBackend.Init(); err != nil {
-		t.Logf("couldn't initialise the firefly plugin: %v\n", err)
-		t.FailNow()
+		t.Fatalf("error creating backend: %v", err)
 	}
 	defer func() {
 		if err := fireflyBackend.Cleanup(); err != nil {

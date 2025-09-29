@@ -41,6 +41,10 @@ type Iperf3Plugin struct {
 	reader *ringbuf.Reader
 }
 
+func (p *Iperf3Plugin) String() string {
+	return "iperf3"
+}
+
 func NewIperf3Plugin(c *Config) (*Iperf3Plugin, error) {
 	p := Iperf3Plugin{Config: *c}
 
@@ -115,15 +119,6 @@ func NewIperf3Plugin(c *Config) (*Iperf3Plugin, error) {
 	}
 
 	return &p, nil
-}
-
-func (p *Iperf3Plugin) String() string {
-	return "iperf3"
-}
-
-func (p *Iperf3Plugin) Init() error {
-	slog.Debug("initialising the iperf3 plugin")
-	return nil
 }
 
 func (p *Iperf3Plugin) closeBuffer(done <-chan struct{}) {

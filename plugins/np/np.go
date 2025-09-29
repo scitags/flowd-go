@@ -19,34 +19,31 @@ type NamedPipePlugin struct {
 	Config
 }
 
-func NewNamedPipePlugin(c *Config) (*NamedPipePlugin, error) {
-	p := NamedPipePlugin{Config: *c}
-	return &p, nil
-}
-
-func (np *NamedPipePlugin) String() string {
+func (p *NamedPipePlugin) String() string {
 	return "named pipe"
 }
 
-func (np *NamedPipePlugin) Init() error {
+func NewNamedPipePlugin(c *Config) (*NamedPipePlugin, error) {
+	p := NamedPipePlugin{Config: *c}
+
 	slog.Debug("initialising the named pipe plugin")
 
-	if _, err := os.Stat(np.PipePath); !errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(p.PipePath); !errors.Is(err, os.ErrNotExist) {
 		slog.Debug("it looks like the named pipe exists!")
-		return nil
+		return &p, nil
 	}
 
 	oldmask := syscall.Umask(0o000)
 	defer syscall.Umask(oldmask)
 	// Consider using the unix package...
-	if err := syscall.Mkfifo(np.PipePath, 0666); err != nil {
-		return fmt.Errorf("couldn't create the named pipe: %w", err)
+	if err := syscall.Mkfifo(p.PipePath, 0666); err != nil {
+		return nil, fmt.Errorf("couldn't create the named pipe: %w", err)
 	}
 
-	return nil
+	return &p, nil
 }
 
-func (np *NamedPipePlugin) Run(done <-chan struct{}, outChan chan<- glowdTypes.FlowID) {
+func (p *NamedPipePlugin) Run(done <-chan struct{}, outChan chan<- glowdTypes.FlowID) {
 	slog.Debug("running the named pipe plugin")
 
 	// If we open the FIFO (i.e. named pipe) only for reading, the call will block
@@ -59,7 +56,7 @@ func (np *NamedPipePlugin) Run(done <-chan struct{}, outChan chan<- glowdTypes.F
 	// open up the FIFO with the O_RDWR flag set and call it a day. Be sure to check
 	// https://pubs.opengroup.org/onlinepubs/9799919799/ for a detailed discussion
 	// on what O_NONBLOCK implies in terms of behaviour when opening files.
-	pipe, err := os.OpenFile(np.PipePath, os.O_RDWR, os.ModeNamedPipe)
+	pipe, err := os.OpenFile(p.PipePath, os.O_RDWR, os.ModeNamedPipe)
 	if err != nil {
 		slog.Error("couldn't open the named pipe", "err", err)
 		close(outChan)
@@ -69,13 +66,13 @@ func (np *NamedPipePlugin) Run(done <-chan struct{}, outChan chan<- glowdTypes.F
 
 	// A buffered channel guarantees that we don't loose events even
 	// if writes take place at the exact same time
-	c := make(chan notify.EventInfo, np.MaxReaders)
+	c := make(chan notify.EventInfo, p.MaxReaders)
 
 	// Hook the notifications
-	notify.Watch(np.PipePath, c, notify.Write|notify.Remove)
+	notify.Watch(p.PipePath, c, notify.Write|notify.Remove)
 
 	// Listen for events
-	buff := make([]byte, np.BuffSize)
+	buff := make([]byte, p.BuffSize)
 	for {
 		select {
 		case e := <-c:
@@ -102,9 +99,9 @@ func (np *NamedPipePlugin) Run(done <-chan struct{}, outChan chan<- glowdTypes.F
 	}
 }
 
-func (np *NamedPipePlugin) Cleanup() error {
+func (p *NamedPipePlugin) Cleanup() error {
 	slog.Debug("cleaning up the named pipe plugin")
-	if err := os.Remove(np.PipePath); err != nil {
+	if err := os.Remove(p.PipePath); err != nil {
 		return fmt.Errorf("error removing named pipe: %w", err)
 	}
 	return nil
