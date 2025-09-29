@@ -121,8 +121,9 @@ relay. Be sure to check the documentation on the firelfy backend for more inform
 - **hasSyslogHeader [bool] {false}**: Whether the incoming fireflies contain the syslog header or not.
 
 ## perfsonar
-The **perfSONAR** plugin will simply mark **all outgoing traffic** with the provided activity and experiment IDs. This plugin will override the
-chosen marking strategy if it's not set to `"label"` and the `matchAll` option is set to false and emit a warning message stating the fact.
+The **perfSONAR** plugin will simply mark **all outgoing traffic** with the provided activity and experiment IDs. If the `matchAll` option of
+the `marker` backend is not set to `true`, this plugin will overwrite the setting, emitting a warning in the process. This plugin is devised
+to work hand in hand with the `marker` backend.
 
 - **activityId [int] {0}**: The activity ID to leverage for marking traffic.
 

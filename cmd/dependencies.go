@@ -18,9 +18,7 @@ func pluginBackendDependencies(plugins []types.Plugin, backends []types.Backend)
 				if !ok {
 					continue
 				}
-				slog.Warn("overriding marking strategy for the eBPF backend",
-					"previous", markerBackend.MarkingStrategy, "new", marker.Label, "matchAll", true)
-				markerBackend.MarkingStrategy = marker.Label
+				slog.Warn("overriding marking criteria to match all for the marker backend")
 				markerBackend.MatchAll = true
 			}
 		// Do nothing by default, just be exhaustive :P
