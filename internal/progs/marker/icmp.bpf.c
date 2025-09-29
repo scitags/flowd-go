@@ -55,13 +55,13 @@ static __always_inline int handleICMP(struct __sk_buff *ctx, struct ipv6hdr *l3)
 	if (flowTag) {
 		bpf_printk("flowd-go: retrieved flowTag: %x", *flowTag);
 
-		#if defined(FLOWD_LABEL) || defined(FLOWD_MATCH_ALL)
+		#if defined(FLOWD_LABEL)
 			// Embed the configured flowTag into the IPv6 header.
 			populateFlowLbl(l3->flow_lbl, *flowTag);
 		#endif
 
 		// Plundered from https://github.com/IurmanJ/ebpf-ipv6-exthdr-injection/blob/main/tc_ipv6_eh_kern.c
-		#if defined(FLOWD_HBH) || defined(FLOWD_DO)
+		#if defined(FLOWD_HOPBYHOP) || defined(FLOWD_DESTINATION)
 			struct extensionHdr_t extensionHdr;
 
 			// Initialise the header
@@ -70,7 +70,7 @@ static __always_inline int handleICMP(struct __sk_buff *ctx, struct ipv6hdr *l3)
 			// Fill in the Hob-by-Hop Header!
 			populateExtensionHdr(&extensionHdr, l3->nexthdr, *flowTag);
 
-			#ifdef FLOWD_HBH
+			#ifdef FLOWD_HOPBYHOP
 				// Signal the next header is a Hop-by-Hop Extension Header
 				l3->nexthdr = NEXT_HDR_HOP_BY_HOP;
 			#else
@@ -100,7 +100,7 @@ static __always_inline int handleICMP(struct __sk_buff *ctx, struct ipv6hdr *l3)
 			}
 		#endif
 
-		#ifdef FLOWD_HBHDO
+		#ifdef FLOWD_HOPBYHOPDESTINATION
 			struct compExtensionHdr_t compExtensionHdr;
 
 			// Initialise the header

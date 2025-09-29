@@ -49,7 +49,7 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 
 	// If there's a flow configured, mark the packet
 	if (flowTag) {
-		#if defined(FLOWD_LABEL) || defined(FLOWD_MATCH_ALL)
+		#if defined(FLOWD_LABEL)
 
 			#ifdef FLOWD_DEBUG
 				bpf_printk("flowd-go: retrieved flowTag: %x", *flowTag);
@@ -58,7 +58,7 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 			populateFlowLbl(l3->flow_lbl, *flowTag);
 		#endif
 
-		#if defined(FLOWD_HBH) || defined(FLOWD_DO)
+		#if defined(FLOWD_HOPBYHOP) || defined(FLOWD_DESTINATION)
 			struct extensionHdr_t extensionHdr;
 
 			// Check we won't go overboard and overwhelm the MTU!
@@ -85,7 +85,7 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 			// Fill in the Hob-by-Hop Header!
 			populateExtensionHdr(&extensionHdr, l3->nexthdr, *flowTag);
 
-			#ifdef FLOWD_HBH
+			#ifdef FLOWD_HOPBYHOP
 				// Signal the next header is a Hop-by-Hop Extension Header
 				l3->nexthdr = NEXT_HDR_HOP_BY_HOP;
 			#else
@@ -115,7 +115,7 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 			}
 		#endif
 
-		#ifdef FLOWD_HBHDO
+		#ifdef FLOWD_HOPBYHOPDESTINATION
 			struct compExtensionHdr_t compExtensionHdr;
 
 			__u32 mtuLen = 0;

@@ -2,7 +2,7 @@
 # This is the only variable we have to modify when adding new targets.
 # Note each item will be appended to 'marker-' so as to generate the
 # output programs.
-PROG_NAMES := label hbh do hbhdo
+PROG_NAMES := $(shell echo "label hopByHop destination hopByHopDestination" | tr 'A-Z' 'a-z')
 
 # Derive the constants the program depends on for conditionally compiling
 # it. We simply add the FLOWD_ prefix and translate each element of PROG_NAMES

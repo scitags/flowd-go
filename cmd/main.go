@@ -181,26 +181,29 @@ var (
 						return
 					}
 
-					dispatchChans := map[types.Flavour][]chan *types.FlowInfo{}
+					var dispatchChans map[types.Flavour][]chan *types.FlowInfo = nil
 					switch flowID.State {
 					case types.START:
-						sourceChans := map[types.Flavour]chan *types.FlowInfo{}
-						for t, e := range enrichers {
-							p, err := e.WatchFlow(flowID)
-							if err != nil {
-								slog.Error("error watching flow", "flavour", t, "err", err)
-								continue
+						if len(enrichers) > 0 {
+							dispatchChans = make(map[types.Flavour][]chan *types.FlowInfo)
+							sourceChans := map[types.Flavour]chan *types.FlowInfo{}
+							for t, e := range enrichers {
+								p, err := e.WatchFlow(flowID)
+								if err != nil {
+									slog.Error("error watching flow", "flavour", t, "err", err)
+									continue
+								}
+
+								sourceChans[t] = p.DataChan
+								for i := 0; i < len(backends); i++ {
+									dispatchChans[t] = append(dispatchChans[t], make(chan *types.FlowInfo))
+								}
 							}
 
-							sourceChans[t] = p.DataChan
-							for i := 0; i < len(backends); i++ {
-								dispatchChans[t] = append(dispatchChans[t], make(chan *types.FlowInfo))
-							}
+							go broadcastEnrichment(sourceChans, dispatchChans)
+
+							flowID.FlowInfoChans = make(map[types.Flavour]chan *types.FlowInfo, 2)
 						}
-
-						go broadcastEnrichment(sourceChans, dispatchChans)
-
-						flowID.FlowInfoChans = make(map[types.Flavour]chan *types.FlowInfo, 2)
 
 					case types.END:
 						flowID.EndTs = time.Now().UTC()
@@ -218,7 +221,7 @@ var (
 
 					slog.Debug("dispatching flowID to backends")
 					for i, ch := range backendChans {
-						if flowID.State == types.START {
+						if flowID.State == types.START && len(enrichers) > 0 {
 							flowID.FlowInfoChans = map[types.Flavour]chan *types.FlowInfo{
 								types.Ebpf:    dispatchChans[types.Ebpf][i],
 								types.Netlink: dispatchChans[types.Netlink][i],

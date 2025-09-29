@@ -35,7 +35,9 @@ func (p *PerfsonarPlugin) Run(done <-chan struct{}, outChan chan<- types.FlowID)
 	 * 0 disables checks within the eBPF program.
 	 */
 	slog.Debug("kicking off packet marking")
-	outChan <- types.FlowID{State: types.START,
+	outChan <- types.FlowID{
+		State:      types.START,
+		Family:     types.IPv6,
 		Src:        types.IPPort{IP: net.ParseIP("::"), Port: 0},
 		Dst:        types.IPPort{IP: net.ParseIP("::"), Port: 0},
 		Experiment: uint32(p.ExperimentId),
