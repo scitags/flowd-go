@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 	"unicode"
 
 	"github.com/scitags/flowd-go/cmd/subcmd"
@@ -180,58 +181,37 @@ var (
 						return
 					}
 
-					flowInfoChans := map[types.Flavour][]chan *types.FlowInfo{
-						types.Ebpf:    make([]chan *types.FlowInfo, len(backendChans)),
-						types.Netlink: make([]chan *types.FlowInfo, len(backendChans)),
-					}
-					for i := range flowInfoChans {
-						for j := range len(backendChans) {
-							flowInfoChans[i][j] = make(chan *types.FlowInfo)
-						}
-					}
-
-					var eBPFChan chan *types.FlowInfo
-					var netlinkChan chan *types.FlowInfo
-
+					dispatchChans := map[types.Flavour][]chan *types.FlowInfo{}
 					switch flowID.State {
 					case types.START:
-						if true {
-							p, err := enrichers[types.Ebpf].WatchFlow(flowID)
+						sourceChans := map[types.Flavour]chan *types.FlowInfo{}
+						for t, e := range enrichers {
+							p, err := e.WatchFlow(flowID)
 							if err != nil {
-								slog.Error("error getting watching flow on eBPF", "err", err)
+								slog.Error("error watching flow", "flavour", t, "err", err)
+								continue
 							}
-							eBPFChan = p.DataChan
+
+							sourceChans[t] = p.DataChan
+							for i := 0; i < len(backends); i++ {
+								dispatchChans[t] = append(dispatchChans[t], make(chan *types.FlowInfo))
+							}
 						}
 
-						if true {
-							p, err := enrichers[types.Netlink].WatchFlow(flowID)
-							if err != nil {
-								slog.Error("error getting watching flow on netlink", "err", err)
-							}
-							netlinkChan = p.DataChan
-						}
-
-						go broadcastEnrichment(map[types.Flavour]chan *types.FlowInfo{
-							types.Ebpf:    eBPFChan,
-							types.Netlink: netlinkChan,
-						}, flowInfoChans)
+						go broadcastEnrichment(sourceChans, dispatchChans)
 
 						flowID.FlowInfoChans = make(map[types.Flavour]chan *types.FlowInfo, 2)
 
 					case types.END:
-						if true {
-							ts, ok := enrichers[types.Ebpf].ForgetFlow(flowID)
-							if !ok {
-								slog.Warn("tried to forget a non-existent flow", "flowID", flowID)
-							}
-							flowID.StartTs = ts
-						}
+						flowID.EndTs = time.Now().UTC()
 
-						if true {
-							ts, ok := enrichers[types.Netlink].ForgetFlow(flowID)
+						for t, e := range enrichers {
+							ts, ok := e.ForgetFlow(flowID)
 							if !ok {
-								slog.Warn("tried to forget a non-existent flow", "flowID", flowID)
+								slog.Warn("tried to forget a non-existent flow", "flavour", t, "flowID", flowID)
 							}
+
+							// If running with 2 enrichers, the start timestamps should be the same...
 							flowID.StartTs = ts
 						}
 					}
@@ -239,8 +219,10 @@ var (
 					slog.Debug("dispatching flowID to backends")
 					for i, ch := range backendChans {
 						if flowID.State == types.START {
-							flowID.FlowInfoChans[types.Ebpf] = flowInfoChans[types.Ebpf][i]
-							flowID.FlowInfoChans[types.Netlink] = flowInfoChans[types.Netlink][i]
+							flowID.FlowInfoChans = map[types.Flavour]chan *types.FlowInfo{
+								types.Ebpf:    dispatchChans[types.Ebpf][i],
+								types.Netlink: dispatchChans[types.Netlink][i],
+							}
 						}
 						ch <- flowID
 					}

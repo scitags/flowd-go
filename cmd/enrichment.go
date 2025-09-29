@@ -17,8 +17,12 @@ type enricherBundle struct {
 
 func createEnrichers(c *Config) (map[types.Flavour]enricherBundle, error) {
 	enrichers := map[types.Flavour]enricherBundle{}
-	if true {
-		slog.Debug("initialising the eBPF enricher")
+	if c.Enrichers == nil {
+		return enrichers, nil
+	}
+
+	if c.Enrichers.SkOps != nil {
+		slog.Debug("initialising the skOps enricher")
 
 		enricher, err := skops.NewEnricher(&skops.DefaultConfig)
 		if err != nil {
@@ -31,7 +35,7 @@ func createEnrichers(c *Config) (map[types.Flavour]enricherBundle, error) {
 		enrichers[types.Ebpf] = enricherBundle{enricher, doneChan}
 	}
 
-	if true {
+	if c.Enrichers.Netlink != nil {
 		slog.Debug("initialising the netlink enricher")
 
 		enricher, err := netlink.NewEnricher(&netlink.DefaultConfig)

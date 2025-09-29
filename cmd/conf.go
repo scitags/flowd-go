@@ -7,6 +7,8 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/scitags/flowd-go/backends/fireflyb"
 	"github.com/scitags/flowd-go/backends/marker"
+	"github.com/scitags/flowd-go/enrichment/netlink"
+	"github.com/scitags/flowd-go/enrichment/skops"
 	"github.com/scitags/flowd-go/plugins/api"
 	"github.com/scitags/flowd-go/plugins/fireflyp"
 	"github.com/scitags/flowd-go/plugins/iperf3"
@@ -31,6 +33,14 @@ type Config struct {
 		Marker  *marker.Config   `yaml:"marker"`
 		Firefly *fireflyb.Config `yaml:"firefly"`
 	} `yaml:"backends"`
+
+	Enrichers *enrichers `yaml:"enrichers"`
+}
+
+type enrichers struct {
+	Period  *int            `yaml:"period"`
+	Netlink *netlink.Config `yaml:"netlink"`
+	SkOps   *skops.Config   `yaml:"skops"`
 }
 
 func (c Config) String() string {
@@ -53,6 +63,30 @@ func (c *Config) UnmarshalYAML(b []byte) error {
 
 	if err := yaml.Unmarshal(b, def); err != nil {
 		return err
+	}
+
+	if def.Enrichers != nil {
+		if def.Enrichers.Period == nil {
+			f := 1000
+			def.Enrichers.Period = &f
+		}
+		if def.Enrichers.SkOps != nil {
+			if def.Enrichers.SkOps.RawStrategy == "" {
+				def.Enrichers.SkOps.RawStrategy = skops.DefaultConfig.Strategy.String()
+			}
+
+			s, ok := skops.ParseStrategy(def.Enrichers.SkOps.RawStrategy)
+			if !ok {
+				return fmt.Errorf("wrong enrichment strategy %q", def.Enrichers.SkOps.RawStrategy)
+			}
+			def.Enrichers.SkOps.Strategy = s
+
+			def.Enrichers.SkOps.PollingInterval = uint64(*def.Enrichers.Period) * skops.NS_PER_MS
+		}
+
+		if def.Enrichers.Netlink != nil {
+			def.Enrichers.Netlink.Period = *def.Enrichers.Period
+		}
 	}
 
 	*c = Config(*def)

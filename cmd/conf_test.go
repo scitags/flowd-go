@@ -43,14 +43,22 @@ func TestEnrichment(t *testing.T) {
 	}
 
 	tests := map[string]struct {
+		p int
 		s *skops.Config
 		n *netlink.Config
 	}{
+		"period.yaml": {
+			p: 10,
+			s: nil,
+			n: nil,
+		},
 		"defaults.yaml": {
+			p: 1000,
 			s: &skops.DefaultConfig,
 			n: &netlink.DefaultConfig,
 		},
 		"populated.yaml": {
+			p: 1234,
 			s: &skops.Config{
 				PollingInterval: 1234 * skops.NS_PER_MS,
 				CgroupPath:      "/",
@@ -71,6 +79,10 @@ func TestEnrichment(t *testing.T) {
 	}
 
 	for _, f := range d {
+		if f.Name() == "none.yaml" {
+			continue
+		}
+
 		got, err := ReadConf(testDir + "/" + f.Name())
 		if err != nil {
 			t.Fatalf("error parsing %q: %v", f.Name(), err)
@@ -83,12 +95,27 @@ func TestEnrichment(t *testing.T) {
 			t.Fatalf("got no want for %q", f.Name())
 		}
 
-		if !cmp.Equal(got.Backends.Firefly.SkOps, want.s) {
-			t.Fatalf("%s: got %v; want %v for skops", f.Name(), got.Backends.Firefly.SkOps, want.s)
+		if !cmp.Equal(got.Enrichers.SkOps, want.s) {
+			t.Fatalf("%s: got %v; want %v for skops", f.Name(), got.Enrichers.SkOps, want.s)
 		}
 
-		if !cmp.Equal(got.Backends.Firefly.Netlink, want.n) {
-			t.Fatalf("%s: got %v; want %v for netlink", f.Name(), got.Backends.Firefly.Netlink, want.n)
+		if !cmp.Equal(got.Enrichers.Netlink, want.n) {
+			t.Fatalf("%s: got %v; want %v for netlink", f.Name(), got.Enrichers.Netlink, want.n)
 		}
+
+		if *got.Enrichers.Period != want.p {
+			t.Fatalf("%s: got %v; want %v for period", f.Name(), *got.Enrichers.Period, want.p)
+		}
+	}
+}
+
+func TestNoEnrichment(t *testing.T) {
+	got, err := ReadConf("testdata/enrichment/none.yaml")
+	if err != nil {
+		t.Fatalf("error parsing none.yaml: %v", err)
+	}
+
+	if got.Enrichers != nil {
+		t.Errorf("got %v; want nil", got.Enrichers)
 	}
 }
