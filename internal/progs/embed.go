@@ -1,3 +1,5 @@
+//go:build ebpf
+
 package progs
 
 import "embed"
