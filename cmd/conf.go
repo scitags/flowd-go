@@ -7,6 +7,7 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/scitags/flowd-go/backends/fireflyb"
 	"github.com/scitags/flowd-go/backends/marker"
+	"github.com/scitags/flowd-go/backends/prometheus"
 	"github.com/scitags/flowd-go/enrichment/netlink"
 	"github.com/scitags/flowd-go/enrichment/skops"
 	"github.com/scitags/flowd-go/plugins/api"
@@ -30,8 +31,9 @@ type Config struct {
 	} `yaml:"plugins"`
 
 	Backends *struct {
-		Marker  *marker.Config   `yaml:"marker"`
-		Firefly *fireflyb.Config `yaml:"firefly"`
+		Marker     *marker.Config     `yaml:"marker"`
+		Firefly    *fireflyb.Config   `yaml:"firefly"`
+		Prometheus *prometheus.Config `yaml:"prometheus"`
 	} `yaml:"backends"`
 
 	Enrichers *enrichers `yaml:"enrichers"`

@@ -234,6 +234,21 @@ payload including flow information.
     - `"compatible"`: Generate flowd-compatible fireflies.
     - `""`: If explicitly empty, all the information will be included. Beware, the amount of information is quite large...
 
+## prometheus
+The **prometheus** backend will export flow information gathered by ENRICHERS as prometheus-compatible metrics. These can then be acquired by an
+existing prometheus deployment for monitoring and further analysis. Note how two ports are supported so that we can publish data acquired through
+both netlink and skops.
+
+- **log [bool] {true}**: Whether to include log messages emitted by the backend in the overall log.
+
+- **bindAddress [string] {"127.0.0.1"}**: The address in which to bind the backing HTTP servers to.
+
+- **netlinkPort [int] {8080}**: The port to bind the netlink registry to. Flow information acquired through netlink will be exported as a series
+  of metrics here. If `0`, netlink metrics will not be exported.
+
+- **skopsPort [int] {8081}**: The port to bind the netlink registry to. Flow information acquired through netlink will be exported as a series
+  of metrics here. If `0`, skops metrics will not be exported.
+
 # ENRICHERS
 TCP connections can be monitored to gain a deeper insight into their evolution. In flowd-go this information is extracted through *enrichers*.
 The gathered information is relayed to every backend so that they can handle and embed the data as they see fit. How this data is

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/scitags/flowd-go/backends/marker"
+	"github.com/scitags/flowd-go/types"
 )
 
 const (
@@ -15,10 +16,11 @@ const (
 )
 
 var logLevelMap = map[string]slog.Level{
-	"debug": slog.LevelDebug,
-	"info":  slog.LevelInfo,
-	"warn":  slog.LevelWarn,
-	"error": slog.LevelError,
+	"trace": types.LevelTrace,
+	"debug": types.LevelDebug,
+	"info":  types.LevelInfo,
+	"warn":  types.LevelWarn,
+	"error": types.LevelError,
 }
 
 func logReplacements(groups []string, a slog.Attr) slog.Attr {
