@@ -38,11 +38,13 @@ func run(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	slog.Debug("writing pid")
-	if err := os.WriteFile(conf.PidPath, []byte(fmt.Sprintf("%d\n", os.Getpid())), 0644); err != nil {
-		slog.Error("couldn't create the PID file", "path", conf.PidPath, "err", err)
+	if conf.PidPath != "" {
+		slog.Debug("writing pid")
+		if err := os.WriteFile(conf.PidPath, []byte(fmt.Sprintf("%d\n", os.Getpid())), 0644); err != nil {
+			slog.Error("couldn't create the PID file", "path", conf.PidPath, "err", err)
+		}
+		defer os.Remove(conf.PidPath)
 	}
-	defer os.Remove(conf.PidPath)
 
 	slog.Debug("creating plugins")
 	plugins, err := createPlugins(conf)
