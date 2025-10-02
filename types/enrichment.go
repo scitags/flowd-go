@@ -124,80 +124,120 @@ func (i *Socket) String() string {
 //
 // 0: https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/include/uapi/linux/tcp.h
 type TCPInfo struct {
-	State       uint8 `structs:"state" lean:"-"`
-	Ca_state    uint8 `structs:"caState" lean:"-"`
+	State    uint8 `structs:"state" lean:"-"`
+	Ca_state uint8 `structs:"caState" lean:"-"`
+
+	// Retransmitted packets out
 	Retransmits uint8 `structs:"retransmits"`
 	Probes      uint8 `structs:"probes" lean:"-"`
 	Backoff     uint8 `structs:"backoff" lean:"-"`
 
 	// See https://elixir.bootlin.com/linux/v5.14/source/include/uapi/linux/tcp.h#L166
 	// for a list of possible values.
-	Options                   uint8  `structs:"options" lean:"-"`
-	Snd_wscale                uint8  `structs:"sndWscale" lean:"-"` // no uint4
-	Rcv_wscale                uint8  `structs:"rcvdWscale" lean:"-"`
-	Delivery_rate_app_limited uint8  `structs:"deliveryRateAppLimited" lean:"-"`
-	Fastopen_client_fail      uint8  `structs:"fastOpenClientFail" lean:"-"`
-	Rto                       uint32 `structs:"rto" lean:"-"`
-	Ato                       uint32 `structs:"ato" lean:"-"`
-	Snd_mss                   uint32 `structs:"sndMss" lean:"sndMss"`
-	Rcv_mss                   uint32 `structs:"rcvMss" lean:"-"`
-	Unacked                   uint32 `structs:"unAcked" lean:"-"`
-	Sacked                    uint32 `structs:"sAcked" lean:"-"`
-	Lost                      uint32 `structs:"lost" lean:"-"`
-	Retrans                   uint32 `structs:"retrans" lean:"-"`
-	Fackets                   uint32 `structs:"fAckets" lean:"-"`
+	Options                   uint8 `structs:"options" lean:"-"`
+	Snd_wscale                uint8 `structs:"sndWscale" lean:"-"` // no uint4
+	Rcv_wscale                uint8 `structs:"rcvdWscale" lean:"-"`
+	Delivery_rate_app_limited uint8 `structs:"deliveryRateAppLimited" lean:"-"`
+	Fastopen_client_fail      uint8 `structs:"fastOpenClientFail" lean:"-"`
 
-	/* Times. */
-	// These seem to be elapsed time, so they increase on almost every sample.
-	// We can probably use them to get more info about intervals between samples.
+	// Retransmit timeout
+	Rto uint32 `structs:"rto" lean:"-"`
+
+	// Predicted tick of soft clock for the delayed ACK (whatever that is!)
+	Ato uint32 `structs:"ato" lean:"-"`
+
+	// Cached effective mss, not including SACKS (i.e. sender's MSS)
+	Snd_mss uint32 `structs:"sndMss" lean:"sndMss"`
+
+	// MSS used for delayed ACK decisions
+	Rcv_mss uint32 `structs:"rcvMss" lean:"-"`
+	Unacked uint32 `structs:"unAcked" lean:"-"`
+	Sacked  uint32 `structs:"sAcked" lean:"-"`
+	Lost    uint32 `structs:"lost" lean:"-"`
+	Retrans uint32 `structs:"retrans" lean:"-"`
+	Fackets uint32 `structs:"fAckets" lean:"-"`
+
+	// Now - timestamp of last sent data packet (for restart window) [ms]
 	Last_data_sent uint32 `structs:"lastDataSent" lean:"-"`
-	Last_ack_sent  uint32 `structs:"lastAckSent" lean:"-"`
-	Last_data_recv uint32 `structs:"lastDataRecv" lean:"-"`
-	Last_ack_recv  uint32 `structs:"lastAckRecv" lean:"-"`
 
-	/* Metrics. */
-	Pmtu            uint32 `structs:"pMtu" lean:"pMtu"`
-	Rcv_ssthresh    uint32 `structs:"rcvSsThresh" lean:"-"`
-	Rtt             uint32 `structs:"rtt" lean:"rtt"`
-	Rttvar          uint32 `structs:"rttVar" lean:"rttVar"`
-	Snd_ssthresh    uint32 `structs:"sndSsThresh" lean:"sndSsThresh"`
-	Snd_cwnd        uint32 `structs:"sndCwnd" lean:"sndCwnd"`
-	Advmss          uint32 `structs:"advMss" lean:"advMss"`
-	Reordering      uint32 `structs:"reordering" lean:"-"`
-	Rcv_rtt         uint32 `structs:"rcvRtt" lean:"-"`
-	Rcv_space       uint32 `structs:"rcvSpace" lean:"-"`
-	Total_retrans   uint32 `structs:"totalRetrans" lean:"-"`
+	// Not present in Linunx v5.14?
+	Last_ack_sent uint32 `structs:"lastAckSent" lean:"-"`
+
+	// Now - timestamp of last received data packet [ms]
+	Last_data_recv uint32 `structs:"lastDataRecv" lean:"-"`
+
+	// Now - timestamp of last received ACK (for keepalives) [ms]
+	Last_ack_recv uint32 `structs:"lastAckRecv" lean:"-"`
+
+	// Last pmtu seen by socket
+	Pmtu uint32 `structs:"pMtu" lean:"pMtu"`
+
+	// Current window clamp
+	Rcv_ssthresh uint32 `structs:"rcvSsThresh" lean:"-"`
+
+	// Smoothed round trip time << 3 in usecs
+	Rtt uint32 `structs:"rtt" lean:"rtt"`
+
+	// Medium deviation in us
+	Rttvar       uint32 `structs:"rttVar" lean:"rttVar"`
+	Snd_ssthresh uint32 `structs:"sndSsThresh" lean:"sndSsThresh"`
+
+	// Sending congestion window
+	Snd_cwnd uint32 `structs:"sndCwnd" lean:"sndCwnd"`
+
+	// Advertised MSS
+	Advmss     uint32 `structs:"advMss" lean:"advMss"`
+	Reordering uint32 `structs:"reordering" lean:"-"`
+	Rcv_rtt    uint32 `structs:"rcvRtt" lean:"-"`
+
+	// Receiver queue space
+	Rcv_space     uint32 `structs:"rcvSpace" lean:"-"`
+	Total_retrans uint32 `structs:"totalRetrans" lean:"-"`
+
+	// Pacing rate in bytes per second
 	Pacing_rate     uint64 `structs:"pacingRate" lean:"-"`
 	Max_pacing_rate uint64 `structs:"maxPacingRate" lean:"-"`
 
-	/* RFC4898 tcpEStatsAppHCThruOctetsAcked */
+	// RFC4898 tcpEStatsAppHCThruOctetsAcked: sum(delta(snd_una)), or
+	// how many bytes were acked.
 	Bytes_acked uint64 `structs:"bytesAcked" lean:"-"`
-	/* RFC4898 tcpEStatsAppHCThruOctetsReceived */
+
+	// RFC4898 tcpEStatsAppHCThruOctetsReceived: sum(delta(rcv_nxt)), or
+	// how many bytes were acked.
 	Bytes_received uint64 `structs:"bytesRecv" lean:"-"`
-	/* RFC4898 tcpEStatsPerfSegsOut */
+
+	// RFC4898 tcpEStatsPerfSegsOut: The total number of segments sent.
 	Segs_out uint32 `structs:"segsOut" lean:"-"`
-	/* RFC4898 tcpEStatsPerfSegsIn */
-	Segs_in       uint32 `structs:"segsIn" lean:"-"`
+
+	// RFC4898 tcpEStatsPerfSegsIn: total number of segments in.
+	Segs_in uint32 `structs:"segsIn" lean:"-"`
+
 	Notsent_bytes uint32 `structs:"notsentBytes" lean:"-"`
 	Min_rtt       uint32 `structs:"minRtt" lean:"minRtt"`
-	/* RFC4898 tcpEStatsDataSegsIn */
+
+	// RFC4898 tcpEStatsDataSegsIn: total number of data segments in.
 	Data_segs_in uint32 `structs:"dataSegsIn" lean:"-"`
-	/* RFC4898 tcpEStatsDataSegsOut */
+
+	// RFC4898 tcpEStatsDataSegsOut: total number of data segments sent.
 	Data_segs_out uint32 `structs:"dataSegsOut" lean:"-"`
 
+	// (saved rate sample: packets delivered) * MSS / (saved rate sample: time elapsed [us]) [Bps]
 	Delivery_rate uint64 `structs:"deliveryRate" lean:"deliveryRate"`
 
-	/* Time (usec) busy sending data */
+	// Time (usec) busy sending data or stalled
 	Busy_time uint64 `structs:"busyTime" lean:"-"`
-	/* Time (usec) limited by receive window */
+
+	// Time (usec) limited by receive window
 	Rwnd_limited uint64 `structs:"rwndLimited" lean:"-"`
-	/* Time (usec) limited by send buffer */
+
+	// Time (usec) limited by send buffer
 	Sndbuf_limited uint64 `structs:"sndBufLimited" lean:"-"`
 
+	// Total data packets delivered incl. rexmits
 	Delivered    uint32 `structs:"delivered" lean:"-"`
 	Delivered_ce uint32 `structs:"deliveredCe" lean:"-"`
 
-	/* RFC4898 tcpEStatsPerfHCDataOctetsOut */
+	// RFC4898 tcpEStatsPerfHCDataOctetsOut: total number of data bytes sent
 	Bytes_sent uint64 `structs:"bytesSent" lean:"bytesSent"`
 	/* RFC4898 tcpEStatsPerfOctetsRetrans */
 	Bytes_retrans uint64 `structs:"bytesRetrans" lean:"-"`
@@ -207,7 +247,8 @@ type TCPInfo struct {
 	Reord_seen uint32 `structs:"reordSeen" lean:"-"`
 	/* Out-of-order packets received */
 	Rcv_ooopack uint32 `structs:"rcvOooPack" lean:"-"`
-	/* peer's advertised receive window after scaling (bytes) */
+
+	// Peer's advertised receive window after scaling (bytes)
 	Snd_wnd uint32 `structs:"sndWnd" lean:"-"`
 }
 
