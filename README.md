@@ -3,6 +3,8 @@
 
 ![FlowyGopher](flowd-go.svg)
 
+<!-- ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/scitags/flowd-go) -->
+
 Flowd-go is a network flow and packet marking daemon. It is heavily inspired by [`scitags/flowd`](https://github.com/scitags/flowd), but
 instead of Python it's implemented in Go.
 
