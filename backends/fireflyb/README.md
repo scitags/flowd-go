@@ -178,20 +178,8 @@ backends:
         collectorAddress: "127.0.0.1"
         collectorPort: 10514
 
-        periodicFireflies: false
-        period: 1000
-        enrichmentVerbosity: "lean"
-
-        netlink:
-            protocol: 6 # TCP
-            ext: 255 # All connections
-            state: 3071 # Every state except listen
-
-        skops:
-          cgroupPath: "/sys/fs/cgroup"
-          programPath: ""
-          strategy: "poll"
-          debugMode: false
+        enrich: false
+        enrichmentMode: "lean"
 ```
 
 <!-- REFs -->
