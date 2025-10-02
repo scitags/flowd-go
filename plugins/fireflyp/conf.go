@@ -21,7 +21,7 @@ func (c *Config) UnmarshalYAML(b []byte) error {
 	type config Config
 
 	def := &config{
-		BindAddress:     "127.0.01.",
+		BindAddress:     "127.0.0.1",
 		BindPort:        10514,
 		BufferSize:      2 * minRecvBufferSize,
 		Deadline:        0,
