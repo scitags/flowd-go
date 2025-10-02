@@ -228,7 +228,7 @@ func (e *EbpfEnricher) WatchFlow(flowID types.FlowID) (*enrichment.Poller, error
 
 // Should we simply wait for an
 func (e *EbpfEnricher) ForgetFlow(flowID types.FlowID) (time.Time, bool) {
-	hash := enrichment.HashFlowID(flowID)
+	hash := enrichment.HashFlowID(types.FlowID{Src: types.IPPort{Port: flowID.Src.Port}, Dst: types.IPPort{Port: flowID.Dst.Port}})
 	slog.Debug("marking flow for removal", "hash", hash)
 	return e.cache.MarkForRemoval(hash)
 }
