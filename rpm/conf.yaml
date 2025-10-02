@@ -1,17 +1,205 @@
 ---
-pidPath: "/var/run/flowd-go/pid"
-workDir": "."
-stunServers: [
-    "stun:stun.l.google.com:19305",
-    "stun:stun.services.mozilla.org:3478"
-],
+# This configuration file will cause flowd-go to start without instantiating
+# any plugins, backends or enrichers. Put simply it'll do nothing! Feel free
+# to uncomment the chunks you're interested in: configured values are
+# sensible defaults that should work most of the time. For more information
+# on available values refer to flowd-go's manpage, flowd-go(1).
 
-plugins:
-    namedPipe:
-        maxReaders: 5
-        buffSize: 1000
-        pipePath: "/var/run/flowd-go/np"
-    api: {}
+# # Where should we place a file containing the PID?
+# pidPath: "/var/run/flowd-go/pid"
 
-backends:
-    marker: {}
+# # What should the working directory be
+# workDir": "/var/cache/flowd-go"
+
+# # STUN servers for public IPv4 discovery
+# stunServers: []
+
+# # Sources for flowIDs
+# plugins:
+
+    # # Signal flowIDs through a REST API.
+    # api:
+    #     # Address the API server will bind to
+    #     bindAddress: "127.0.0.1"
+
+    #     # Port the API server will bind to
+    #     bindPort: 7777
+
+    # # Signal flowIDs through a named pipe, see mkfifo(1)
+    # namedPipe:
+    #     # Maximum number of readers on the named pipe
+    #     maxReaders: 5
+
+    #     # Size of the buffer data on the pipe is read into
+    #     buffSize: 1000
+
+    #     # Path where the named pipe is created
+    #     pipePath: "/var/run/flowd-go/np"
+
+    # # Create flowIDs based on incoming fireflies
+    # firefly:
+    #     # Address the UDP server will bind to.
+    #     bindAddress: "127.0.0.1"
+
+    #     # Port the UDP server will bind to
+    #     bindPort: 10514
+
+    #     # Deadline of the underlying UDP socket. If set to 0,
+    #     # the socket will block (which is what we usually want).
+    #     deadline: 0
+
+    #     # Do incoming fireflies have a syslog header? This is crucial
+    #     # for parsing the embedded JSON payload.
+    #     hasSyslogHeader: false
+
+    # # Detect TCP connections based on source and destination ports
+    # iperf3:
+    #     # Lower bound (inclusive) of the source port range. If 0, this check
+    #     # will not be enforced.
+    #     minSourcePort: 0
+
+    #     # Upper bound (inclusive) of the source port range. If 0, this check
+    #     # will not be enforced.
+    #     maxSourcePort: 0
+
+    #     # Lower bound (inclusive) of the destination port range. If 0, this check
+    #     # will not be enforced.
+    #     minDestinationPort: 0
+
+    #     # Upper bound (inclusive) of the destination port range. If 0, this check
+    #     # will not be enforced.
+    #     maxDestinationPort: 0
+
+    #     # Path of the cgroup whose sockets we are sensitive to. Unless you know
+    #     # what this means the setting is best left as-is.
+    #     cgroupPath: "/sys/fs/cgroup"
+
+    #     # Path to a compiled eBPF program to use instead of the embedded one for
+    #     # detecting connections. If empty, the embedded program will be used.
+    #     programPath: ""
+
+    #     # Enable debugging output for the eBPF program? Doing so CAN AFFECT
+    #     # PERFORMANCE, so it's better left disabled in production.
+    #     debugMode: false
+
+    #     # Chose activity and experiment IDs randomly?
+    #     randomIDs: false
+
+    #     # List of activity IDs to use. Its length MUST be the same as that of
+    #     # the experiment IDs.
+    #     activityIDs: [0, 1, 2]
+
+    #     # List of experiment IDs to use. Its length MUST be the same as that of
+    #     # the activity IDs.
+    #     experimentIDs: [0, 1, 2]
+
+    # # Simply mark everything with a fixed activity and experiment ID
+    # perfsonar:
+    #     # The activity ID to mark everything with
+    #     activityID: 0
+
+    #     # The experiment ID to mark everything with
+    #     experimentID: 0
+
+# # Sinks for the flowIDs
+# backends:
+
+#     # Send output fireflies
+#     firefly:
+#         # Destination port for the fireflies sent to the transfer's destination
+#         destinationPort: 10514
+
+#         # Add the syslog header to the firefly?
+#         prependSyslog: false
+
+#         # Should fireflies be sent to the collector as well?
+#         sendToCollector: false
+
+#         # Address of the collector:
+#         collectorAddress: "127.0.0.1"
+
+#         # Port of the collector
+#         collectorPort: 10514
+
+#         # Should periodic fireflies (i.e. with an ongoing state) be sent?
+#         enrich: false
+
+#         # What information should be embedded in periodic fireflies?
+#         enrichmentMode: "lean"
+
+#     # Mark IPv6 datagrams
+#     marker:
+#         # Interfaces to attach the marker to. Only datagrams sent out on these
+#         # interfaces will be marked.
+#         targetInterfaces: ["lo"]
+
+#         # Should the program be attached to every interface with a public IPv6?
+#         discoverInterfaces: false
+
+#         # Should the qdisc (i.e. filter) be removed upon program termination?
+#         # Unless you have a clear reason to do so, don't disable this!
+#         removeQdisc: true
+
+#         # Path to a compiled eBPF program to use instead of the embedded one for
+#         # marking datagrams. If empty, the embedded program will be used.
+#         programPath: ""
+
+#         # How should datagrams be marked?
+#         markingStrategy: "label"
+
+#         # Should we match every datagram? This is only useful when paired with the
+#         # perfsonar plugin.
+#         matchAll: true
+
+#         # Enable debugging output for the eBPF program? Doing so CAN AFFECT
+#         # PERFORMANCE, so it's better left disabled in production.
+#         debugMode: false
+
+#     # Export flow information as prometheus metrics
+#     prometheus:
+#         # Enable logging for this backend?
+#         log: true
+
+#         # Address the prometheus HTTP servers will bind to
+#         bindAddress: "127.0.0.1"
+
+#         # Port netlink-gathered information will be exported on
+#         netlinkPort: 8080
+
+#         # Port skOps-gathered information will be exported on
+#         skopsPort: 8081
+
+# # Sources of information for ongoing TCP connections
+# enrichers:
+
+#     # How often to gather statistics (in milliseconds)
+#     period: 1000
+
+#     # Netlink (i.e. sock_diag(7)) configuration
+#     netlink:
+#         # The L4 protocol to gather information for.
+#         protocol: 6 # i.e. IPPROTO_TCP
+
+#         # Requested information from the sock_diag subsystem
+#         ext: 255 # i.e. everything
+
+#         # TCP states to retrieve information from
+#         state: 3071 # i.e. every state but LISTEN
+
+#     # eBPF (i.e. sk_ops) configuration
+#     skops:
+#         # Cgroup whose sockets we'll be sensitive to. Unless you know what this
+#         # means, the setting is better left alone.
+#         cgroupPath: "/sys/fs/cgroup"
+
+#         # Path to a compiled eBPF program to use instead of the embedded one for
+#         # gathering connection information. If empty, the embedded program will
+#         # be used.
+#         programPath: ""
+
+#         # Enable debugging output for the eBPF program? Doing so CAN AFFECT
+#         # PERFORMANCE, so it's better left disabled in production.
+#         debugMode: false
+
+#         # How should data be acquired?
+#         strategy: "poll"

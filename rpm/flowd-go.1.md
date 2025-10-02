@@ -191,7 +191,7 @@ hooked on a *clsact qdisc* which only deals with egress datagrams. The loading a
   in a particular way as the loading into the kernel won't work otherwise. Please refer to the eBPF documentation bundled with the implementation
   to take a look at how the embedded program is compiled.
 
-- **markingStrategy [string] {"flowLabel"}**: The marking strategy to leverage on the eBPF program. This option must be one of the following if
+- **markingStrategy [string] {"label"}**: The marking strategy to leverage on the eBPF program. This option must be one of the following if
   configured, otherwise flowd-go will refuse to start. Available marking strategies are:
 
     - `"label"`: The eBPF program embeds the flow information in the IPv6 header's *Flow Label* field as defined in SciTags' technical specification.
