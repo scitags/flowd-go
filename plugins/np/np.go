@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/rjeczalik/notify"
+	"github.com/scitags/flowd-go/types"
 	glowdTypes "github.com/scitags/flowd-go/types"
 )
 
@@ -167,9 +168,19 @@ func parseEvents(rawEvents string) []glowdTypes.FlowID {
 			continue
 		}
 
+		if types.IsIPv4(srcIP) != types.IsIPv4(dstIP) {
+			slog.Warn("found different IP address families", "srcIP IPv4?", types.IsIPv4(srcIP), "dstIP IPv4?", types.IsIPv4(dstIP))
+		}
+
 		flowID := glowdTypes.FlowID{
-			State:      flowState,
-			Protocol:   proto,
+			State:    flowState,
+			Protocol: proto,
+			Family: func() types.Family {
+				if types.IsIPv4(srcIP) {
+					return types.IPv4
+				}
+				return types.IPv6
+			}(),
 			Src:        glowdTypes.IPPort{IP: srcIP, Port: uint16(srcPort)},
 			Dst:        glowdTypes.IPPort{IP: dstIP, Port: uint16(dstPort)},
 			Experiment: uint32(experimentId),
