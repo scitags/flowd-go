@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
-	"net/netip"
 
+	"github.com/scitags/flowd-go/types"
 	glowdTypes "github.com/scitags/flowd-go/types"
 )
 
@@ -33,20 +33,8 @@ func discoverInterfaces() ([]string, error) {
 				slog.Warn("error parsing CIDR", "interface", iFace.Name, "cidr", addr.String())
 			}
 
-			// Note how this conversion from the CIDR to a netip.Addr will ALWAYS convert
-			// IPv4 addresses into 4-in-6 addresses: that's why the following check will
-			// filter out all IPv4 addresses for us!
-			pAddr := netip.AddrFrom16([16]byte(cidr.To16()))
-
-			// Check if ipAddr is a 4-in-6 address: this will effectively filter out
-			// all IPv4 addresses given out previous cast
-			if pAddr.Unmap() != pAddr {
-				slog.Debug("address is a v4-in-v6 address, skipping", "interface", iFace.Name, "cidr", cidr)
-				continue
-			}
-
-			// Just to be sure: this shouldn't be necessary at all though...
-			if pAddr.Is4() {
+			if types.IsIPv4(cidr) {
+				slog.Debug("address is IPv4", "interface", iFace.Name, "cidr", cidr)
 				continue
 			}
 

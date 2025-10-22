@@ -93,9 +93,19 @@ var (
 func IsIPPrivate(ip net.IP) bool {
 	for i, ipnet := range privateNetworks {
 		if ipnet.Contains(ip) {
-			slog.Debug("private IP match", "i", i, "ip", ip, "ipnet", ipnet)
+			slog.Debug("ip is private", "i", i, "ip", ip, "ipnet", ipnet)
 			return true
 		}
 	}
 	return false
+}
+
+// IsIPv4 asserts whether an IP address is either IPv4 or IPv6. For
+// IPv4-in-IPv6 addresses (i.e. ::FFFF:192.168.0.1) IsIPv4 returns
+// true.
+func IsIPv4(ip net.IP) bool {
+	// We should really try to use netip.Addr in the implementation...
+	// p, _ := netip.AddrFromSlice(ip)
+	// return p.Is4()
+	return ip.To4() != nil
 }
