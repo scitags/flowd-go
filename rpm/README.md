@@ -33,7 +33,14 @@ Just a quick TODO list for when we (inevitably) forget how to make a release:
 
         $ koji build scitags9al "git+https://github.com/scitags/flowd-go.git#main"
 
-1. Look for the result in the [scitags9al-testing][scitags9al-repo] RPM repository.
+1. Tag the package for both the [scitags9al-qa][] and [scitags9al-stable][] repos with
+   (version numbers will differ)
+
+        $ koji tag-build scitags9al-qa flowd-go-2.2.0-1
+        $ koji tag-build scitags9al-stable flowd-go-2.2.0-1
+
+1. Look for the result in the [scitags9al-testing][], [scitags9al-qa][] and
+   [scitags9al-stable][] RPM repositories.
 
 Should the build fail, one can re-run it with the `--scratch` option, thus avoiding
 the extra tagging step:
@@ -91,8 +98,52 @@ to test them out with
 
     $ dnf install https://linuxsoft.cern.ch/repos/scitags9al-testing/x86_64/os/Packages/f/flowd-go-2.1.0-1.x86_64.rpm
 
-or whatever version's the latest. You can always add this repository as a file under
-`/etc/yum.repos.d` too!
+or whatever version's the latest. Note how, by default once a package is successfully built it'll be added
+to the `scitags9al-testing` tag and so it'll only appear on the `scitags9al-testing` repo over at:
+
+    https://linuxsoft.cern.ch/repos/scitags9al-testing/x86_64/os
+
+We need to **manually** tag the built package so that it finds its way into both `scitag9al-qa` and
+`scitags9al-stable`. All it takes is running the following Koji commands:
+
+    $ koji tag-build scitags9al-qa flowd-go-2.2.0-1
+    $ koji tag-build scitags9al-stable flowd-go-2.2.0-1
+
+Note how the version number will differ for each release. In order for the above to work, the packages
+must've been added to the respective tags beforehand. This is something that needs to be done only
+once (and it's already been done for `flowd-go`):
+
+    $ koji add-pkg --owner=$(id -nu) scitags9al-qa flowd-go
+    $ koji add-pkg --owner=$(id -nu) scitags9al-stable flowd-go
+
+All in all, the usual way to install this packages is through the respective repositories, something
+that can be easily configured with a `*.repo` file placed in `/etc/yum.repos.d` resembling:
+
+```ini
+[scitags-stable]
+name     = Scitags Repository - stable
+baseurl  = https://linuxsoft.cern.ch/repos/scitags9al-stable/$basearch/os
+protect  = 1
+enabled  = 1
+gpgcheck = 1
+gpgkey   = https://linuxsoft.cern.ch/repos/RPM-GPG-KEY-kojiv2
+
+[scitags-qa]
+name     = Scitags Repository - qa
+baseurl  = https://linuxsoft.cern.ch/repos/scitags9al-qa/$basearch/os
+protect  = 1
+enabled  = 0
+gpgcheck = 1
+gpgkey   = https://linuxsoft.cern.ch/repos/RPM-GPG-KEY-kojiv2
+
+[scitags-testing]
+name     = Scitags Repository - testing
+baseurl  = https://linuxsoft.cern.ch/repos/scitags9al-testing/$basearch/os
+protect  = 1
+enabled  = 0
+gpgcheck = 1
+gpgkey   = https://linuxsoft.cern.ch/repos/RPM-GPG-KEY-kojiv2
+```
 
 ### A deeper look into Koji and co.
 One can tell from the above that the integration with Koji is rather strong and at times brittle. The core
@@ -158,6 +209,14 @@ this Koji bonanza:
     # Untagging builds so that we can cleanly re-run stuff
     $ koji untag-build scitags9al-testing flowd-go-2.1.0-1
 
+    # Add a package to a tag (which must be done once)
+    $ koji add-pkg --owner=$(id -nu) scitags9al-qa flowd-go
+    $ koji add-pkg --owner=$(id -nu) scitags9al-stable flowd-go
+
+    # Tag a package in *-testing so that it belongs to *-qa and *-stable too
+    $ koji tag-build scitags9al-qa flowd-go-2.2.0-1
+    $ koji tag-build scitags9al-stable flowd-go-2.2.0-1
+
 <!-- REFs -->
 [koji]: https://koji.build
 [mock]: https://rpm-software-management.github.io/mock/
@@ -166,4 +225,6 @@ this Koji bonanza:
 [rpm-manual]: https://rpm-software-management.github.io/rpm/manual/
 [cern-myrpm]: https://gitlab.cern.ch/linuxsupport/myrpm
 [repo-vault]: https://vault.almalinux.org
-[scitags9al-repo]: https://linuxsoft.cern.ch/repos/scitags9al-testing
+[scitags9al-testing]: https://linuxsoft.cern.ch/repos/scitags9al-testing
+[scitags9al-qa]: https://linuxsoft.cern.ch/repos/scitags9al-qa
+[scitags9al-stable]: https://linuxsoft.cern.ch/repos/scitags9al-stable
