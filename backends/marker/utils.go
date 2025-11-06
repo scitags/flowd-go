@@ -30,6 +30,12 @@ func extractHalves(ip net.IP) (uint64, uint64) {
 
 // Implementation of Section 1.2 of https://docs.google.com/document/d/1x9JsZ7iTj44Ta06IHdkwpv5Q2u4U2QGLWnUeN2Zf5ts/edit?usp=sharing
 func (b *MarkerBackend) genFlowTag(experimentId, activityId uint32) uint32 {
+	// If not using the flow label we can make do without any entropy bits and make our life
+	// that much easier.
+	if b.MarkingStrategy != Label {
+		return experimentId<<8 | activityId&0xFF
+	}
+
 	// We'll slice this number up to get our needed 5 random bits
 	rNum := b.rGen.Uint32()
 

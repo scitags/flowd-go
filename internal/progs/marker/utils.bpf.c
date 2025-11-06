@@ -1,6 +1,6 @@
 // +build ignore
 
-#include "vmlinux.h"
+#include "../vmlinux.h"
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_endian.h>
 
@@ -46,24 +46,34 @@ static __always_inline void populateExtensionHdr(struct extensionHdr_t *extHdr, 
 	// The number of octets of the option's data.
 	extHdr->opts[1] = 0x3;
 
-	// Populate the option data with the flowTag.
-	extHdr->opts[2] = 0x0 << 4 | (flowTag & ( 0xF << 16)) >> 16;
-	extHdr->opts[3] =            (flowTag & (0xFF <<  8)) >>  8;
-	extHdr->opts[4] =             flowTag &  0xFF;
-
-	// Add a Pad1 option to fill up the 8 octets we need at least.
-	// Check RFC 2460 Section 4.2: https://www.rfc-editor.org/rfc/rfc2460.html#section-4.2
-	extHdr->opts[5] = 0x00;
+	// Rework the incoming flow tag so that we align with the expected contents of the Extension Header (EH).
+	// This approach correctly handles endianness (i.e. we change the native endianness with which data is
+	// written to and read from the map to network endianness with bpf_htonl) and reduces the amount of memory
+	// accesses so that we only follow a pointer once. Note how the last byte (i.e. opts[5]) must be 0x00. This
+	// translates into a Pad1 option which we need to fill up the 8 octets we at least need to fill up the
+	// EH. Check RFC 2460 Section 4.2: https://www.rfc-editor.org/rfc/rfc2460.html#section-4.2.
+	__u32 nFlowTag = bpf_htonl(flowTag) >> 8;
+	*(__u32*) (&extHdr->opts[2]) = nFlowTag;
 
 	#ifdef FLOWD_DEBUG
-		bpf_printk("flowd-go: extensionHeader nextHdr: %d", extHdr->nextHdr);
-		bpf_printk("flowd-go: extensionHeader  hdrLen: %x", extHdr->hdrLen);
-		bpf_printk("flowd-go: extensionHeader opts[0]: %x", extHdr->opts[0]);
-		bpf_printk("flowd-go: extensionHeader opts[1]: %x", extHdr->opts[1]);
-		bpf_printk("flowd-go: extensionHeader opts[2]: %x", extHdr->opts[2]);
-		bpf_printk("flowd-go: extensionHeader opts[3]: %x", extHdr->opts[3]);
-		bpf_printk("flowd-go: extensionHeader opts[4]: %x", extHdr->opts[4]);
-		bpf_printk("flowd-go: extensionHeader opts[5]: %x", extHdr->opts[5]);
+		bpf_printk("flowd-go: extensionHeader                       flowTag: %x", flowTag);
+		bpf_printk("flowd-go: extensionHeader                flowTag & 0xFF: %x", flowTag & 0xFF);
+		bpf_printk("flowd-go: extensionHeader    (flowTag & 0xFF << 8) >> 8: %x", (flowTag & 0xFF << 8) >> 8);
+		bpf_printk("flowd-go: extensionHeader  (flowTag & 0xFF << 16) >> 16: %x", (flowTag & 0xFF << 16) >> 16);
+		bpf_printk("flowd-go: extensionHeader  (flowTag & 0xFF << 24) >> 24: %x", (flowTag & 0xFF << 24) >> 24);
+		bpf_printk("flowd-go: extensionHeader            bpf_htonl(flowTag): %x", nFlowTag);
+		bpf_printk("flowd-go: extensionHeader               nFlowTag & 0xFF: %x", nFlowTag & 0xFF);
+		bpf_printk("flowd-go: extensionHeader   (nFlowTag & 0xFF << 8) >> 8: %x", (nFlowTag & 0xFF << 8) >> 8);
+		bpf_printk("flowd-go: extensionHeader (nFlowTag & 0xFF << 16) >> 16: %x", (nFlowTag & 0xFF << 16) >> 16);
+		bpf_printk("flowd-go: extensionHeader (nFlowTag & 0xFF << 24) >> 24: %x", (nFlowTag & 0xFF << 24) >> 24);
+		bpf_printk("flowd-go: extensionHeader                       nextHdr: %d", extHdr->nextHdr);
+		bpf_printk("flowd-go: extensionHeader                        hdrLen: %x", extHdr->hdrLen);
+		bpf_printk("flowd-go: extensionHeader                       opts[0]: %x", extHdr->opts[0]);
+		bpf_printk("flowd-go: extensionHeader                       opts[1]: %x", extHdr->opts[1]);
+		bpf_printk("flowd-go: extensionHeader                       opts[2]: %x", extHdr->opts[2]);
+		bpf_printk("flowd-go: extensionHeader                       opts[3]: %x", extHdr->opts[3]);
+		bpf_printk("flowd-go: extensionHeader                       opts[4]: %x", extHdr->opts[4]);
+		bpf_printk("flowd-go: extensionHeader                       opts[5]: %x", extHdr->opts[5]);
 	#endif
 }
 
