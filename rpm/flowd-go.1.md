@@ -153,10 +153,10 @@ port ranges. Activity and experiment IDs are read from the provided lists.
 - **randomIDs [bool] {false}**: Whether to read experiment and activity IDs sequentially (default) or randomly. The generated index will be leveraged for
   recovering both IDs.
 
-- **experimentIds [array of int] {[0, 1, 2]}**: The experiment IDs to leverage for marking traffic. Bear in mind that both `experimentIDs` and `activityIDs`
+- **experimentIDs [array of int] {[0, 1, 2]}**: The experiment IDs to leverage for marking traffic. Bear in mind that both `experimentIDs` and `activityIDs`
   should have the same length.
 
-- **activityIds [array of int] {[0, 1, 2]}**: The activity IDs to leverage for marking traffic. Bear in mind that both `experimentIDs` and `activityIDs`
+- **activityIDs [array of int] {[0, 1, 2]}**: The activity IDs to leverage for marking traffic. Bear in mind that both `experimentIDs` and `activityIDs`
   should have the same length.
 
 # BACKENDS
