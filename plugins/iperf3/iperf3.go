@@ -154,7 +154,7 @@ func (p *Iperf3Plugin) Run(done <-chan struct{}, outChan chan<- types.FlowID) {
 	go p.closeBuffer(done)
 	defer close(outChan)
 
-	idIndex := 0
+	idIndex := -1
 	if p.RandomIDs {
 		idIndex = rand.IntN(len(p.ExperimentIDs))
 	}
@@ -181,11 +181,18 @@ func (p *Iperf3Plugin) Run(done <-chan struct{}, outChan chan<- types.FlowID) {
 		switch types.State(rec.RawSample[56]) {
 		case types.TCP_ESTABLISHED:
 			s = types.START
+			if p.RandomIDs {
+				idIndex = rand.IntN(len(p.ExperimentIDs))
+			} else {
+				idIndex = (idIndex + 1) % len(p.ExperimentIDs)
+			}
 		case types.TCP_CLOSE:
 			s = types.END
 		default:
 			slog.Warn("unexpected state", "s", rec.RawSample[56])
 		}
+
+		slog.Debug("idIndex", "index", idIndex, "len", len(p.ExperimentIDs), "mod", idIndex%len(p.ExperimentIDs))
 
 		family := types.Family(rec.RawSample[0])
 		f := types.FlowID{
@@ -203,12 +210,6 @@ func (p *Iperf3Plugin) Run(done <-chan struct{}, outChan chan<- types.FlowID) {
 			Activity:   uint32(p.ActivityIDs[idIndex]),
 		}
 		slog.Debug("crafted flowID", "flowID", f)
-
-		if p.RandomIDs {
-			idIndex = rand.IntN(len(p.ExperimentIDs))
-		} else {
-			idIndex = (idIndex + 1) % len(p.ExperimentIDs)
-		}
 
 		outChan <- f
 	}
