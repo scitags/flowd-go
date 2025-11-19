@@ -10,6 +10,7 @@ require (
 	github.com/florianl/go-tc v0.4.5
 	github.com/goccy/go-yaml v1.18.0
 	github.com/google/go-cmp v0.7.0
+	github.com/jellydator/ttlcache/v3 v3.4.0
 	github.com/josharian/native v1.1.0
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/mdlayher/netlink v1.8.0
@@ -41,7 +42,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/stretchr/testify v1.10.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/wlynxg/anet v0.0.3 // indirect
