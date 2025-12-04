@@ -9,9 +9,6 @@ Source0: flowd-go-%{version}.tar.gz
 
 License:	ASL 2.0
 
-# Note libbpf-static already depends on the needed libbpf-devel
-BuildRequires:	libbpf-static = 2:1.5.0-1.el9
-
 # We would need bpftool to generate vmlinux.h when building. Including
 # vmlinux.h can be quite a headache given the file's size, but it might
 # be what we need to do in the end as we're now relying on the machine
@@ -32,11 +29,6 @@ BuildRequires:	gzip >= 1.12
 # Needed for all the SystemD-related macros and such
 BuildRequires:	systemd
 BuildRequires:	systemd-rpm-macros
-
-# Let's try not to impose any restriction for now. Besides, this shouldn't
-# even be necessary given libbpf should be bundled with the output binary!
-# Requires:	libbpf = 2:1.4.0-1.el9
-# Requires:	libbpf
 
 # Longer description on what the package is/does
 %description
