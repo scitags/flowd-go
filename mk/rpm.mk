@@ -80,7 +80,7 @@ rpm-dbg:
 	@echo "       SRPM_PATH: $(SRPM_PATH)"
 
 # Files to include in the SRPM
-RPM_FILES := backends cmd enrichment plugins settings rpm stun types go.mod go.sum Makefile vendor commit
+RPM_FILES := backends cmd enrichment internal plugins rpm stun types go.mod go.sum Makefile vendor commit
 
 # This target will bundle all the source files so that we can easily create a SRPM with our SPEC file.
 # We'll also bundle vmlinux.h so as to avoid having to generate that on the machine we might generate
