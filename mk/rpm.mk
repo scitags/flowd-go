@@ -16,7 +16,7 @@
 #   https://gitlab.cern.ch/linuxsupport/myrpm
 #   https://gitlab.cern.ch/linuxsupport/rpmci
 
-SPECFILE             = $(shell find . -type f -name *.spec)
+SPECFILE             = $(shell find . -maxdepth 1 -type f -name *.spec)
 SPECFILE_NAME        = $(shell awk '$$1 == "Name:"     { print $$2 }' $(SPECFILE))
 SPECFILE_VERSION     = $(shell awk '$$1 == "Version:"  { print $$2 }' $(SPECFILE))
 SPECFILE_RELEASE     = $(shell awk '$$1 == "Release:"  { print $$2 }' $(SPECFILE))
