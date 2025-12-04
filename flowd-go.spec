@@ -1,5 +1,5 @@
 Name:		flowd-go
-Version:	2.3.0
+Version:	2.3.1
 Release:	1
 Summary:	SciTags flowd-go Daemon
 
@@ -93,6 +93,9 @@ install -m 0664 rpm/%{name}.1.gz    %{buildroot}%{_mandir}/man1/%{name}.1.gz
 
 # Changes introduced with each version
 %changelog
+* Thu Dec 4 2025 Pablo Collado Soto <pablo.collado.soto@cern.ch> - 2.3.1-1
+- Update default configuration paths
+
 * Thu Dec 4 2025 Pablo Collado Soto <pablo.collado.soto@cern.ch> - 2.3.0-1
 - Pull changes shown to work at SuperComputing 25
 - Migrate from libbpf and libbpf-go to cilium/ebpf
