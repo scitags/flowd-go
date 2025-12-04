@@ -9,6 +9,9 @@ Source0: flowd-go-%{version}.tar.gz
 
 License:	ASL 2.0
 
+# Add libbpf's headers (i.e. <bpf/bpf_helpers.h>)
+BuildRequires:	libbpf-devel >= 1.5.0
+
 # We would need bpftool to generate vmlinux.h when building. Including
 # vmlinux.h can be quite a headache given the file's size, but it might
 # be what we need to do in the end as we're now relying on the machine
