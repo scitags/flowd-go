@@ -41,3 +41,10 @@ release:
 		--build-arg GH_CLI_VERSION=2.59.0 \
 		--progress plain \
 		-t ghcr.io/scitags/flowd-go:release-$(DOCKER_IMG_VERSION) -f release.dockerfile .
+
+# Build the multiplatform CI image we'll be using for building SRPMs and RPMs
+.PHONY: rpm
+rpm:
+	docker buildx build --platform linux/amd64,linux/arm64 \
+		--progress plain \
+		-t ghcr.io/scitags/flowd-go:rpm-$(DOCKER_IMG_VERSION) -f rpm.dockerfile .
