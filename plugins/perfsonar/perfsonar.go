@@ -31,12 +31,13 @@ func (p *PerfsonarPlugin) Run(done <-chan struct{}, outChan chan<- types.FlowID)
 	 */
 	slog.Debug("kicking off packet marking")
 	outChan <- types.FlowID{
-		State:      types.START,
-		Family:     types.IPv6,
-		Src:        types.IPPort{IP: net.ParseIP("::"), Port: 0},
-		Dst:        types.IPPort{IP: net.ParseIP("::"), Port: 0},
-		Experiment: uint32(p.ExperimentId),
-		Activity:   uint32(p.ActivityId),
+		State:       types.START,
+		Family:      types.IPv6,
+		Src:         types.IPPort{IP: net.ParseIP("::"), Port: 0},
+		Dst:         types.IPPort{IP: net.ParseIP("::"), Port: 0},
+		Experiment:  uint32(p.ExperimentId),
+		Activity:    uint32(p.ActivityId),
+		Application: types.SYSLOG_APP_NAME,
 	}
 
 	// Simply block until the done channel is closed so that we can exit

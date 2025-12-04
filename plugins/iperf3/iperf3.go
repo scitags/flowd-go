@@ -206,8 +206,9 @@ func (p *Iperf3Plugin) Run(done <-chan struct{}, outChan chan<- types.FlowID) {
 				IP:   parseIP(family, rec.RawSample[32:48]),
 				Port: parsePort(rec.RawSample[48:56]),
 			},
-			Experiment: uint32(p.ExperimentIDs[idIndex]),
-			Activity:   uint32(p.ActivityIDs[idIndex]),
+			Experiment:  uint32(p.ExperimentIDs[idIndex]),
+			Activity:    uint32(p.ActivityIDs[idIndex]),
+			Application: types.SYSLOG_APP_NAME,
 		}
 		slog.Debug("crafted flowID", "flowID", f)
 

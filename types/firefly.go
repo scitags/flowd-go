@@ -11,8 +11,7 @@ import (
 )
 
 const (
-	FIREFLY_VERSION int    = 1
-	APPLICATION     string = "flowd-go v1.0.0"
+	FIREFLY_VERSION int = 1
 
 	// Let's replicate 2024-11-02T16:07:01.769470+00:00.
 	TIME_FORMAT string = "2006-01-02T15:04:05.999999-07:00"
@@ -21,13 +20,16 @@ const (
 	SYSLOG_SEVERITY_INFORMATIONAL int    = 6
 	SYSLOG_PRIORITY               int    = (SYSLOG_FACILITY_LOCAL0 << 3) | SYSLOG_SEVERITY_INFORMATIONAL
 	SYSLOG_VERSION                int    = 1
-	SYSLOG_APP_NAME               string = "flowd-go"
 	SYSLOG_PROC_ID                string = "-"
 	SYSLOG_MSG_ID                 string = "firefly-json"
 	SYSLOG_STRUCT_DATA            string = "-"
 )
 
 var (
+	// Initialised upon compilation
+	SYSLOG_APP_NAME string
+
+	// Initialised in an init function
 	SYSLOG_HEADER string
 )
 
@@ -218,15 +220,16 @@ func (f *SlimFirefly) UnmarshalJSON(in []byte) error {
 	}
 
 	f.FlowID = FlowID{
-		State:      flowState,
-		Family:     family,
-		Protocol:   protocol,
-		Src:        IPPort{srcIP, rawFirefly.FlowID.SrcPort},
-		Dst:        IPPort{dstIP, rawFirefly.FlowID.DstPort},
-		Experiment: rawFirefly.Context.ExperimentID,
-		Activity:   rawFirefly.Context.ActivityID,
-		StartTs:    startTs,
-		EndTs:      endTs,
+		State:       flowState,
+		Family:      family,
+		Protocol:    protocol,
+		Src:         IPPort{srcIP, rawFirefly.FlowID.SrcPort},
+		Dst:         IPPort{dstIP, rawFirefly.FlowID.DstPort},
+		Experiment:  rawFirefly.Context.ExperimentID,
+		Activity:    rawFirefly.Context.ActivityID,
+		StartTs:     startTs,
+		EndTs:       endTs,
+		Application: rawFirefly.Context.Application,
 	}
 
 	return nil

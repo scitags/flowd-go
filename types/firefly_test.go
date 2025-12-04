@@ -46,6 +46,8 @@ func TestFireflyValidation(t *testing.T) {
 		t.Fatalf("error compiling the schema: %v", err)
 	}
 
+	sampleApplication := "flowd-go"
+
 	tests := []struct {
 		id         FlowID
 		nl         *FlowInfo
@@ -62,7 +64,7 @@ func TestFireflyValidation(t *testing.T) {
 				StartTs:     time.Now(),
 				Activity:    0,
 				Experiment:  0,
-				Application: APPLICATION,
+				Application: sampleApplication,
 			},
 			nil,
 			nil,
@@ -78,7 +80,7 @@ func TestFireflyValidation(t *testing.T) {
 				StartTs:     time.Now(),
 				Activity:    0,
 				Experiment:  0,
-				Application: APPLICATION,
+				Application: sampleApplication,
 			},
 			nil,
 			nil,
@@ -95,7 +97,7 @@ func TestFireflyValidation(t *testing.T) {
 				EndTs:       time.Now(),
 				Activity:    0,
 				Experiment:  0,
-				Application: APPLICATION,
+				Application: sampleApplication,
 			},
 			nil,
 			nil,
@@ -111,7 +113,7 @@ func TestFireflyValidation(t *testing.T) {
 				StartTs:     time.Now(),
 				Activity:    0,
 				Experiment:  0,
-				Application: APPLICATION,
+				Application: sampleApplication,
 			},
 			&FlowInfo{Mode: "lean", Cong: &Cong{Algorithm: "vegas"}},
 			nil,
@@ -127,7 +129,7 @@ func TestFireflyValidation(t *testing.T) {
 				StartTs:     time.Now(),
 				Activity:    0,
 				Experiment:  0,
-				Application: APPLICATION,
+				Application: sampleApplication,
 			},
 			nil,
 			&FlowInfo{Mode: "lean", Cong: &Cong{Algorithm: "vegas"}},
@@ -143,7 +145,7 @@ func TestFireflyValidation(t *testing.T) {
 				StartTs:     time.Now(),
 				Activity:    0,
 				Experiment:  0,
-				Application: APPLICATION,
+				Application: sampleApplication,
 			},
 			&FlowInfo{Mode: "lean", Cong: &Cong{Algorithm: "vegas"}},
 			&FlowInfo{Mode: "lean", Cong: &Cong{Algorithm: "vegas"}},

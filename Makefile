@@ -21,6 +21,7 @@ endif
 
 # Define the value of version-related global variables
 CFLAGS := $(CFLAGS) -ldflags "-X main.builtCommit=$(COMMIT) -X main.baseVersion=$(VERSION)"
+CFLAGS := $(CFLAGS) -ldflags "-X github.com/scitags/flowd-go/types.SYSLOG_APP_NAME=flowd-go-$(VERSION)"
 
 # If adding support for eBPF programs pull in the necessary loaders and helpers.
 ifndef NO_EBPF

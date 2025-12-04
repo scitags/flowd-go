@@ -181,10 +181,11 @@ func parseEvents(rawEvents string) []glowdTypes.FlowID {
 				}
 				return types.IPv6
 			}(),
-			Src:        glowdTypes.IPPort{IP: srcIP, Port: uint16(srcPort)},
-			Dst:        glowdTypes.IPPort{IP: dstIP, Port: uint16(dstPort)},
-			Experiment: uint32(experimentId),
-			Activity:   uint32(activityId),
+			Src:         glowdTypes.IPPort{IP: srcIP, Port: uint16(srcPort)},
+			Dst:         glowdTypes.IPPort{IP: dstIP, Port: uint16(dstPort)},
+			Experiment:  uint32(experimentId),
+			Activity:    uint32(activityId),
+			Application: types.SYSLOG_APP_NAME,
 		}
 
 		if flowState == glowdTypes.START {

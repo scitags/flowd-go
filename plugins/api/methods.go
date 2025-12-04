@@ -6,23 +6,24 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	glowdTypes "github.com/scitags/flowd-go/types"
+	"github.com/scitags/flowd-go/types"
 )
 
-var dummyFlowID = glowdTypes.FlowID{
+var dummyFlowID = types.FlowID{
 	// State:    glowd.START,
-	Family:   glowdTypes.IPv6,
-	Protocol: glowdTypes.TCP,
-	Src: glowdTypes.IPPort{
+	Family:   types.IPv6,
+	Protocol: types.TCP,
+	Src: types.IPPort{
 		IP:   net.ParseIP("::1"),
 		Port: 2345,
 	},
-	Dst: glowdTypes.IPPort{
+	Dst: types.IPPort{
 		IP:   net.ParseIP("::1"),
 		Port: 5777,
 	},
-	Activity:   0xFFFF,
-	Experiment: 0xFFFF,
+	Activity:    0xFFFF,
+	Experiment:  0xFFFF,
+	Application: types.SYSLOG_APP_NAME,
 	// StartTs:    time.Now(),
 }
 
@@ -37,7 +38,7 @@ func handleDummyStartFlow(c echo.Context) error {
 	cc := c.(*extendedContext)
 
 	tmp := dummyFlowID
-	tmp.State = glowdTypes.START
+	tmp.State = types.START
 	tmp.StartTs = time.Now()
 
 	cc.flowChannel <- tmp
@@ -48,7 +49,7 @@ func handleDummyEndFlow(c echo.Context) error {
 	cc := c.(*extendedContext)
 
 	tmp := dummyFlowID
-	tmp.State = glowdTypes.END
+	tmp.State = types.END
 	tmp.EndTs = time.Now()
 
 	cc.flowChannel <- tmp
@@ -58,7 +59,7 @@ func handleDummyEndFlow(c echo.Context) error {
 func handleFlow(c echo.Context) error {
 	cc := c.(*extendedContext)
 
-	flowID := glowdTypes.FlowID{}
+	flowID := types.FlowID{}
 	if err := cc.Bind(&flowID); err != nil {
 		return c.JSONPretty(http.StatusBadRequest, err, JSON_PRETTY_INDENT)
 	}
