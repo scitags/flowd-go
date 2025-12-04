@@ -21,7 +21,7 @@ RUN microdnf --refresh --enablerepo=crb --nodocs --setopt=install_weak_deps=0 -y
         bpftool-7.4.0         \
         clang-18.1.8          \
         llvm-18.1.8           \
-        golang-1.22.9         \
+        golang>=1.24          \
         make-1:4.3            \
         git-2.43.5            \
         tar                   \

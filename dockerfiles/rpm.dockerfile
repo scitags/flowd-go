@@ -18,13 +18,13 @@ COPY cern.repo /etc/yum.repos.ours/
 
 # Get all the necessary dependencies
 RUN dnf --refresh --enablerepo=crb -y install \
-        rpm-build     \
+        rpm-build        \
         dnf-plugins-core \
-        which         \
-        git           \
-        tar           \
-        make          \
-        golang \
+        which            \
+        git              \
+        tar              \
+        make             \
+        golang>=1.24     \
     && dnf clean all
 
 # Specify a sane working directory

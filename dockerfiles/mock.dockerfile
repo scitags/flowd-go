@@ -22,7 +22,7 @@ RUN microdnf --refresh --enablerepo=crb --nodocs --setopt=install_weak_deps=0 -y
         git           \
         tar           \
         make          \
-        golang-1.23.9 \
+        golang>=1.24  \
     && microdnf clean all
 
 # Copy the necessary mock(1) configurations

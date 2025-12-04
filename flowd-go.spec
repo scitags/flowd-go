@@ -26,7 +26,7 @@ BuildRequires:	make >= 1:4.3-8.el9
 BuildRequires:	clang >= 18.1.8-3.el9
 BuildRequires:	llvm  >= 18.1.8-3.el9
 
-BuildRequires:	golang >= 1.23.9
+BuildRequires:	golang >= 1.24
 BuildRequires:	gzip >= 1.12
 
 # Needed for all the SystemD-related macros and such

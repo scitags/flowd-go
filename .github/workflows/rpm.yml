@@ -17,7 +17,7 @@ jobs:
     name: Build the ${{ inputs.target-arch }} RPM
     runs-on: ${{ inputs.target-runner }}
     container:
-        image: ghcr.io/scitags/flowd-go:rpm-v2.1
+        image: ghcr.io/scitags/flowd-go:rpm-v2.2
     steps:
       - name: Check the current architecture
         run: arch

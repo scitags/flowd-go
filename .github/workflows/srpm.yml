@@ -8,7 +8,7 @@ jobs:
     name: SRPM time!
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/scitags/flowd-go:rpm-v2.1
+      image: ghcr.io/scitags/flowd-go:rpm-v2.2
     steps:
       - uses: actions/checkout@v4
 
