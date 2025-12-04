@@ -9,7 +9,7 @@ After=network.target
 [Service]
 RuntimeDirectory=flowd-go
 Type=simple
-ExecStart=/usr/bin/flowd-go --conf /etc/flowd-go/conf.json run
+ExecStart=/usr/bin/flowd-go --conf /etc/flowd-go/conf.yaml run
 Restart=always
 
 [Install]
