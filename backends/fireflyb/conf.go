@@ -2,6 +2,7 @@ package fireflyb
 
 import (
 	"github.com/goccy/go-yaml"
+	"github.com/scitags/flowd-go/internal/stun"
 )
 
 type Config struct {
@@ -14,6 +15,8 @@ type Config struct {
 
 	Enrich         bool   `yaml:"enrich"`
 	EnrichmentMode string `yaml:"enrichmentMode"`
+
+	Stun *stun.Config `yaml:"stun"`
 }
 
 func (c *Config) UnmarshalYAML(b []byte) error {

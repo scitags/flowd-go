@@ -18,9 +18,8 @@ import (
 )
 
 type Config struct {
-	PidPath     string   `yaml:"pidPath"`
-	WorkDir     string   `yaml:"workDir"`
-	StunServers []string `yaml:"stunServers"`
+	PidPath string `yaml:"pidPath"`
+	WorkDir string `yaml:"workDir"`
 
 	Plugins *struct {
 		Np        *np.Config        `yaml:"namedPipe"`
@@ -58,9 +57,8 @@ func (c *Config) UnmarshalYAML(b []byte) error {
 	type config Config
 
 	def := &config{
-		PidPath:     "/var/run/flowd-go.pid",
-		WorkDir:     "/var/cache/flowd-go",
-		StunServers: []string{},
+		PidPath: "/var/run/flowd-go.pid",
+		WorkDir: "/var/cache/flowd-go",
 	}
 
 	if err := yaml.Unmarshal(b, def); err != nil {
