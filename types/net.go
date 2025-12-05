@@ -21,6 +21,8 @@ func parseCidr(network string, comment string) net.IPNet {
 }
 
 var (
+	linkLocalNet = parseCidr("fe80::/10", "RFC 4291: Link-Local Unicast")
+
 	// This has been shamelessly plundered from [0]. Thanks a ton for keeping all this up to date!
 	//   0: https://raw.githubusercontent.com/letsencrypt/boulder/refs/heads/main/bdns/dns.go
 
@@ -81,7 +83,7 @@ var (
 		parseCidr("3fff::/20", "RFC 9637: Documentation"),
 		parseCidr("5f00::/16", "RFC 9602: Segment Routing (SRv6) SIDs"),
 		parseCidr("fc00::/7", "RFC 4193 & RFC 8190: Unique-Local"),
-		parseCidr("fe80::/10", "RFC 4291: Link-Local Unicast"),
+		linkLocalNet,
 		// ff00::/8 are multicast addresses as per RFC 4291, Sections 2.4 & 2.7.
 		// They are not present in the IANA registry.
 		parseCidr("ff00::/8", "RFC 4291: Multicast Addresses"),
@@ -96,6 +98,14 @@ func IsIPPrivate(ip net.IP) bool {
 			slog.Debug("ip is private", "i", i, "ip", ip, "ipnet", ipnet)
 			return true
 		}
+	}
+	return false
+}
+
+func IsIPLinkLocal(ip net.IP) bool {
+	if linkLocalNet.Contains(ip) {
+		slog.Debug("ip is a link-local address", "ip", ip, "ipnet", linkLocalNet)
+		return true
 	}
 	return false
 }

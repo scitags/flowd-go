@@ -103,20 +103,6 @@ func GetPubIPOverSTUN(ipFamily IPFamily) (net.IP, error) {
 	return parsedIP, nil
 }
 
-func GetDefaultOutboundIP(ipFamily IPFamily) (net.IP, error) {
-	dialNet, ok := ipFamilyMap[ipFamily]
-	if !ok {
-		return nil, fmt.Errorf("chosen IP Family (%s) is not correct", ipFamily)
-	}
-	conn, err := net.Dial(dialNet, "dns.google.com:80")
-	if err != nil {
-		return nil, fmt.Errorf("couldn't dial 8.8.8.8:80: %w", err)
-	}
-	defer conn.Close()
-
-	return conn.LocalAddr().(*net.UDPAddr).IP, nil
-}
-
 // Implementation of RFC 5389. This can also be accomplished with Pion as seen
 // on https://github.com/pion/stun/blob/959cdb5320679144547cac716f2cb7b52fea4d74/cmd/stun-nat-behaviour/main.go,
 // but it's not really necessary for us as we just want the external IPs...

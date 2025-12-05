@@ -11,6 +11,7 @@ require (
 	github.com/goccy/go-yaml v1.18.0
 	github.com/google/go-cmp v0.7.0
 	github.com/josharian/native v1.1.0
+	github.com/jsimonetti/rtnetlink/v2 v2.0.1
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/mdlayher/netlink v1.8.0
 	github.com/pion/stun/v3 v3.0.0
