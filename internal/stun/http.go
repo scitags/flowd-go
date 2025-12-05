@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+
+	"golang.org/x/sys/unix"
 )
 
 // The serviceURLs map contains the URLs where HTTP-based discovery services can be
@@ -24,9 +26,20 @@ var serviceURLs = map[string]string{
 // configuration. The implementation currently supports the following Ip discovery services:
 //   - ipify.org
 //   - ipconfig.io
-func GetPubIPOverHTTP(localAddr net.IP) (net.IP, error) {
+func GetPubIPOverHTTP(c Config, family int, localAddr net.IP) (net.IP, error) {
 	// Force HTTP requests to be made through the default interface
-	addr, err := net.ResolveTCPAddr("tcp", localAddr.String()+":0")
+	var (
+		addr *net.TCPAddr
+		err  error
+	)
+	switch family {
+	case unix.AF_INET:
+		addr, err = net.ResolveTCPAddr("tcp4", localAddr.String()+":0")
+	case unix.AF_INET6:
+		addr, err = net.ResolveTCPAddr("tcp6", fmt.Sprintf("[%s]:0", localAddr.String()))
+	default:
+		return nil, fmt.Errorf("wrong family specified")
+	}
 	if err != nil {
 		return nil, fmt.Errorf("couldn't resolve the local TCP address: %w", err)
 	}

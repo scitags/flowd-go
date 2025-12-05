@@ -2,12 +2,9 @@ package stun
 
 import (
 	"fmt"
-	"log/slog"
 	"net"
-	"net/netip"
 
 	"github.com/jsimonetti/rtnetlink/v2/rtnl"
-	"github.com/scitags/flowd-go/types"
 	"golang.org/x/sys/unix"
 )
 
@@ -50,44 +47,4 @@ func GetInterfaceAddresses(iface *net.Interface) ([]*net.IPNet, []*net.IPNet, er
 	}
 
 	return ip4Addrs, ip6Addrs, nil
-}
-
-func GetPublicAddresses() (map[netip.Addr]net.IP, error) {
-	dIface, err := GetDefaultInterface()
-	if err != nil {
-		return nil, err
-	}
-
-	ip4Addrs, ip6Addrs, err := GetInterfaceAddresses(dIface)
-	if err != nil {
-		return nil, err
-	}
-
-	pubIPMap := map[netip.Addr]net.IP{}
-	for _, addr := range append(ip4Addrs, ip6Addrs...) {
-		ip, ok := netip.AddrFromSlice(addr.IP)
-		if !ok {
-			slog.Warn("error casting net.IP to netip.Addr", "ip", addr.IP)
-			continue
-		}
-
-		if types.IsIPLinkLocal(addr.IP) {
-			continue
-		}
-
-		// If private, get a public address through STUN, DNS, HTTP...
-		if types.IsIPPrivate(addr.IP) {
-			pub, err := GetPubIPOverHTTP(addr.IP)
-			if err == nil {
-				pubIPMap[ip] = pub
-				continue
-			}
-			slog.Warn("couldn't resolve public ip over HTTP", "err", err)
-			continue
-		}
-
-		pubIPMap[ip] = addr.IP
-	}
-
-	return pubIPMap, nil
 }
