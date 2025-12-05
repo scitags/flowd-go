@@ -9,9 +9,6 @@ import (
 )
 
 type Config struct {
-	HttpResolution bool `yaml:"httpResolution"`
-	StunResolution bool `yaml:"stunResolution"`
-
 	ManualMapping map[string]string `yaml:"manualMapping"`
 
 	// Internal field
@@ -25,9 +22,6 @@ func (c *Config) UnmarshalYAML(b []byte) error {
 	type config Config
 
 	def := &config{
-		HttpResolution: false,
-		StunResolution: false,
-
 		ManualMapping: nil,
 
 		StunServers: []string{
