@@ -25,8 +25,11 @@ func (c *Config) UnmarshalYAML(b []byte) error {
 		ManualMapping: nil,
 
 		StunServers: []string{
-			"stun:stun.l.google.com:19302",
-			"stun:stun.services.mozilla.org:3478",
+			"stun.l.google.com:3478",
+			"stun1.l.google.com:3478",
+			"stun2.l.google.com:3478",
+			"stun3.l.google.com:3478",
+			"stun4.l.google.com:3478",
 		},
 	}
 
@@ -41,9 +44,9 @@ func (c *Config) UnmarshalYAML(b []byte) error {
 			return fmt.Errorf("couldn't parse provided IP address %q", k)
 		}
 
-		ip, ok := netip.AddrFromSlice(rawIP)
-		if !ok {
-			return fmt.Errorf("error casting net.IP %q to netip.Addr", rawIP)
+		ip, err := netip.ParseAddr(k)
+		if err != nil {
+			return fmt.Errorf("couldn't parse provided IP address %q: %w", k, err)
 		}
 
 		rawIP = net.ParseIP(v)
