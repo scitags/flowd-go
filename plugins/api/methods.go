@@ -1,8 +1,8 @@
 package api
 
 import (
-	"net"
 	"net/http"
+	"net/netip"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -11,16 +11,10 @@ import (
 
 var dummyFlowID = types.FlowID{
 	// State:    glowd.START,
-	Family:   types.IPv6,
-	Protocol: types.TCP,
-	Src: types.IPPort{
-		IP:   net.ParseIP("::1"),
-		Port: 2345,
-	},
-	Dst: types.IPPort{
-		IP:   net.ParseIP("::1"),
-		Port: 5777,
-	},
+	Family:      types.IPv6,
+	Protocol:    types.TCP,
+	Src:         netip.AddrPortFrom(netip.MustParseAddr("::1"), 2345),
+	Dst:         netip.AddrPortFrom(netip.MustParseAddr("::1"), 5777),
 	Activity:    0xFFFF,
 	Experiment:  0xFFFF,
 	Application: types.SYSLOG_APP_NAME,

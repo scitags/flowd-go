@@ -2,7 +2,7 @@ package types
 
 import (
 	"bytes"
-	"net"
+	"net/netip"
 	"os"
 	"path"
 	"strings"
@@ -59,8 +59,8 @@ func TestFireflyValidation(t *testing.T) {
 				State:       START,
 				Protocol:    TCP,
 				Family:      IPv6,
-				Src:         IPPort{IP: net.ParseIP("::1"), Port: 1234},
-				Dst:         IPPort{IP: net.ParseIP("::1"), Port: 4321},
+				Src:         netip.AddrPortFrom(netip.MustParseAddr("::1"), 1234),
+				Dst:         netip.AddrPortFrom(netip.MustParseAddr("::1"), 4321),
 				StartTs:     time.Now(),
 				Activity:    0,
 				Experiment:  0,
@@ -75,8 +75,8 @@ func TestFireflyValidation(t *testing.T) {
 				State:       ONGOING,
 				Protocol:    TCP,
 				Family:      IPv6,
-				Src:         IPPort{IP: net.ParseIP("::1"), Port: 1234},
-				Dst:         IPPort{IP: net.ParseIP("::1"), Port: 4321},
+				Src:         netip.AddrPortFrom(netip.MustParseAddr("::1"), 1234),
+				Dst:         netip.AddrPortFrom(netip.MustParseAddr("::1"), 4321),
 				StartTs:     time.Now(),
 				Activity:    0,
 				Experiment:  0,
@@ -91,8 +91,8 @@ func TestFireflyValidation(t *testing.T) {
 				State:       END,
 				Protocol:    TCP,
 				Family:      IPv6,
-				Src:         IPPort{IP: net.ParseIP("::1"), Port: 1234},
-				Dst:         IPPort{IP: net.ParseIP("::1"), Port: 4321},
+				Src:         netip.AddrPortFrom(netip.MustParseAddr("::1"), 1234),
+				Dst:         netip.AddrPortFrom(netip.MustParseAddr("::1"), 4321),
 				StartTs:     time.Now(),
 				EndTs:       time.Now(),
 				Activity:    0,
@@ -108,8 +108,8 @@ func TestFireflyValidation(t *testing.T) {
 				State:       START,
 				Protocol:    TCP,
 				Family:      IPv6,
-				Src:         IPPort{IP: net.ParseIP("::1"), Port: 1234},
-				Dst:         IPPort{IP: net.ParseIP("::1"), Port: 4321},
+				Src:         netip.AddrPortFrom(netip.MustParseAddr("::1"), 1234),
+				Dst:         netip.AddrPortFrom(netip.MustParseAddr("::1"), 4321),
 				StartTs:     time.Now(),
 				Activity:    0,
 				Experiment:  0,
@@ -124,8 +124,8 @@ func TestFireflyValidation(t *testing.T) {
 				State:       START,
 				Protocol:    TCP,
 				Family:      IPv6,
-				Src:         IPPort{IP: net.ParseIP("::1"), Port: 1234},
-				Dst:         IPPort{IP: net.ParseIP("::1"), Port: 4321},
+				Src:         netip.AddrPortFrom(netip.MustParseAddr("::1"), 1234),
+				Dst:         netip.AddrPortFrom(netip.MustParseAddr("::1"), 4321),
 				StartTs:     time.Now(),
 				Activity:    0,
 				Experiment:  0,
@@ -140,8 +140,8 @@ func TestFireflyValidation(t *testing.T) {
 				State:       START,
 				Protocol:    TCP,
 				Family:      IPv6,
-				Src:         IPPort{IP: net.ParseIP("::1"), Port: 1234},
-				Dst:         IPPort{IP: net.ParseIP("::1"), Port: 4321},
+				Src:         netip.AddrPortFrom(netip.MustParseAddr("::1"), 1234),
+				Dst:         netip.AddrPortFrom(netip.MustParseAddr("::1"), 4321),
 				StartTs:     time.Now(),
 				Activity:    0,
 				Experiment:  0,

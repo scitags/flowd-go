@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"sync"
@@ -176,7 +177,12 @@ func (e *EbpfEnricher) Run(done <-chan struct{}) {
 
 		fi := tcpInfoToFlowInfo(tcpInfo)
 
-		hash := enrichment.HashFlowID(types.FlowID{Src: types.IPPort{Port: uint16(tcpInfo.SrcPort)}, Dst: types.IPPort{Port: uint16(tcpInfo.DstPort)}})
+		hash := enrichment.HashFlowID(
+			types.FlowID{
+				Src: netip.AddrPortFrom(netip.IPv6Unspecified(), uint16(tcpInfo.SrcPort)),
+				Dst: netip.AddrPortFrom(netip.IPv6Unspecified(), uint16(tcpInfo.DstPort)),
+			},
+		)
 
 		// Be sure to unlock m on **every** path...
 		poller, m, ok := e.cache.GetLock(hash)
@@ -193,14 +199,19 @@ func (e *EbpfEnricher) Run(done <-chan struct{}) {
 }
 
 func (e *EbpfEnricher) WatchFlow(flowID types.FlowID) (*enrichment.Poller, error) {
-	spec := FlowSpec{DstPort: uint32(flowID.Dst.Port), SrcPort: uint32(flowID.Src.Port)}
+	spec := FlowSpec{DstPort: uint32(flowID.Dst.Port()), SrcPort: uint32(flowID.Src.Port())}
 	if err := e.coll.Maps[MAP_NAME].Update(spec, byte(0xFF), ebpf.UpdateAny); err != nil {
 		return nil, fmt.Errorf("error inserting flow spec into eBPF map: %w", err)
 	}
 
 	// eBPF samples only contain port numbers (even though they could contain IP addresses too...)
-	// Simply drop the IPvX addresses for computing the hashes.
-	hash := enrichment.HashFlowID(types.FlowID{Src: types.IPPort{Port: flowID.Src.Port}, Dst: types.IPPort{Port: flowID.Dst.Port}})
+	// Simply force the IPvX addresses for computing the hashes.
+	hash := enrichment.HashFlowID(
+		types.FlowID{
+			Src: netip.AddrPortFrom(netip.IPv6Unspecified(), flowID.Src.Port()),
+			Dst: netip.AddrPortFrom(netip.IPv6Unspecified(), flowID.Dst.Port()),
+		},
+	)
 	slog.Debug("watching flow", "hash", hash)
 
 	poller, ok := e.cache.Insert(hash, flowID.StartTs)
@@ -228,7 +239,12 @@ func (e *EbpfEnricher) WatchFlow(flowID types.FlowID) (*enrichment.Poller, error
 
 // Should we simply wait for an
 func (e *EbpfEnricher) ForgetFlow(flowID types.FlowID) (time.Time, bool) {
-	hash := enrichment.HashFlowID(types.FlowID{Src: types.IPPort{Port: flowID.Src.Port}, Dst: types.IPPort{Port: flowID.Dst.Port}})
+	hash := enrichment.HashFlowID(
+		types.FlowID{
+			Src: netip.AddrPortFrom(netip.IPv6Unspecified(), flowID.Src.Port()),
+			Dst: netip.AddrPortFrom(netip.IPv6Unspecified(), flowID.Dst.Port()),
+		},
+	)
 	slog.Debug("marking flow for removal", "hash", hash)
 	return e.cache.MarkForRemoval(hash)
 }

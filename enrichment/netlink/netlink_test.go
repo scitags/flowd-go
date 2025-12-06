@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -103,8 +104,8 @@ func TestDumpLo(t *testing.T) {
 	defer ne.Cleanup()
 
 	poller, err := ne.WatchFlow(types.FlowID{
-		Src: types.IPPort{Port: uint16(sPort)},
-		Dst: types.IPPort{Port: uint16(lPort)},
+		Src: netip.AddrPortFrom(netip.IPv6Unspecified(), uint16(sPort)),
+		Dst: netip.AddrPortFrom(netip.IPv6Unspecified(), uint16(lPort)),
 	})
 	if err != nil {
 		t.Fatalf("error getting flow information: %v", err)

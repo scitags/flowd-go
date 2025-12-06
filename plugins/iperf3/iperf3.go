@@ -8,7 +8,7 @@ import (
 	"log"
 	"log/slog"
 	"math/rand/v2"
-	"net"
+	"net/netip"
 	"os"
 	"strings"
 
@@ -131,19 +131,19 @@ func parsePort(r []byte) uint16 {
 	return uint16(r[1])<<8 | uint16(r[0])
 }
 
-func parseIP(f types.Family, r []byte) net.IP {
+func parseIP(f types.Family, r []byte) (netip.Addr, bool) {
 	switch f {
 	case types.IPv4:
-		return net.IP([]byte{
+		return netip.AddrFromSlice([]byte{
 			r[11], r[10], r[9], r[8],
 		})
 	case types.IPv6:
-		return net.IP([]byte{
+		return netip.AddrFromSlice([]byte{
 			r[7], r[6], r[5], r[4], r[3], r[2], r[1], r[0],
 			r[15], r[14], r[13], r[12], r[11], r[10], r[9], r[8],
 		})
 	}
-	return nil
+	return netip.Addr{}, false
 }
 
 func (p *Iperf3Plugin) Run(done <-chan struct{}, outChan chan<- types.FlowID) {
@@ -190,22 +190,28 @@ func (p *Iperf3Plugin) Run(done <-chan struct{}, outChan chan<- types.FlowID) {
 			s = types.END
 		default:
 			slog.Warn("unexpected state", "s", rec.RawSample[56])
+			continue
 		}
 
 		slog.Debug("idIndex", "index", idIndex, "len", len(p.ExperimentIDs), "mod", idIndex%len(p.ExperimentIDs))
 
 		family := types.Family(rec.RawSample[0])
+		srcIP, ok := parseIP(family, rec.RawSample[8:24])
+		if !ok {
+			slog.Warn("couldn't parse the source address")
+			continue
+		}
+		dstIP, ok := parseIP(family, rec.RawSample[32:48])
+		if !ok {
+			slog.Warn("couldn't parse the destination address")
+			continue
+		}
+
 		f := types.FlowID{
-			State:  s,
-			Family: family,
-			Src: types.IPPort{
-				IP:   parseIP(family, rec.RawSample[8:24]),
-				Port: parsePort(rec.RawSample[24:32]),
-			},
-			Dst: types.IPPort{
-				IP:   parseIP(family, rec.RawSample[32:48]),
-				Port: parsePort(rec.RawSample[48:56]),
-			},
+			State:       s,
+			Family:      family,
+			Src:         netip.AddrPortFrom(srcIP, parsePort(rec.RawSample[24:32])),
+			Dst:         netip.AddrPortFrom(dstIP, parsePort(rec.RawSample[48:56])),
 			Experiment:  uint32(p.ExperimentIDs[idIndex]),
 			Activity:    uint32(p.ActivityIDs[idIndex]),
 			Application: types.SYSLOG_APP_NAME,

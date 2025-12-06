@@ -5,24 +5,21 @@ package marker
 import (
 	"fmt"
 	"log/slog"
-	"net"
+	"net/netip"
 )
 
-func extractHalves(ip net.IP) (uint64, uint64) {
+func extractHalves(ip netip.Addr) (uint64, uint64) {
 	var addrHi uint64
 	var addrLo uint64
 
-	rawIP := []byte(ip)
-
-	// net.IPs are internally represented as a 16-element []byte with
-	// the last element being the LSByte and the first the MSByte.
-	if len(rawIP) != 16 {
+	if !ip.Is6() {
 		return 0, 0
 	}
 
+	s := ip.As16()
 	for i := 0; i < 8; i++ {
-		addrHi |= uint64(rawIP[i]) << (8 * (8 - (1 + i)))
-		addrLo |= uint64(rawIP[i+8]) << (8 * (8 - (1 + i)))
+		addrHi |= uint64(s[i]) << (8 * (8 - (1 + i)))
+		addrLo |= uint64(s[i+8]) << (8 * (8 - (1 + i)))
 	}
 
 	return addrHi, addrLo

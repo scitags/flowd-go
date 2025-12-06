@@ -3,7 +3,7 @@ package types
 import (
 	"fmt"
 	"log/slog"
-	"net"
+	"net/netip"
 )
 
 /*
@@ -12,12 +12,12 @@ import (
  * backends.
  */
 
-func parseCidr(network string, comment string) net.IPNet {
-	_, net, err := net.ParseCIDR(network)
+func parseCidr(network string, comment string) netip.Prefix {
+	prefix, err := netip.ParsePrefix(network)
 	if err != nil {
-		panic(fmt.Sprintf("error parsing %s (%s): %s", network, comment, err))
+		panic(fmt.Sprintf("error parsing %s (%s): %v", network, comment, err))
 	}
-	return *net
+	return prefix
 }
 
 var (
@@ -28,7 +28,7 @@ var (
 
 	// Private IPv4 CIDRs obtained from [0].
 	//   0: https://www.iana.org/assignments/iana-ipv4-special-registry/iana-ipv4-special-registry.xhtml
-	privateNetworks = []net.IPNet{
+	privateNetworks = []netip.Prefix{
 		parseCidr("0.0.0.0/8", "RFC 791, Section 3.2: This network"),
 		parseCidr("0.0.0.0/32", "RFC 1122, Section 3.2.1.3: This host on this network"),
 		parseCidr("10.0.0.0/8", "RFC 1918: Private-Use"),
@@ -90,9 +90,9 @@ var (
 	}
 )
 
-// IsIPPrivate will return true whenever the provided net.IP belongs to a
+// IsIPPrivate will return true whenever the provided netip.Prefix belongs to a
 // private range as defined per IANA.
-func IsIPPrivate(ip net.IP) bool {
+func IsIPPrivate(ip netip.Addr) bool {
 	for i, ipnet := range privateNetworks {
 		if ipnet.Contains(ip) {
 			slog.Debug("ip is private", "i", i, "ip", ip, "ipnet", ipnet)
@@ -102,20 +102,11 @@ func IsIPPrivate(ip net.IP) bool {
 	return false
 }
 
-func IsIPLinkLocal(ip net.IP) bool {
+func IsIPLinkLocal(ip netip.Addr) bool {
+	// What about prefix.Addr().IsLinkLocalUnicast() || prefix.Addr().IsLinkLocalMulticast()?
 	if linkLocalNet.Contains(ip) {
 		slog.Debug("ip is a link-local address", "ip", ip, "ipnet", linkLocalNet)
 		return true
 	}
 	return false
-}
-
-// IsIPv4 asserts whether an IP address is either IPv4 or IPv6. For
-// IPv4-in-IPv6 addresses (i.e. ::FFFF:192.168.0.1) IsIPv4 returns
-// true.
-func IsIPv4(ip net.IP) bool {
-	// We should really try to use netip.Addr in the implementation...
-	// p, _ := netip.AddrFromSlice(ip)
-	// return p.Is4()
-	return ip.To4() != nil
 }

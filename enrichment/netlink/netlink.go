@@ -96,8 +96,8 @@ func (e *NetlinkEnricher) GetFlowInfo(flowID types.FlowID) []types.FlowInfo {
 			// On the other hand, if looking for a single socket these seem to be taken into account [1].
 			// 0: https://elixir.bootlin.com/linux/v6.12.4/source/net/ipv4/inet_diag.c#L1019
 			// 1: https://elixir.bootlin.com/linux/v6.12.4/source/net/ipv4/inet_diag.c#L519
-			SPort: Htons(uint16(flowID.Src.Port)),
-			DPort: Htons(uint16(flowID.Dst.Port)),
+			SPort: Htons(flowID.Src.Port()),
+			DPort: Htons(flowID.Dst.Port()),
 		},
 	})
 	if err != nil {

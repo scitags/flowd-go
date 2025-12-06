@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net"
+	"net/netip"
 	"os"
 	"strconv"
 	"strings"
@@ -13,7 +13,6 @@ import (
 
 	"github.com/rjeczalik/notify"
 	"github.com/scitags/flowd-go/types"
-	glowdTypes "github.com/scitags/flowd-go/types"
 )
 
 type NamedPipePlugin struct {
@@ -44,7 +43,7 @@ func NewNamedPipePlugin(c *Config) (*NamedPipePlugin, error) {
 	return &p, nil
 }
 
-func (p *NamedPipePlugin) Run(done <-chan struct{}, outChan chan<- glowdTypes.FlowID) {
+func (p *NamedPipePlugin) Run(done <-chan struct{}, outChan chan<- types.FlowID) {
 	slog.Debug("running the named pipe plugin")
 
 	// If we open the FIFO (i.e. named pipe) only for reading, the call will block
@@ -108,9 +107,9 @@ func (p *NamedPipePlugin) Cleanup() error {
 	return nil
 }
 
-func parseEvents(rawEvents string) []glowdTypes.FlowID {
+func parseEvents(rawEvents string) []types.FlowID {
 	rawEventsSlice := strings.Split(rawEvents, "\n")
-	flowIDs := make([]glowdTypes.FlowID, 0, len(rawEventsSlice))
+	flowIDs := make([]types.FlowID, 0, len(rawEventsSlice))
 
 	// Drop the last entry as it'll always be empty...
 	for _, rawEvent := range rawEventsSlice[:len(rawEventsSlice)-1] {
@@ -120,20 +119,20 @@ func parseEvents(rawEvents string) []glowdTypes.FlowID {
 			continue
 		}
 
-		flowState, ok := glowdTypes.ParseFlowState(fields[0])
+		flowState, ok := types.ParseFlowState(fields[0])
 		if !ok {
 			slog.Warn("wrong flow state", "flow state", fields[0])
 			continue
 		}
 
-		proto, ok := glowdTypes.ParseProtocol(fields[1])
+		proto, ok := types.ParseProtocol(fields[1])
 		if !ok {
 			slog.Warn("wrong protocol", "protocol", fields[1])
 			continue
 		}
 
-		srcIP := net.ParseIP(fields[2])
-		if srcIP == nil {
+		srcIP, err := netip.ParseAddr(fields[2])
+		if err != nil {
 			slog.Warn("wrong source IP address", "srcIP", fields[2])
 			continue
 		}
@@ -144,8 +143,8 @@ func parseEvents(rawEvents string) []glowdTypes.FlowID {
 			continue
 		}
 
-		dstIP := net.ParseIP(fields[4])
-		if dstIP == nil {
+		dstIP, err := netip.ParseAddr(fields[4])
+		if err != nil {
 			slog.Warn("wrong destination IP address", "dstIP", fields[4])
 			continue
 		}
@@ -168,29 +167,29 @@ func parseEvents(rawEvents string) []glowdTypes.FlowID {
 			continue
 		}
 
-		if types.IsIPv4(srcIP) != types.IsIPv4(dstIP) {
-			slog.Warn("found different IP address families", "srcIP IPv4?", types.IsIPv4(srcIP), "dstIP IPv4?", types.IsIPv4(dstIP))
+		if srcIP.Is4() && !dstIP.Is4() {
+			slog.Warn("found different IP address families", "srcIP IPv4?", srcIP.Is4(), "dstIP IPv4?", dstIP.Is4())
 		}
 
-		flowID := glowdTypes.FlowID{
+		flowID := types.FlowID{
 			State:    flowState,
 			Protocol: proto,
 			Family: func() types.Family {
-				if types.IsIPv4(srcIP) {
+				if srcIP.Is4() {
 					return types.IPv4
 				}
 				return types.IPv6
 			}(),
-			Src:         glowdTypes.IPPort{IP: srcIP, Port: uint16(srcPort)},
-			Dst:         glowdTypes.IPPort{IP: dstIP, Port: uint16(dstPort)},
+			Src:         netip.AddrPortFrom(srcIP, uint16(srcPort)),
+			Dst:         netip.AddrPortFrom(dstIP, uint16(dstPort)),
 			Experiment:  uint32(experimentId),
 			Activity:    uint32(activityId),
 			Application: types.SYSLOG_APP_NAME,
 		}
 
-		if flowState == glowdTypes.START {
+		if flowState == types.START {
 			flowID.StartTs = time.Now()
-		} else if flowState == glowdTypes.END {
+		} else if flowState == types.END {
 			flowID.EndTs = time.Now()
 		} else {
 			slog.Warn("somehow the flow state got mangled", "flowState", flowState.String())

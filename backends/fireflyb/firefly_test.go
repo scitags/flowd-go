@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"net/netip"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -170,8 +171,8 @@ func TestPeriodicFirefly(t *testing.T) {
 	dummyFlow := types.FlowID{
 		State:       types.START,
 		Family:      types.IPv6,
-		Src:         types.IPPort{IP: net.ParseIP("::"), Port: 2345},
-		Dst:         types.IPPort{IP: net.ParseIP("::"), Port: 5777},
+		Src:         netip.AddrPortFrom(netip.MustParseAddr("::"), 2345),
+		Dst:         netip.AddrPortFrom(netip.MustParseAddr("::"), 5777),
 		Experiment:  0,
 		Activity:    0,
 		Application: "iperf3Tests",

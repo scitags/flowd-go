@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/netip"
 
 	"golang.org/x/sys/unix"
 )
@@ -26,7 +27,7 @@ var serviceURLs = map[string]string{
 // configuration. The implementation currently supports the following Ip discovery services:
 //   - ipify.org
 //   - ipconfig.io
-func GetPubIPOverHTTP(c Config, family int, localAddr net.IP) (net.IP, error) {
+func GetPubIPOverHTTP(c Config, family int, localAddr netip.Addr) (netip.Addr, error) {
 	// Force HTTP requests to be made through the default interface
 	var (
 		addr *net.TCPAddr
@@ -38,10 +39,10 @@ func GetPubIPOverHTTP(c Config, family int, localAddr net.IP) (net.IP, error) {
 	case unix.AF_INET6:
 		addr, err = net.ResolveTCPAddr("tcp6", fmt.Sprintf("[%s]:0", localAddr.String()))
 	default:
-		return nil, fmt.Errorf("wrong family specified")
+		return netip.Addr{}, fmt.Errorf("wrong family specified")
 	}
 	if err != nil {
-		return nil, fmt.Errorf("couldn't resolve the local TCP address: %w", err)
+		return netip.Addr{}, fmt.Errorf("couldn't resolve the local TCP address: %w", err)
 	}
 	dialer := &net.Dialer{LocalAddr: addr}
 	transport := &http.Transport{DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
@@ -62,41 +63,41 @@ func GetPubIPOverHTTP(c Config, family int, localAddr net.IP) (net.IP, error) {
 
 		return pIP, nil
 	}
-	return nil, fmt.Errorf("couldn't get public IP address and we exhausted URLs")
+	return netip.Addr{}, fmt.Errorf("couldn't get public IP address and we exhausted URLs")
 }
 
 // Function doRequest simply carries out an HTTP request to an IP discovery service to then
 // extract the public IP from the returned payload as a string.
-func doRequest(client *http.Client, url, key string) (net.IP, error) {
+func doRequest(client *http.Client, url, key string) (netip.Addr, error) {
 	req, err := client.Get(url)
 	if err != nil {
-		return nil, err
+		return netip.Addr{}, err
 	}
 	defer req.Body.Close()
 
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		return nil, err
+		return netip.Addr{}, err
 	}
 
 	rawPayload := map[string]interface{}{}
 	if err := json.Unmarshal(body, &rawPayload); err != nil {
-		return nil, fmt.Errorf("error unmarshaling the payload: %w", err)
+		return netip.Addr{}, fmt.Errorf("error unmarshaling the payload: %w", err)
 	}
 
 	rawIP, ok := rawPayload[key]
 	if !ok {
-		return nil, fmt.Errorf("key %q not found in rawPayload", key)
+		return netip.Addr{}, fmt.Errorf("key %q not found in rawPayload", key)
 	}
 
 	ipStr, ok := rawIP.(string)
 	if !ok {
-		return nil, fmt.Errorf("raw IP %v could't be cast to a string", rawIP)
+		return netip.Addr{}, fmt.Errorf("raw IP %v could't be cast to a string", rawIP)
 	}
 
-	pIP := net.ParseIP(ipStr)
-	if pIP == nil {
-		return nil, fmt.Errorf("couldn't parse the raw IP %q", rawIP)
+	pIP, err := netip.ParseAddr(ipStr)
+	if err != nil {
+		return netip.Addr{}, fmt.Errorf("couldn't parse the raw IP %q", rawIP)
 	}
 
 	return pIP, nil

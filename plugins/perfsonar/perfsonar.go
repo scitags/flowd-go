@@ -2,7 +2,7 @@ package perfsonar
 
 import (
 	"log/slog"
-	"net"
+	"net/netip"
 
 	"github.com/scitags/flowd-go/types"
 )
@@ -33,8 +33,8 @@ func (p *PerfsonarPlugin) Run(done <-chan struct{}, outChan chan<- types.FlowID)
 	outChan <- types.FlowID{
 		State:       types.START,
 		Family:      types.IPv6,
-		Src:         types.IPPort{IP: net.ParseIP("::"), Port: 0},
-		Dst:         types.IPPort{IP: net.ParseIP("::"), Port: 0},
+		Src:         netip.AddrPortFrom(netip.IPv6Unspecified(), 0),
+		Dst:         netip.AddrPortFrom(netip.IPv6Unspecified(), 0),
 		Experiment:  uint32(p.ExperimentId),
 		Activity:    uint32(p.ActivityId),
 		Application: types.SYSLOG_APP_NAME,

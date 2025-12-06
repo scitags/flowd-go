@@ -14,7 +14,7 @@ type FireflyBackend struct {
 	Config
 
 	collectorConn net.Conn
-	pubIpMap      map[netip.Addr]net.IP
+	pubIpMap      map[netip.Addr]netip.Addr
 }
 
 func (b *FireflyBackend) String() string {
@@ -59,18 +59,10 @@ func (b *FireflyBackend) Run(done <-chan struct{}, inChan <-chan types.FlowID) {
 
 			// Rewrite private source IP address
 			if len(b.pubIpMap) > 0 {
-				slog.Debug("foo")
-				ip, ok := netip.AddrFromSlice(flowID.Src.IP)
-				if !ok {
-					slog.Warn("error casting net.IP to netip.Addr", "ip", flowID.Src.IP)
-				} else {
-					pubIp, ok := b.pubIpMap[ip]
-					if !ok {
-						slog.Warn("no public IP found", "privIp", ip.String())
-					} else {
-						slog.Debug("rewriting private ip", "privIp", flowID.Src.IP, "pubIp", pubIp)
-						flowID.Src.IP = pubIp
-					}
+				pubIp, ok := b.pubIpMap[flowID.Src.Addr()]
+				if ok {
+					slog.Debug("rewriting private ip", "privIp", flowID.Src.Addr(), "pubIp", pubIp)
+					flowID.Src = netip.AddrPortFrom(pubIp, flowID.Src.Port())
 				}
 			}
 

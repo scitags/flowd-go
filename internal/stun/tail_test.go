@@ -1,7 +1,7 @@
 package stun
 
 import (
-	"net"
+	"net/netip"
 	"testing"
 
 	"github.com/scitags/flowd-go/types"
@@ -18,30 +18,30 @@ var stunConf = Config{
 	},
 }
 
-func getDefaultAddrs(t *testing.T) ([]*net.IPNet, []*net.IPNet) {
+func getDefaultPrefixes(t *testing.T) ([]netip.Prefix, []netip.Prefix) {
 	i, err := GetDefaultInterface()
 	if err != nil {
 		t.Fatalf("error getting the default interface: %v", err)
 	}
 
-	addrs4, addrs6, err := GetInterfaceAddresses(i)
+	prefixes4, prefixes6, err := GetInterfacePrefixes(i)
 	if err != nil {
 		t.Fatalf("error getting interface addresses: %v", err)
 	}
 
-	return addrs4, addrs6
+	return prefixes4, prefixes6
 }
 
 func TestStun4(t *testing.T) {
-	addrs4, _ := getDefaultAddrs(t)
+	prefixes4, _ := getDefaultPrefixes(t)
 
-	for _, addr := range addrs4 {
-		if types.IsIPLinkLocal(addr.IP) {
+	for _, prefix := range prefixes4 {
+		if types.IsIPLinkLocal(prefix.Addr()) {
 			continue
 		}
 
-		t.Logf("requesting pubIP for IPv4 %s", addr.IP)
-		pubIp, err := GetPubIPOverSTUN(stunConf, unix.AF_INET, addr.IP)
+		t.Logf("requesting pubIP for IPv4 %s", prefix.Addr())
+		pubIp, err := GetPubIPOverSTUN(stunConf, unix.AF_INET, prefix.Addr())
 		if err != nil {
 			t.Errorf("error getting public IPv4: %v", err)
 			continue
@@ -51,15 +51,15 @@ func TestStun4(t *testing.T) {
 }
 
 func TestStun6(t *testing.T) {
-	_, addrs6 := getDefaultAddrs(t)
+	_, prefixes6 := getDefaultPrefixes(t)
 
-	for _, addr := range addrs6 {
-		if types.IsIPLinkLocal(addr.IP) {
+	for _, prefix := range prefixes6 {
+		if types.IsIPLinkLocal(prefix.Addr()) {
 			continue
 		}
 
-		t.Logf("requesting pubIP for IPv6 %s", addr.IP)
-		pubIp, err := GetPubIPOverSTUN(stunConf, unix.AF_INET6, addr.IP)
+		t.Logf("requesting pubIP for IPv6 %s", prefix.Addr())
+		pubIp, err := GetPubIPOverSTUN(stunConf, unix.AF_INET6, prefix.Addr())
 		if err != nil {
 			t.Errorf("error getting public IPv6: %v", err)
 			continue

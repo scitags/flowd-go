@@ -3,6 +3,7 @@
 package skops
 
 import (
+	"net/netip"
 	"sync"
 	"testing"
 	"time"
@@ -49,8 +50,8 @@ func TestInterop(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	poller, err := enricher.WatchFlow(types.FlowID{
-		Src: types.IPPort{Port: 2345},
-		Dst: types.IPPort{Port: 5777},
+		Src: netip.AddrPortFrom(netip.IPv6Unspecified(), 2345),
+		Dst: netip.AddrPortFrom(netip.IPv6Unspecified(), 5777),
 	})
 	if err != nil {
 		t.Fatalf("error starting the poller: %v", err)

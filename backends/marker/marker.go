@@ -117,12 +117,12 @@ func (b *MarkerBackend) Run(done <-chan struct{}, inChan <-chan glowdTypes.FlowI
 				continue
 			}
 
-			rawDstIPHi, rawDstIPLo := extractHalves(flowID.Dst.IP)
+			rawDstIPHi, rawDstIPLo := extractHalves(flowID.Dst.Addr())
 			flowHash := FlowFourTuple{
 				IPv6Hi:  rawDstIPHi,
 				IPv6Lo:  rawDstIPLo,
-				DstPort: uint32(flowID.Dst.Port),
-				SrcPort: uint32(flowID.Src.Port),
+				DstPort: uint32(flowID.Dst.Port()),
+				SrcPort: uint32(flowID.Src.Port()),
 			}
 
 			switch flowID.State {

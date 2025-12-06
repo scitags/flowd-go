@@ -19,7 +19,7 @@ func TestNlGetInterfaceAddresses(t *testing.T) {
 	}
 	t.Logf("default interface; name: %s, index: %d", i.Name, i.Index)
 
-	ip4, ip6, err := GetInterfaceAddresses(i)
+	ip4, ip6, err := GetInterfacePrefixes(i)
 	if err != nil {
 		t.Errorf("error getting the interface addresses: %v", err)
 	}

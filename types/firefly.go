@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"net"
+	"net/netip"
 	"os"
 	"strings"
 	"time"
@@ -85,11 +85,11 @@ func NewFirefly(flowID FlowID, nlInfo, skOps *FlowInfo) Firefly {
 	ff.PopulateTimeStamps(flowID)
 
 	ff.FlowID.AFI = flowID.Family.String()
-	ff.FlowID.SrcIP = flowID.Src.IP.String()
-	ff.FlowID.DstIP = flowID.Dst.IP.String()
+	ff.FlowID.SrcIP = flowID.Src.Addr().String()
+	ff.FlowID.DstIP = flowID.Dst.Addr().String()
 	ff.FlowID.Protocol = flowID.Protocol.String()
-	ff.FlowID.SrcPort = flowID.Src.Port
-	ff.FlowID.DstPort = flowID.Dst.Port
+	ff.FlowID.SrcPort = flowID.Src.Port()
+	ff.FlowID.DstPort = flowID.Dst.Port()
 
 	ff.Context.ExperimentID = flowID.Experiment
 	ff.Context.ActivityID = flowID.Activity
@@ -178,17 +178,17 @@ func (f *SlimFirefly) UnmarshalJSON(in []byte) error {
 	// Checking IP address parsing can be problematic given both families leverage
 	// a 16-bit underlying representation... Check 0:
 	// 0: https://stackoverflow.com/questions/22751035/golang-distinguish-ipv4-ipv6
-	parseIP := func(rawIP string) (net.IP, error) {
-		ipvX := net.ParseIP(rawIP)
+	parseIP := func(rawIP string) (netip.Addr, error) {
+		ipvX, err := netip.ParseAddr(rawIP)
+		if err != nil {
+			return netip.Addr{}, err
+		}
 
-		if ipvX == nil {
-			return nil, fmt.Errorf("address %s is not a valid IPv{4,6}", rawIP)
+		if family == IPv4 && !ipvX.Is4() {
+			return netip.Addr{}, fmt.Errorf("IPv4 address expected, but it looks like an IPv6 address")
 		}
-		if family == IPv4 && strings.Contains(rawIP, ":") {
-			return nil, fmt.Errorf("IPv4 address expected, but it looks like an IPv6")
-		}
-		if family == IPv6 && !strings.Contains(rawIP, ":") {
-			return nil, fmt.Errorf("IPv6 address expected, but it looks like an IPv4")
+		if family == IPv6 && !ipvX.Is6() {
+			return netip.Addr{}, fmt.Errorf("IPv6 address expected, but it looks like an IPv4 address")
 		}
 
 		return ipvX, nil
@@ -223,8 +223,8 @@ func (f *SlimFirefly) UnmarshalJSON(in []byte) error {
 		State:       flowState,
 		Family:      family,
 		Protocol:    protocol,
-		Src:         IPPort{srcIP, rawFirefly.FlowID.SrcPort},
-		Dst:         IPPort{dstIP, rawFirefly.FlowID.DstPort},
+		Src:         netip.AddrPortFrom(srcIP, rawFirefly.FlowID.SrcPort),
+		Dst:         netip.AddrPortFrom(dstIP, rawFirefly.FlowID.DstPort),
 		Experiment:  rawFirefly.Context.ExperimentID,
 		Activity:    rawFirefly.Context.ActivityID,
 		StartTs:     startTs,

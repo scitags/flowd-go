@@ -8,11 +8,11 @@ import (
 )
 
 func TestHttp4(t *testing.T) {
-	addrs4, _ := getDefaultAddrs(t)
+	prefixes4, _ := getDefaultPrefixes(t)
 
-	for _, addr := range addrs4 {
-		t.Logf("requesting pubIP for IPv4 %s", addr.IP)
-		pubIp, err := GetPubIPOverHTTP(Config{}, unix.AF_INET, addr.IP)
+	for _, prefix := range prefixes4 {
+		t.Logf("requesting pubIP for IPv4 %s", prefix.Addr())
+		pubIp, err := GetPubIPOverHTTP(Config{}, unix.AF_INET, prefix.Addr())
 		if err != nil {
 			t.Errorf("error getting public IPv4: %v", err)
 			continue
@@ -22,15 +22,15 @@ func TestHttp4(t *testing.T) {
 }
 
 func TestHttp6(t *testing.T) {
-	_, addrs6 := getDefaultAddrs(t)
+	_, prefixes6 := getDefaultPrefixes(t)
 
-	for _, addr := range addrs6 {
-		if types.IsIPLinkLocal(addr.IP) {
+	for _, prefix := range prefixes6 {
+		if types.IsIPLinkLocal(prefix.Addr()) {
 			continue
 		}
 
-		t.Logf("requesting pubIP for IPv6 %s", addr.IP)
-		pubIp, err := GetPubIPOverHTTP(Config{}, unix.AF_INET6, addr.IP)
+		t.Logf("requesting pubIP for IPv6 %s", prefix.Addr())
+		pubIp, err := GetPubIPOverHTTP(Config{}, unix.AF_INET6, prefix.Addr())
 		if err != nil {
 			t.Errorf("error getting public IPv6: %v", err)
 			continue

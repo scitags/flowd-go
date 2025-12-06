@@ -2,7 +2,7 @@ package types
 
 import (
 	"fmt"
-	"net"
+	"net/netip"
 	"strings"
 	"time"
 
@@ -13,8 +13,8 @@ type FlowID struct {
 	State       FlowState
 	Protocol    Protocol
 	Family      Family
-	Src         IPPort
-	Dst         IPPort
+	Src         netip.AddrPort
+	Dst         netip.AddrPort
 	Experiment  uint32
 	Activity    uint32
 	StartTs     time.Time
@@ -30,13 +30,8 @@ type FlowID struct {
 func (f FlowID) String() string {
 	return fmt.Sprintf(
 		"{s: %s, f: %s, src: {i: %s, p: %d}, dst: {i: %s, p: %d}}",
-		f.State, f.Family, f.Src.IP, f.Src.Port, f.Dst.IP, f.Dst.Port,
+		f.State, f.Family, f.Src.Addr(), f.Src.Port(), f.Dst.Addr(), f.Dst.Port(),
 	)
-}
-
-type IPPort struct {
-	IP   net.IP
-	Port uint16
 }
 
 type Protocol int

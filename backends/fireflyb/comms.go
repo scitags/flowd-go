@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"net/netip"
 	"syscall"
 
 	glowdTypes "github.com/scitags/flowd-go/types"
@@ -21,7 +22,7 @@ import (
 // TODO:   2: https://www.kernel.org/doc/html/latest/networking/af_xdp.html
 func (b *FireflyBackend) sendFirefly(flowID glowdTypes.FlowID, payload []byte) error {
 	sendErrors := []error{}
-	if err := b.sendToDestination(flowID.Family, flowID.Dst.IP, payload); err != nil {
+	if err := b.sendToDestination(flowID.Family, flowID.Dst.Addr(), payload); err != nil {
 		sendErrors = append(sendErrors, err)
 		slog.Error("couldn't send the firefly to the destination", "err", err)
 	}
@@ -54,7 +55,7 @@ func (b *FireflyBackend) sendToCollector(payload []byte) error {
 	return nil
 }
 
-func (b *FireflyBackend) sendToDestination(family glowdTypes.Family, destIP net.IP, payload []byte) error {
+func (b *FireflyBackend) sendToDestination(family glowdTypes.Family, destIP netip.Addr, payload []byte) error {
 	addressFmt := "[%s]:%d"
 	if family == glowdTypes.IPv4 {
 		addressFmt = "%s:%d"

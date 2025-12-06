@@ -1,28 +1,28 @@
 plugins:
-  iperf3:
-    minSourcePort: 2340
-    maxSourcePort: 2350
+  # iperf3:
+  #   minSourcePort: 2340
+  #   maxSourcePort: 2350
 
-    minDestinationPort: 5200
-    maxDestinationPort: 5210
+  #   minDestinationPort: 5200
+  #   maxDestinationPort: 5210
 
-    debugMode: true
+  #   debugMode: true
+
+  namedPipe: {}
 
 backends:
-  marker:
-    targetInterfaces: ["eno1"]
-    markingStrategy: "label"
-    debugMode: true
+  # marker:
+  #   targetInterfaces: ["eno1"]
+  #   markingStrategy: "label"
+  #   debugMode: true
 
   firefly:
     prependSyslog: false
     sendToCollector: true
     collectorAddress: 2001:720:420:c002::a
     collectorPort: 10515
-    enrich: true
+    enrich: false
     enrichmentMode: "lean"
-
-enrichers:
-  period: 200
-  netlink: {}
-  skops: {}
+    stun:
+      manualMapping:
+        150.244.247.148: 10.0.0.1

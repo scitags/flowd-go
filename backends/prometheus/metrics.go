@@ -250,8 +250,8 @@ func (m *metrics) newLabels(f types.FlowID, t types.Flavour) prometheus.Labels {
 	return prometheus.Labels{
 		"act":     strconv.FormatUint(uint64(f.Activity), 10),
 		"exp":     strconv.FormatUint(uint64(f.Experiment), 10),
-		"src":     f.Src.IP.String(),
-		"dst":     f.Dst.IP.String(),
+		"src":     f.Src.Addr().String(),
+		"dst":     f.Dst.Addr().String(),
 		"flow":    fmt.Sprintf("<%d:%d>", f.Src.Port, f.Dst.Port),
 		"flavour": t.String(),
 	}

@@ -317,7 +317,7 @@ func Is(b []byte) bool {
 		string(b[4:8]) == magicCookie
 }
 
-func GetPubIPOverSTUN(c Config, family int, localAddr net.IP) (net.IP, error) {
+func GetPubIPOverSTUN(c Config, family int, localAddr netip.Addr) (netip.Addr, error) {
 	var (
 		lAddr   *net.UDPAddr
 		err     error
@@ -331,10 +331,10 @@ func GetPubIPOverSTUN(c Config, family int, localAddr net.IP) (net.IP, error) {
 		network = "udp6"
 		lAddr, err = net.ResolveUDPAddr(network, fmt.Sprintf("[%s]:0", localAddr.String()))
 	default:
-		return nil, fmt.Errorf("wrong family specified")
+		return netip.Addr{}, fmt.Errorf("wrong family specified")
 	}
 	if err != nil {
-		return nil, fmt.Errorf("error resolving local address: %w", err)
+		return netip.Addr{}, fmt.Errorf("error resolving local address: %w", err)
 	}
 
 	for _, srvAddr := range c.StunServers {
@@ -379,8 +379,8 @@ func GetPubIPOverSTUN(c Config, family int, localAddr net.IP) (net.IP, error) {
 			slog.Warn("mismatching TX IDs", "req", txId, "resp", txIdResp)
 		}
 
-		return net.IP(addr.Addr().AsSlice()), nil
+		return addr.Addr(), nil
 	}
 
-	return nil, fmt.Errorf("exhausted server list")
+	return netip.Addr{}, fmt.Errorf("exhausted server list")
 }

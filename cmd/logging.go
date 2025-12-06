@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"log/slog"
-	"net"
+	"net/netip"
 	"path/filepath"
 
 	"github.com/scitags/flowd-go/backends/marker"
@@ -50,24 +50,27 @@ func logReplacements(groups []string, a slog.Attr) slog.Attr {
 		flowHash, ok := a.Value.Any().(marker.FlowFourTuple)
 		if ok {
 			return slog.Attr{Key: a.Key, Value: slog.StringValue(
-				fmt.Sprintf("%s(%#x|%#x);%d;%d", net.IP([]byte{
-					byte(flowHash.IPv6Hi & (0xFF << 7) >> 7),
-					byte(flowHash.IPv6Hi & (0xFF << 6) >> 6),
-					byte(flowHash.IPv6Hi & (0xFF << 5) >> 5),
-					byte(flowHash.IPv6Hi & (0xFF << 4) >> 4),
-					byte(flowHash.IPv6Hi & (0xFF << 3) >> 3),
-					byte(flowHash.IPv6Hi & (0xFF << 2) >> 2),
-					byte(flowHash.IPv6Hi & (0xFF << 1) >> 1),
-					byte(flowHash.IPv6Hi & 0xFF),
-					byte(flowHash.IPv6Lo & (0xFF << 7) >> 7),
-					byte(flowHash.IPv6Lo & (0xFF << 6) >> 6),
-					byte(flowHash.IPv6Lo & (0xFF << 5) >> 5),
-					byte(flowHash.IPv6Lo & (0xFF << 4) >> 4),
-					byte(flowHash.IPv6Lo & (0xFF << 3) >> 3),
-					byte(flowHash.IPv6Lo & (0xFF << 2) >> 2),
-					byte(flowHash.IPv6Lo & (0xFF << 1) >> 1),
-					byte(flowHash.IPv6Lo & 0xFF),
-				}), flowHash.IPv6Hi, flowHash.IPv6Lo, flowHash.SrcPort, flowHash.DstPort),
+				fmt.Sprintf("%s(%#x|%#x);%d;%d", func() netip.Addr {
+					r, _ := netip.AddrFromSlice([]byte{
+						byte(flowHash.IPv6Hi & (0xFF << 7) >> 7),
+						byte(flowHash.IPv6Hi & (0xFF << 6) >> 6),
+						byte(flowHash.IPv6Hi & (0xFF << 5) >> 5),
+						byte(flowHash.IPv6Hi & (0xFF << 4) >> 4),
+						byte(flowHash.IPv6Hi & (0xFF << 3) >> 3),
+						byte(flowHash.IPv6Hi & (0xFF << 2) >> 2),
+						byte(flowHash.IPv6Hi & (0xFF << 1) >> 1),
+						byte(flowHash.IPv6Hi & 0xFF),
+						byte(flowHash.IPv6Lo & (0xFF << 7) >> 7),
+						byte(flowHash.IPv6Lo & (0xFF << 6) >> 6),
+						byte(flowHash.IPv6Lo & (0xFF << 5) >> 5),
+						byte(flowHash.IPv6Lo & (0xFF << 4) >> 4),
+						byte(flowHash.IPv6Lo & (0xFF << 3) >> 3),
+						byte(flowHash.IPv6Lo & (0xFF << 2) >> 2),
+						byte(flowHash.IPv6Lo & (0xFF << 1) >> 1),
+						byte(flowHash.IPv6Lo & 0xFF),
+					})
+					return r
+				}(), flowHash.IPv6Hi, flowHash.IPv6Lo, flowHash.SrcPort, flowHash.DstPort),
 			)}
 		}
 	}

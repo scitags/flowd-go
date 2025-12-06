@@ -2,7 +2,6 @@ package stun
 
 import (
 	"fmt"
-	"net"
 	"net/netip"
 
 	"github.com/goccy/go-yaml"
@@ -12,7 +11,7 @@ type Config struct {
 	ManualMapping map[string]string `yaml:"manualMapping"`
 
 	// Internal field
-	manualMappingParsed map[netip.Addr]net.IP `yaml:"-"`
+	manualMappingParsed map[netip.Addr]netip.Addr `yaml:"-"`
 
 	StunServers []string `yaml:"stunServers"`
 }
@@ -37,24 +36,19 @@ func (c *Config) UnmarshalYAML(b []byte) error {
 		return err
 	}
 
-	def.manualMappingParsed = map[netip.Addr]net.IP{}
+	def.manualMappingParsed = map[netip.Addr]netip.Addr{}
 	for k, v := range def.ManualMapping {
-		rawIP := net.ParseIP(k)
-		if rawIP == nil {
-			return fmt.Errorf("couldn't parse provided IP address %q", k)
-		}
-
-		ip, err := netip.ParseAddr(k)
+		kIP, err := netip.ParseAddr(k)
 		if err != nil {
-			return fmt.Errorf("couldn't parse provided IP address %q: %w", k, err)
-		}
-
-		rawIP = net.ParseIP(v)
-		if rawIP == nil {
 			return fmt.Errorf("couldn't parse provided IP address %q", k)
 		}
 
-		def.manualMappingParsed[ip] = rawIP
+		vIP, err := netip.ParseAddr(v)
+		if err != nil {
+			return fmt.Errorf("couldn't parse provided IP address %q", v)
+		}
+
+		def.manualMappingParsed[kIP] = vIP
 	}
 
 	*c = Config(*def)

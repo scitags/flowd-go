@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"net/netip"
 
 	"github.com/scitags/flowd-go/types"
-	glowdTypes "github.com/scitags/flowd-go/types"
 )
 
 // Function discoverInterfaces will inspect all the available interfaces
@@ -28,17 +28,17 @@ func discoverInterfaces() ([]string, error) {
 		}
 		for _, addr := range addrs {
 			slog.Debug("interface addr", "interface", iFace.Name, "addr", addr)
-			cidr, _, err := net.ParseCIDR(addr.String())
+			cidr, err := netip.ParsePrefix(addr.String())
 			if err != nil {
 				slog.Warn("error parsing CIDR", "interface", iFace.Name, "cidr", addr.String())
 			}
 
-			if types.IsIPv4(cidr) {
+			if cidr.Addr().Is4() {
 				slog.Debug("address is IPv4", "interface", iFace.Name, "cidr", cidr)
 				continue
 			}
 
-			if !glowdTypes.IsIPPrivate(cidr) {
+			if !types.IsIPPrivate(cidr.Addr()) {
 				targetInterfaces = append(targetInterfaces, iFace.Name)
 				break
 			}
