@@ -34,8 +34,12 @@ func GetPublicAddresses(c Config) (map[netip.Addr]net.IP, error) {
 				continue
 			}
 
+			slog.Debug("mapping private ip", "privIp", ip)
+			slog.Debug("mapping private ip", "privIp", c.manualMappingParsed)
+
 			manual, ok := c.manualMappingParsed[ip]
 			if ok {
+				slog.Debug("adding manual mapping", "privIp", ip, "pubIp", manual)
 				pubIPMap[ip] = manual
 				continue
 			}
