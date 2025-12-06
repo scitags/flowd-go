@@ -1,0 +1,12 @@
+---
+stun:
+  httpResolution: true
+  stunResolution: false
+
+  manualMapping:
+    dogGoes: guau
+    catGoes: miau
+
+  stunServers:
+    - "foo.stun.faa"
+    - "fee.stun.fii"

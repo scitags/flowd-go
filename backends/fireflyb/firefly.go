@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"net/netip"
 
+	"github.com/scitags/flowd-go/internal/stun"
 	"github.com/scitags/flowd-go/types"
 )
 
@@ -12,6 +14,7 @@ type FireflyBackend struct {
 	Config
 
 	collectorConn net.Conn
+	pubIpMap      map[netip.Addr]net.IP
 }
 
 func (b *FireflyBackend) String() string {
@@ -30,6 +33,15 @@ func NewFireflyBackend(c *Config) (*FireflyBackend, error) {
 		b.collectorConn = conn
 	}
 
+	if c.Stun != nil {
+		slog.Debug("mapping private addresses to public ones")
+		pubIpMap, err := stun.GetPublicAddresses(*c.Stun)
+		if err != nil {
+			return nil, fmt.Errorf("couldn't resolve private to public addresses: %w", err)
+		}
+		b.pubIpMap = pubIpMap
+	}
+
 	return &b, nil
 }
 
@@ -44,6 +56,23 @@ func (b *FireflyBackend) Run(done <-chan struct{}, inChan <-chan types.FlowID) {
 				return
 			}
 			slog.Debug("got a flowID", "flowID.Src", flowID.Src, "flowID.Dst", flowID.Dst)
+
+			// Rewrite private source IP address
+			if len(b.pubIpMap) > 0 {
+				slog.Debug("foo")
+				ip, ok := netip.AddrFromSlice(flowID.Src.IP)
+				if !ok {
+					slog.Warn("error casting net.IP to netip.Addr", "ip", flowID.Src.IP)
+				} else {
+					pubIp, ok := b.pubIpMap[ip]
+					if !ok {
+						slog.Warn("no public IP found", "privIp", ip.String())
+					} else {
+						slog.Debug("rewriting private ip", "privIp", flowID.Src.IP, "pubIp", pubIp)
+						flowID.Src.IP = pubIp
+					}
+				}
+			}
 
 			// Insert the times before doing anything else
 			switch flowID.State {

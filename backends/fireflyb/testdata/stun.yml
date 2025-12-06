@@ -1,0 +1,12 @@
+---
+stun:
+  httpResolution: true
+  stunResolution: false
+
+  manualMapping:
+    "10.0.0.1": 10.0.0.2
+    "10.0.0.3": 10.0.0.4
+
+  stunServers:
+    - "foo.stun.faa"
+    - "fee.stun.fii"
