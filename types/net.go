@@ -2,7 +2,6 @@ package types
 
 import (
 	"fmt"
-	"log/slog"
 	"net/netip"
 )
 
@@ -93,9 +92,9 @@ var (
 // IsIPPrivate will return true whenever the provided netip.Prefix belongs to a
 // private range as defined per IANA.
 func IsIPPrivate(ip netip.Addr) bool {
-	for i, ipnet := range privateNetworks {
+	for _, ipnet := range privateNetworks {
 		if ipnet.Contains(ip) {
-			slog.Debug("ip is private", "i", i, "ip", ip, "ipnet", ipnet)
+			// slog.Debug("ip is private", "i", i, "ip", ip, "ipnet", ipnet)
 			return true
 		}
 	}
@@ -105,7 +104,7 @@ func IsIPPrivate(ip netip.Addr) bool {
 func IsIPLinkLocal(ip netip.Addr) bool {
 	// What about prefix.Addr().IsLinkLocalUnicast() || prefix.Addr().IsLinkLocalMulticast()?
 	if linkLocalNet.Contains(ip) {
-		slog.Debug("ip is a link-local address", "ip", ip, "ipnet", linkLocalNet)
+		// slog.Debug("ip is a link-local address", "ip", ip, "ipnet", linkLocalNet)
 		return true
 	}
 	return false
