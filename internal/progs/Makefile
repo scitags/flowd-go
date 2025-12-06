@@ -6,7 +6,7 @@ export CC := clang
 export CFLAGS := -g -O2 -target bpf -D__TARGET_ARCH_x86_64 -I . -I .. -c
 
 # The files to eliminate when cleaning up
-export TRASH := *.o vmlinux.h .cache
+export TRASH := *.o .cache
 
 # Dependencies of each eBPF program
 export DEPS := *.bpf.c *.bpf.h ../vmlinux.h
