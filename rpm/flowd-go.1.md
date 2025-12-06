@@ -234,6 +234,20 @@ payload including flow information.
     - `"compatible"`: Generate flowd-compatible fireflies.
     - `""`: If explicitly empty, all the information will be included. Beware, the amount of information is quite large...
 
+- **stun [object]**: The configuration for private-public address mapping. Bear in mind that, despite it's name, the logic controlled
+  through this option leverages both STUN-based and HTTP-based methods (favouring the latter) to resolve private interface addresses
+  to public ones. Please note that only the private address of the default interface (as given by the default route) will be automatically
+  mapped. You can leverage the `manualMapping` option to override this behaviour by providing a manual list of private-public address
+  pairs. As implied by this setting belonging to the firefly backend's configuration, these remappings will only be applied to outbound
+  fireflies.
+
+    - **manualMapping [object of string keys and string values] {{}}**: A list of private address (keys) and the associated public ones (values).
+    Bear in mind that, despite the name, you can map public addresses to other public or private addresses. The backend indexes the keys with
+    the flow's source address and rewrites the source address to the associated value.
+
+    - **stunServers [array of string] {["stun.l.google.com:3478", "stun{1,2,3,4}.l.google.com:3478"]}**: Additional STUN servers to leverage for,
+    well, STUN-based public address discovery.
+
 ## prometheus
 The **prometheus** backend will export flow information gathered by ENRICHERS as prometheus-compatible metrics. These can then be acquired by an
 existing prometheus deployment for monitoring and further analysis. Note how two ports are supported so that we can publish data acquired through
@@ -318,13 +332,6 @@ its default value is enclosed in braces (`{}`).
 **workDir [string] {"/var/cache/flowd-go"}**
 
 :   The directory where flowd-go will drop cache's and otherwise persistent files.
-
-**stunServers [array of string] {[]}**
-
-:   Additional STUN servers to leverage for outbound IPv4 address discovery. Flowd-go already has a couple
-    of STUN servers defined so this option can be left empty. If providing one, the expected format is
-    `stun:<stun-server-hostname>:<stun-server-port>`. For instance, the following would be completely
-    valid: `stun:stun.services.mozilla.org:3478`.
 
 **plugins [object]**
 
