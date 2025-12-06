@@ -29,8 +29,7 @@ func GetPublicAddresses(c Config) (map[netip.Addr]netip.Addr, error) {
 		for _, prefix := range prefixes {
 			addr := prefix.Addr()
 
-			slog.Debug("mapping private ip", "privIp", addr)
-			slog.Debug("mapping private ip", "privIp", c.manualMappingParsed)
+			slog.Debug("mapping ip", "ip", addr)
 
 			manual, ok := c.manualMappingParsed[addr]
 			if ok {
@@ -41,28 +40,34 @@ func GetPublicAddresses(c Config) (map[netip.Addr]netip.Addr, error) {
 
 			// Only applicable for AF_INET6, but it doesn't hurt for AF_INET
 			if types.IsIPLinkLocal(addr) {
+				slog.Debug("ip is a link-local address", "ip", addr)
 				continue
 			}
 
 			// If private, get a public address through STUN, DNS, HTTP...
 			if types.IsIPPrivate(addr) {
+				slog.Debug("trying to get public IP over HTTP")
 				pub, err := GetPubIPOverHTTP(c, family, addr)
 				if err == nil {
+					slog.Debug("got public ip over HTTP", "pubIp", pub)
 					pubIPMap[addr] = pub
 					continue
 				}
 				slog.Warn("couldn't resolve public ip over HTTP", "err", err)
 
+				slog.Debug("trying to get public IP over STUN")
 				pub, err = GetPubIPOverSTUN(c, family, addr)
 				if err == nil {
+					slog.Debug("got public ip over STUN", "pubIp", pub)
 					pubIPMap[addr] = pub
+					continue
 				}
 				slog.Warn("couldn't resolve public IP over STUN", "err", err)
 
 				continue
 			}
 
-			pubIPMap[addr] = addr
+			slog.Debug("ip is public", "ip", addr)
 		}
 	}
 
