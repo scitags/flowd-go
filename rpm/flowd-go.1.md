@@ -63,14 +63,24 @@ The implementation can be found at https://github.com/scitags/flowd-go.
 
 `marker`
 
-:   A command hosing several marker-related subcommands. These allow for handling details about the
+:   A command hosting several marker-related subcommands. These allow for handling details about the
     underlying eBPF machinery.
+
+`stun`
+
+:   A command hosting several STUN-related subcommands. These allow to test how STUN or HTTP-based resolution
+    is carried out when mapping private to public addresses.
 
 ## Marker SUBCOMMANDS
 `clean`
 
 :   Clean up the backing eBPF infrastructure including qdisc, hooks and programs. This is particularly useful
     if flowd-go terminates abruptly, even though it should be able to handle leftover hooks and qdiscs.
+
+## Stun SUBCOMMANDS
+`sample`
+
+:   Run private-to-public address mapping logic mimicking what would be done when running with STUN enabled.
 
 # PLUGINS
 This section lists the configuration options available for each of the provided plugins. For a deeper explanation please

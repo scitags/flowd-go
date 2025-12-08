@@ -71,6 +71,11 @@ var (
 		Short: "Handle several marker (i.e. eBPF) thingies.",
 	}
 
+	stunCmd = &cobra.Command{
+		Use:   "stun",
+		Short: "STUN-related utilities.",
+	}
+
 	runCmd = &cobra.Command{
 		Use:   "run",
 		Short: "Time to show what glowd can do!",
@@ -90,12 +95,14 @@ func init() {
 
 	// Add sub2-commands
 	markerCmd.AddCommand(subcmd.MarkerClean)
+	stunCmd.AddCommand(subcmd.StunSample)
 
 	// Add the different sub-commands
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(confCmd)
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(markerCmd)
+	rootCmd.AddCommand(stunCmd)
 }
 
 func main() {
