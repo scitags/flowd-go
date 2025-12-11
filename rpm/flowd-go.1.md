@@ -5,7 +5,7 @@ flowd-go 1 "September 2025" flowd-go "General Commands Manual"
 flowd-go - SciTags Flowd-go Daemon
 
 # SYNOPSIS
-`flowd-go [-h | --help] [--conf CONFIG_FILE_PATH] [--log-level=info] [--log-time] [run | version | help]`
+`flowd-go [-h | --help] [--conf CONFIG_FILE_PATH] [--log-level=info] [--log-time] [help | version | conf | marker [clean] | stun [sample] | run]`
 
 # DESCRIPTION
 The flowd-go daemon will listen for flow events through its various plugins and exert the actions as defined in its several
@@ -60,6 +60,10 @@ The implementation can be found at https://github.com/scitags/flowd-go.
 `run`
 
 :   Run the flowd-go daemon.
+
+`conf`
+
+:   Print the parsed configuration on screen. Non-enabled sections will have an associated `null` value.
 
 `marker`
 
@@ -321,7 +325,14 @@ has been configured and, if not, a default value is applied. Bear in mind plugin
 configuration file, but their associated options can be an empty object (i.e. `{}`). The following are examples of
 valid configurations:
 
-    # Use default settings for everything, but do instantiate an api plugin and the marker and firefly backends
+Please note that **plugins**, **backends** and **enrichers** are opt-in. That is, unless explicitly configured, they won't
+be instantiated when running. To use their default settings, simply include an empty map (i.e. `{}`). The rationale for
+working in such a way is sidestepping the need for an `enable` setting in every optional component. Bear in mind that
+top-level settings (i.e. `pidPath` and `workDir` below) will assume a default value given they're always needed. At any
+rate, in order to check whether the parsed configuration is the one you expect, the `conf` command is especially useful.
+For example, given the following configuration (stored in `conf.yaml`)
+
+    # Instantiate the api plugin and the marker and firefly backends with their default values.
     plugins:
         api: {}
 
@@ -329,8 +340,54 @@ valid configurations:
         marker: {}
         firefly: {}
 
-If setting `--log-level=debug` you will get a glimpse of what is actually parsed so that you can check whether it's what
-you expect or not.
+we can check the parsed configuration with
+
+    $ flowd-go --conf conf.yaml conf
+    {
+    "PidPath": "/var/run/flowd-go.pid",
+    "WorkDir": "/var/cache/flowd-go",
+    "Plugins": {
+        "Np": null,
+        "Firefly": null,
+        "Api": {
+            "BindAddress": "127.0.0.1",
+            "BindPort": 7777
+        },
+        "Perfsonar": null,
+        "Iperf3": null
+    },
+    "Backends": {
+        "Marker": {
+            "TargetInterfaces": [
+                "lo"
+            ],
+            "DiscoverInterfaces": false,
+            "RemoveQdisc": true,
+            "ProgramPath": "",
+            "RawMarkingStrategy": "label",
+            "MarkingStrategy": 0,
+            "DebugMode": false,
+            "MatchAll": false
+        },
+        "Firefly": {
+            "DestinationPort": 10514,
+            "PrependSyslog": true,
+            "SendToCollector": false,
+            "CollectorAddress": "127.0.0.1",
+            "CollectorPort": 10514,
+            "Enrich": false,
+            "EnrichmentMode": "lean",
+            "Stun": null
+        },
+        "Prometheus": null
+    },
+    "Enrichers": null
+    }
+
+In this particular case, notice how the `stun` setting in the `firefly` backend is disabled as well. Once again,
+you should set `stun: {}` to apply the default settings for that particular option. You can also, of course,
+configure a single setting for a given plugin or backend and the rest of the default settings will still be
+applied!
 
 The following details the available configuration options. The setting's value type is enclosed in brackets (`[]`) and
 its default value is enclosed in braces (`{}`).
@@ -348,16 +405,21 @@ its default value is enclosed in braces (`{}`).
 :   This object defines the plugins to instantiate as well as their configuration. The object's keys **MUST**
     be the identifier of the desired plugin and the associated values are objects representing each plugin's
     particular configuration. The details of these per-plugin configurations can be found on the PLUGINS
-    section. If key specifying a non-existent plugin is included, flowd-go will refuse to start and print
-    a (hopefully) informative error indicating the problem.
+    section. If a key specifying a non-existent plugin is included, flowd-go will silently ignore it.
 
 **backends [object]**
 
 :   This object defines the backends to instantiate as well as their configuration. The object's keys **MUST**
     be the identifier of the desired backend and the associated values are objects representing each backend's
     particular configuration. The details of these per-backend configurations can be found on the BACKENDS
-    section. If key specifying a non-existent backend is included, flowd-go will refuse to start and print
-    a (hopefully) informative error indicating the problem.
+    section. If a key specifying a non-existent backend is included, flowd-go will silently ignore it.
+
+**enrichers [object]**
+
+:   This object defines the enrichers to instantiate as well as their configuration. The object's keys **MUST**
+    be the identifier of the desired enricher and the associated values are objects representing each enrichers's
+    particular configuration. The details of these per-enricher configurations can be found on the ENRICHERS
+    section. If a key specifying a non-existent enricher is included, flowd-go will silently ignore it.
 
 # AUTHORS
 - Tristan Sullivan (CERN)
