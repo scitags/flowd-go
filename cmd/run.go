@@ -62,12 +62,6 @@ func run(cmd *cobra.Command, args []string) {
 	}
 	defer cleanupBackends(backends)
 
-	slog.Debug("solving plugin-backend dependencies")
-	if err := pluginBackendDependencies(plugins, backends); err != nil {
-		slog.Error("couldn't fulfill the plugin-backend dependencies", "err", err)
-		return
-	}
-
 	slog.Debug("creating enrichers")
 	enrichers, err := createEnrichers(conf)
 	if err != nil {

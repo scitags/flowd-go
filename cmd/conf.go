@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 
 	"github.com/goccy/go-yaml"
@@ -94,6 +95,21 @@ func (c *Config) UnmarshalYAML(b []byte) error {
 	return nil
 }
 
+// Are there any plugin-backend dependencies we should be aware of?
+func pluginBackendDependencies(c *Config) {
+	if c.Plugins == nil || c.Backends == nil {
+		return
+	}
+
+	// If using the perfsonar plugin, override the marking strategy
+	if c.Plugins.Perfsonar != nil {
+		if c.Backends.Marker != nil {
+			slog.Warn("overriding marking criteria to match all for the marker backend")
+			c.Backends.Marker.MatchAll = true
+		}
+	}
+}
+
 func ReadConf(path string) (*Config, error) {
 	r, err := os.ReadFile(path)
 	if err != nil {
@@ -104,6 +120,8 @@ func ReadConf(path string) (*Config, error) {
 	if err := yaml.Unmarshal(r, &conf); err != nil {
 		return nil, fmt.Errorf("error unmarshaling the configuration: %w", err)
 	}
+
+	pluginBackendDependencies(&conf)
 
 	return &conf, nil
 }
