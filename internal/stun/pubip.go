@@ -1,7 +1,6 @@
 package stun
 
 import (
-	"fmt"
 	"log/slog"
 	"net/netip"
 
@@ -72,7 +71,7 @@ func GetPublicAddresses(c Config) (map[netip.Addr]netip.Addr, error) {
 	}
 
 	if len(pubIPMap) == 0 {
-		return nil, fmt.Errorf("didn't get any public IPs")
+		slog.Warn("didn't get any public IPs")
 	}
 
 	return pubIPMap, nil
