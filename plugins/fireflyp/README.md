@@ -169,12 +169,31 @@ Please refer to the Markdown-formatted documentation at the repository's root fo
 options. The following replicates the default configuration:
 
 ```yaml
-backends:
-    firefly:
-        bindAddress: "127.0.01."
+plugins:
+    fireflyp:
+        bindAddress: "127.0.0.1"
         bindPort: 10514
+        bufferSize: 4096
         deadline: 0
         hasSyslogHeader: false
+        # fireflyReceivers: []
+```
+
+### `fireflyReceivers`
+An optional list of UDP destinations to forward received firefly datagrams to verbatim, before they are parsed
+into flow events. Each entry requires an `address` (hostname or IP) and a `port`. Configuring zero receivers
+(the default) preserves existing behaviour exactly. Example:
+
+```yaml
+plugins:
+    fireflyp:
+        bindAddress: "0.0.0.0"
+        bindPort: 10514
+        fireflyReceivers:
+          - address: "192.168.1.100"
+            port: 10514
+          - address: "accounting.example.org"
+            port: 10514
 ```
 
 <!-- REFs -->

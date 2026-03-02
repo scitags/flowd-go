@@ -49,6 +49,12 @@
     #     # for parsing the embedded JSON payload.
     #     hasSyslogHeader: false
 
+    #     # Optionally forward received fireflies verbatim to one or more UDP
+    #     # destinations before parsing. Each entry needs an address and a port.
+    #     # fireflyReceivers:
+    #     #   - address: "192.168.1.100"
+    #     #     port: 10514
+
     # # Detect TCP connections based on source and destination ports
     # iperf3:
     #     # Lower bound (inclusive) of the source port range. If 0, this check
