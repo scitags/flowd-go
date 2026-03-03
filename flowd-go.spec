@@ -1,5 +1,5 @@
 Name:		flowd-go
-Version:	2.4.2
+Version:	2.5.0
 Release:	1
 Summary:	SciTags flowd-go Daemon
 
@@ -93,6 +93,9 @@ install -m 0664 rpm/%{name}.1.gz    %{buildroot}%{_mandir}/man1/%{name}.1.gz
 
 # Changes introduced with each version
 %changelog
+* Tue Mar 03 2026 Pablo Collado Soto <pablo.collado.soto@cern.ch> - 2.5.0-1
+- Add support for relaying fireflies to an arbitrary number of destinations.
+
 * Thu Dec 11 2025 Pablo Collado Soto <pablo.collado.soto@cern.ch> - 2.4.2-1
 - Solve plugin-backend configuration dependencies before instantiation
 
