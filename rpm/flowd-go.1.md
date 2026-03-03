@@ -430,4 +430,4 @@ its default value is enclosed in braces (`{}`).
 # AUTHORS
 - Tristan Sullivan (CERN)
 - Marian Babik (CERN)
-- Pablo Collado Soto <pablo.collado@uam.es> (Universidad Autónoma de Madrid)
+- Pablo Collado Soto <pablo.collado.soto@cern.ch> (CERN)
