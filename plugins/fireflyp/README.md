@@ -169,12 +169,14 @@ Please refer to the Markdown-formatted documentation at the repository's root fo
 options. The following replicates the default configuration:
 
 ```yaml
-backends:
+plugins:
     firefly:
-        bindAddress: "127.0.01."
+        bindAddress: "127.0.0.1"
         bindPort: 10514
+        bufferSize: 4096
         deadline: 0
         hasSyslogHeader: false
+        fireflyReceivers: []
 ```
 
 <!-- REFs -->

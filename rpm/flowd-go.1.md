@@ -134,6 +134,12 @@ relay. Be sure to check the documentation on the firelfy backend for more inform
 
 - **hasSyslogHeader [bool] {false}**: Whether the incoming fireflies contain the syslog header or not.
 
+- **fireflyReceivers [array of objects] {[]}**: A list of UDP destinations to which received firefly
+  datagrams are forwarded verbatim before parsing. Each entry is an object with the following fields:
+
+    - **address [string]**: The hostname or IP address of the destination.
+    - **port [int]**: The UDP port of the destination. Must be equal to or lower than `65535`.
+
 ## perfsonar
 The **perfSONAR** plugin will simply mark **all outgoing traffic** with the provided activity and experiment IDs. If the `matchAll` option of
 the `marker` backend is not set to `true`, this plugin will overwrite the setting, emitting a warning in the process. This plugin is devised
@@ -424,4 +430,4 @@ its default value is enclosed in braces (`{}`).
 # AUTHORS
 - Tristan Sullivan (CERN)
 - Marian Babik (CERN)
-- Pablo Collado Soto <pablo.collado@uam.es> (Universidad Autónoma de Madrid)
+- Pablo Collado Soto <pablo.collado.soto@cern.ch> (CERN)

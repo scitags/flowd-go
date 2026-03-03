@@ -14,7 +14,8 @@ import (
 type FireflyPlugin struct {
 	Config
 
-	listener *net.UDPConn
+	listener   *net.UDPConn
+	forwarders []*net.UDPConn
 }
 
 func (p *FireflyPlugin) String() string {
@@ -44,6 +45,22 @@ func NewFireflyPlugin(c *Config) (*FireflyPlugin, error) {
 
 	p.listener = listener
 
+	// Set up outbound UDP connections for each firefly receiver.
+	for _, receiver := range p.FireflyReceivers {
+		dstAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", receiver.Address, receiver.Port))
+		if err != nil {
+			return nil, fmt.Errorf("error resolving firefly receiver %q:%d: %w", receiver.Address, receiver.Port, err)
+		}
+
+		conn, err := net.DialUDP("udp", nil, dstAddr)
+		if err != nil {
+			return nil, fmt.Errorf("error creating forwarder to firefly receiver %q:%d: %w", receiver.Address, receiver.Port, err)
+		}
+
+		slog.Debug("forwarding fireflies to receiver", "address", receiver.Address, "port", receiver.Port)
+		p.forwarders = append(p.forwarders, conn)
+	}
+
 	return &p, nil
 }
 
@@ -72,26 +89,47 @@ func (p *FireflyPlugin) Run(done <-chan struct{}, outChan chan<- glowdTypes.Flow
 				slog.Error("error reading from UDP", "err", err)
 				continue
 			}
-			slog.Debug("read from UDP", "n", n, "from", *addr)
+			slog.Debug("read raw firefly", "n", n, "from", *addr)
 
-			go func(msg []byte) {
+			rawFirefly := recvBuffer[:n]
+
+			// Forward the raw datagram to all configured firefly receivers.
+			for _, fwd := range p.forwarders {
+				go func(conn *net.UDPConn, data []byte) {
+					slog.Debug("forwarding firefly to receiver", "dst", conn.RemoteAddr())
+
+					if _, err := conn.Write(data); err != nil {
+						slog.Error("error forwarding firefly to receiver", "dst", conn.RemoteAddr(), "err", err)
+					}
+				}(fwd, rawFirefly)
+			}
+
+			// Extract the FlowID from the incoming firefly
+			go func(raw []byte) {
 				slog.Debug("serving an incoming UDP firefly")
 
 				auxFirefly := glowdTypes.SlimFirefly{}
-				if err := auxFirefly.Parse(msg); err != nil {
+				if err := auxFirefly.Parse(raw); err != nil {
 					slog.Error("couldn't parse the incoming firefly", "err", err,
 						"hasSyslogHeader", p.HasSyslogHeader)
 				}
 
 				outChan <- auxFirefly.FlowID
-
-			}(recvBuffer[:n])
+			}(rawFirefly)
 		}
 	}
 }
 
 func (p *FireflyPlugin) Cleanup() error {
 	slog.Debug("cleaning up the firefly plugin")
+
+	// Close all firefly receiver connections.
+	for _, fwd := range p.forwarders {
+		if err := fwd.Close(); err != nil {
+			slog.Error("error closing firefly forwarder connection", "dst", fwd.RemoteAddr(), "err", err)
+		}
+	}
+
 	if err := p.listener.Close(); err != nil {
 		slog.Error("error closing the UDP listener", "err", err)
 	}
