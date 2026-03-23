@@ -19,6 +19,10 @@ type Config struct {
 	RawMarkingStrategy string   `yaml:"markingStrategy"`
 	MarkingStrategy    Strategy `yaml:"-"` // Parsed strategy
 
+	// Fixed identifiers leveraged when marking all traffic
+	FixedExperimentId int `yaml:"-"`
+	FixedActivityId   int `yaml:"-"`
+
 	DebugMode bool `yaml:"debugMode"`
 	MatchAll  bool `yaml:"matchAll"`
 }
@@ -33,6 +37,9 @@ func (c *Config) UnmarshalYAML(b []byte) error {
 
 		RemoveQdisc: true,
 		ProgramPath: "",
+
+		FixedExperimentId: -1,
+		FixedActivityId:   -1,
 
 		RawMarkingStrategy: "label",
 		DebugMode:          false,
