@@ -28,9 +28,7 @@ func (b *FireflyBackend) sendFirefly(flowID glowdTypes.FlowID, payload []byte) e
 	}
 
 	if b.SendToCollector {
-		if err := validateCollectorFlow(flowID); err != nil {
-			slog.Warn("skipping collector send for invalid flow", "flowID", flowID, "err", err)
-		} else if err := b.sendToCollector(payload); err != nil {
+		if err := b.sendToCollector(payload); err != nil {
 			sendErrors = append(sendErrors, err)
 		}
 	}
