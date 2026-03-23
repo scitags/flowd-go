@@ -106,6 +106,10 @@ func pluginBackendDependencies(c *Config) {
 		if c.Backends.Marker != nil {
 			slog.Warn("overriding marking criteria to match all for the marker backend")
 			c.Backends.Marker.MatchAll = true
+
+			slog.Debug("configuring fixed ids", "experimentId", c.Plugins.Perfsonar.ExperimentId, "activityId", c.Plugins.Perfsonar.ActivityId)
+			c.Backends.Marker.FixedExperimentId = c.Plugins.Perfsonar.ExperimentId
+			c.Backends.Marker.FixedActivityId = c.Plugins.Perfsonar.ActivityId
 		}
 	}
 }
