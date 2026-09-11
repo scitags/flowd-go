@@ -6,19 +6,24 @@
 
 #include "marker.bpf.h"
 
-static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, void *data_end) {
-	// The pointer to the header of an TCP segment. As usual, struct tcphdr is
-	// defined on vmlinux.h.
-	struct tcphdr *l4;
+static __always_inline int handleL4(struct __sk_buff *ctx, struct ipv6hdr *l3, void *data_end) {
+	// The pointer to the header of an L4 segment (It may be TCP or UDP, but 
+	// we only need the source and dest ports, which are in the same place 
+	// regardless). As usual, struct udphdr is defined on vmlinux.h.
+	struct udphdr *l4;
 
-	// Get a hold of the TCP header!
+	// Get a hold of the header!
 	l4 = (void *)(l3 + 1);
 	if ((void *)(l4 + 1) > data_end)
 		return TC_ACT_OK;
 
+	// Source and destination ports
+	__u16 dest = bpf_htons(l4->dest);
+	__u16 source = bpf_htons(l4->source);
+
 	#ifdef FLOWD_DEBUG
-		bpf_printk("flowd-go:      TCP source port: %d", bpf_htons(l4->source));
-		bpf_printk("flowd-go: TCP destination port: %d", bpf_htons(l4->dest));
+		bpf_printk("flowd-go:      TCP source port: %d", source);
+		bpf_printk("flowd-go: TCP destination port: %d", dest);
 	#endif
 
 	// Declare the struct we'll use to index the map
@@ -32,8 +37,8 @@ static __always_inline int handleTCP(struct __sk_buff *ctx, struct ipv6hdr *l3, 
 		// Populate the lookup based on the incoming datagram's data
 		flowHash.ip6Hi = ipv6AddrHi(l3->daddr);
 		flowHash.ip6Lo = ipv6AddrLo(l3->daddr);
-		flowHash.dPort = bpf_htons(l4->dest);
-		flowHash.sPort = bpf_htons(l4->source);
+		flowHash.dPort = dest;
+		flowHash.sPort = source;
 	#endif
 
 	#ifdef FLOWD_DEBUG

@@ -29,7 +29,7 @@
 // included after the above so that all the necessary types are defined.
 #include "utils.bpf.c"
 #include "icmp.bpf.c"
-#include "tcp.bpf.c"
+#include "l4.bpf.c"
 
 static __always_inline int handleDatagram(struct __sk_buff *ctx, struct ipv6hdr *l3, void *data_end) {
 	// If running in debug mode we'll handle ICMP messages as well
@@ -41,8 +41,8 @@ static __always_inline int handleDatagram(struct __sk_buff *ctx, struct ipv6hdr 
 	#endif
 
 	// We'll only handle TCP traffic flows
-	if (l3->nexthdr == PROTO_TCP) {
-		return handleTCP(ctx, l3, data_end);
+	if (l3->nexthdr == PROTO_TCP || l3->nexthdr == PROTO_UDP) {
+		return handleL4(ctx, l3, data_end);
 	}
 
 	// Simply signal that the packet should proceed!

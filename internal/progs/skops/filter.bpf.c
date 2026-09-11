@@ -14,8 +14,8 @@ static __always_inline int handleDatagram(struct __sk_buff *ctx, struct ipv6hdr 
 	#endif
 
 	// We'll only handle TCP traffic flows
-	if (l3->nexthdr == PROTO_TCP) {
-		return handleTCP(ctx, l3, data_end);
+	if (l3->nexthdr == PROTO_TCP || l3->nexthdr == PROTO_UDP) {
+		return handleTCPOrUDP(ctx, l3, data_end);
 	}
 
 	// Simply signal that the packet should proceed!
