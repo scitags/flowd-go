@@ -40,7 +40,7 @@ static __always_inline int handleDatagram(struct __sk_buff *ctx, struct ipv6hdr 
 			return handleICMP(ctx, l3);
 	#endif
 
-	// We'll only handle TCP traffic flows
+	// We'll only handle TCP or UDP traffic flows
 	if (l3->nexthdr == PROTO_TCP || l3->nexthdr == PROTO_UDP) {
 		return handleL4(ctx, l3, data_end);
 	}
