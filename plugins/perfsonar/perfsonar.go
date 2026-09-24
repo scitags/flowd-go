@@ -2,7 +2,6 @@ package perfsonar
 
 import (
 	"log/slog"
-	"net/netip"
 
 	"github.com/scitags/flowd-go/types"
 )
@@ -30,15 +29,11 @@ func (p *PerfsonarPlugin) Run(done <-chan struct{}, outChan chan<- types.FlowID)
 	 * 0 disables checks within the eBPF program.
 	 */
 	slog.Debug("kicking off packet marking")
-	outChan <- types.FlowID{
-		State:       types.START,
-		Family:      types.IPv6,
-		Src:         netip.AddrPortFrom(netip.IPv6Unspecified(), 0),
-		Dst:         netip.AddrPortFrom(netip.IPv6Unspecified(), 0),
-		Experiment:  uint32(p.ExperimentId),
-		Activity:    uint32(p.ActivityId),
-		Application: types.SYSLOG_APP_NAME,
-	}
+
+	// The perfSONAR plugin is simply a no-op to maintain backwards compatibility with
+	// previous configurations. Configuration parsing and plugin bootstrapping take
+	// care of setting things up so that every IPv6 datagram is marked with the
+	// experiment and activity IDs specified in the configuration.
 
 	// Simply block until the done channel is closed so that we can exit
 	<-done

@@ -5,12 +5,14 @@ package marker
 import (
 	"fmt"
 	"log/slog"
+	"net/netip"
 	"os"
 	"time"
 
 	"math/rand"
 
 	"github.com/cilium/ebpf"
+	"github.com/scitags/flowd-go/types"
 	glowdTypes "github.com/scitags/flowd-go/types"
 )
 
@@ -102,6 +104,35 @@ func NewMarkerBackend(c *Config) (*MarkerBackend, error) {
 
 func (b *MarkerBackend) Run(done <-chan struct{}, inChan <-chan glowdTypes.FlowID) {
 	slog.Debug("running the marker backend")
+
+	if b.Config.FixedExperimentId != -1 || b.Config.FixedActivityId != -1 {
+		slog.Debug("triggering marking of all datagrams", "experimentId", b.Config.FixedExperimentId, "activityId", b.Config.FixedActivityId)
+
+		markAllFlowdId := types.FlowID{
+			State:       types.START,
+			Family:      types.IPv6,
+			Src:         netip.AddrPortFrom(netip.IPv6Unspecified(), 0),
+			Dst:         netip.AddrPortFrom(netip.IPv6Unspecified(), 0),
+			Experiment:  uint32(b.Config.FixedExperimentId),
+			Activity:    uint32(b.Config.FixedActivityId),
+			Application: types.SYSLOG_APP_NAME,
+		}
+
+		rawDstIPHi, rawDstIPLo := extractHalves(markAllFlowdId.Dst.Addr())
+		flowHash := FlowFourTuple{
+			IPv6Hi:  rawDstIPHi,
+			IPv6Lo:  rawDstIPLo,
+			DstPort: uint32(markAllFlowdId.Dst.Port()),
+			SrcPort: uint32(markAllFlowdId.Src.Port()),
+		}
+
+		flowTag := b.genFlowTag(markAllFlowdId.Experiment, markAllFlowdId.Activity)
+
+		if err := b.coll.Maps[MAP_NAME].Update(flowHash, flowTag, ebpf.UpdateAny); err != nil {
+			slog.Error("error inserting map value", "err", err, "flowHash", flowHash, "flowTag", flowTag)
+		}
+		slog.Debug("inserted map value", "flowHash", flowHash, "flowTag", flowTag)
+	}
 
 	for {
 		select {

@@ -37,6 +37,29 @@ func (b *FireflyBackend) sendFirefly(flowID glowdTypes.FlowID, payload []byte) e
 	return errors.Join(sendErrors...)
 }
 
+func validateCollectorFlow(flowID glowdTypes.FlowID) error {
+	if flowID.Src.Port() == 0 || flowID.Dst.Port() == 0 {
+		return fmt.Errorf("ports must be non-zero")
+	}
+
+	if flowID.Src.Addr().IsUnspecified() || flowID.Dst.Addr().IsUnspecified() {
+		return fmt.Errorf("source and destination addresses must be specific")
+	}
+
+	switch flowID.State {
+	case glowdTypes.START:
+		if flowID.StartTs.IsZero() {
+			return fmt.Errorf("start flow is missing start timestamp")
+		}
+	case glowdTypes.END:
+		if flowID.EndTs.IsZero() {
+			return fmt.Errorf("end flow is missing end timestamp")
+		}
+	}
+
+	return nil
+}
+
 func (b *FireflyBackend) sendToCollector(payload []byte) error {
 	slog.Debug("sending firefly to the collector")
 
