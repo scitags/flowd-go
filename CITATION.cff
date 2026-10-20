@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+
+message: "If you use this software, please cite it as below."
+
+authors:
+- family-names: "Collado"
+  given-names: "Pablo"
+  orcid: "https://orcid.org/0009-0006-9050-8984"
+
+- family-names: "Babik"
+  given-names: "Marian"
+  orcid: "https://orcid.org/0000-0003-4141-5635"
+
+- family-names: "Sullivan"
+  given-names: "Tristan"
+
+title: "flowd-go"
+
+version: 2.6.0
+
+date-released: 2024-10-25
+
+url: "https://github.com/scitags/flowd-go"
