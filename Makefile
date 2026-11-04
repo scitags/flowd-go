@@ -31,7 +31,7 @@ endif
 # Prevent natively-compiled binaries from enabling CGO by default. Otherwise, the
 # C runtime (i.e. libc) and some other libraries will be symbolically linked. For
 # more information see https://pkg.go.dev/cmd/cgo
-ENV_FLAGS := CGO_ENABLED=0
+ENV_FLAGS := CGO_ENABLED=0 GOOS=linux
 
 # Adjust the target architecture based on the TARGET_ARCH variable.
 # As this variable is populated by the {%_target} macro it can
