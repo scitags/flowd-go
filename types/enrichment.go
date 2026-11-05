@@ -50,6 +50,15 @@ type FlowInfo struct {
 	DCTCPInfo *DCTCPInfo  `structs:"dctcpInfo,omitempty" lean:"-"`
 }
 
+// FlowUsage encodes the byte counts for sent and received traffic on a
+// given flow. It exists separately from FlowInfo to provide backwards-compatible
+// support for behaviour introduced by XRootD where these byte counts are
+// embedded in a hard-coded field.
+type FlowUsage struct {
+	Sent     uint32 `json:"sent"`
+	Received uint32 `json:"received"`
+}
+
 // MarshalJSON implements the json.Marshaler interface. We'll simply leverage
 // structs to play around with the struct tags in an effort to control the
 // marshalling output. The idea here is that we can choose what struct tag to

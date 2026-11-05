@@ -16,9 +16,9 @@ func (b *FireflyBackend) periodicFFs(f types.FlowID, flavour types.Flavour, fic 
 
 		switch flavour {
 		case types.Ebpf:
-			ff = types.NewFirefly(f, nil, fi)
+			ff = types.NewFirefly(f, nil, fi, nil)
 		case types.Netlink:
-			ff = types.NewFirefly(f, fi, nil)
+			ff = types.NewFirefly(f, fi, nil, nil)
 		}
 
 		payload, err := ff.Payload(b.PrependSyslog)

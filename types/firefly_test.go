@@ -154,7 +154,7 @@ func TestFireflyValidation(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		ff := NewFirefly(test.id, test.nl, test.ebpf)
+		ff := NewFirefly(test.id, test.nl, test.ebpf, nil)
 		pl, err := ff.Payload(test.withSyslog)
 		if err != nil {
 			t.Errorf("error generating a payload [%d/%d]: %v", i, len(tests), err)

@@ -84,7 +84,7 @@ func (b *FireflyBackend) Run(done <-chan struct{}, inChan <-chan types.FlowID) {
 			}
 
 			// Send START and END FFs
-			ff := types.NewFirefly(flowID, nil, nil)
+			ff := types.NewFirefly(flowID, nil, nil, nil)
 			payload, err := ff.Payload(b.PrependSyslog)
 			if err != nil {
 				slog.Error("error building the firefly", "err", err)

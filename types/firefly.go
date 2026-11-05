@@ -71,11 +71,16 @@ type Firefly struct {
 		ActivityID   uint32 `json:"activity-id"`
 		Application  string `json:"application"`
 	} `json:"context"`
-	Netlink *FlowInfo `json:"netlink,omitempty"`
-	SkOps   *FlowInfo `json:"skOps,omitempty"`
+	Netlink *FlowInfo  `json:"netlink,omitempty"`
+	SkOps   *FlowInfo  `json:"skOps,omitempty"`
+	Usage   *FlowUsage `json:"usage,omitempty"`
 }
 
-func NewFirefly(flowID FlowID, nlInfo, skOps *FlowInfo) Firefly {
+// Function NewFirefly will populate a Firefly with the provided information.
+// Arguments nlInfo, skOps and usage contain optional L4 statistics that can
+// be embedded in the firelfy. Argument usage controls a backwards-compatible
+// behaviour where sent and received byte counts are to be added to a different
+func NewFirefly(flowID FlowID, nlInfo, skOps *FlowInfo, usage *FlowUsage) Firefly {
 	ff := Firefly{}
 
 	ff.Version = FIREFLY_VERSION
@@ -97,6 +102,8 @@ func NewFirefly(flowID FlowID, nlInfo, skOps *FlowInfo) Firefly {
 
 	ff.Netlink = nlInfo
 	ff.SkOps = skOps
+
+	ff.Usage = usage
 
 	// TODO: If src IP address is private, get one through STUN!
 
