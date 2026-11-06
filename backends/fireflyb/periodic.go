@@ -34,3 +34,14 @@ func (b *FireflyBackend) periodicFFs(f types.FlowID, flavour types.Flavour, fic 
 
 	slog.Debug("exiting periodic firefly goroutine", "flowID", f)
 }
+
+func (b *FireflyBackend) endEvent(fic chan *types.FlowInfo, uc chan types.FlowUsage) {
+	for fi := range fic {
+		slog.Debug("got tcp event on endEvent", "state", types.State(fi.NewState))
+
+		// Wait for fic closure for cleanup!
+		if types.State(fi.NewState) == types.TCP_CLOSE {
+			uc <- types.FlowUsage{Sent: fi.TCPInfo.Bytes_sent, Received: fi.TCPInfo.Bytes_received}
+		}
+	}
+}

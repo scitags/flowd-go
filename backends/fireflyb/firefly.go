@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net"
 	"net/netip"
+	"time"
 
 	"github.com/scitags/flowd-go/internal/stun"
 	"github.com/scitags/flowd-go/types"
@@ -48,6 +49,8 @@ func NewFireflyBackend(c *Config) (*FireflyBackend, error) {
 func (b *FireflyBackend) Run(done <-chan struct{}, inChan <-chan types.FlowID) {
 	slog.Debug("running the firefly backend")
 
+	var usageChan chan types.FlowUsage = nil
+	var payload []byte
 	for {
 		select {
 		case flowID, ok := <-inChan:
@@ -74,32 +77,64 @@ func (b *FireflyBackend) Run(done <-chan struct{}, inChan <-chan types.FlowID) {
 						if fc == nil {
 							continue
 						}
-						go b.periodicFFs(flowID, t, fc)
+
+						if b.OnlyEnd {
+							usageChan = make(chan types.FlowUsage)
+							go b.endEvent(fc, usageChan)
+						} else {
+							go b.periodicFFs(flowID, t, fc)
+						}
 					}
 				}
+				tmp, err := b.buildFirefly(flowID, nil)
+				if err != nil {
+					slog.Error("error building the firefly", "err", err)
+					continue
+				}
+				payload = tmp
 
 			case types.END:
+				var usage *types.FlowUsage = nil
+				if usageChan != nil {
+					select {
+					case fi := <-usageChan:
+						slog.Debug("got closing info", "sent", fi.Sent, "received", fi.Received)
+						usage = &fi
+						break
+					case <-time.Tick(time.Duration(30 * time.Second)):
+						break
+					}
+				}
+				tmp, err := b.buildFirefly(flowID, usage)
+				if err != nil {
+					slog.Error("error building the firefly", "err", err)
+					continue
+				}
+				payload = tmp
 			default:
 				slog.Warn("received flowID with wrong state", "state", flowID.State)
-			}
-
-			// Send START and END FFs
-			ff := types.NewFirefly(flowID, nil, nil, nil)
-			payload, err := ff.Payload(b.PrependSyslog)
-			if err != nil {
-				slog.Error("error building the firefly", "err", err)
-				continue
 			}
 
 			slog.Debug("sending the firefly...")
 			if err := b.sendFirefly(flowID, payload); err != nil {
 				slog.Error("error sending the firefly", "err", err)
 			}
+
 		case <-done:
 			slog.Debug("cleanly exiting the firefly backend")
 			return
 		}
 	}
+}
+
+func (b *FireflyBackend) buildFirefly(flowID types.FlowID, usage *types.FlowUsage) ([]byte, error) {
+	ff := types.NewFirefly(flowID, nil, nil, usage)
+	payload, err := ff.Payload(b.PrependSyslog)
+	if err != nil {
+		return nil, err
+	}
+	return payload, nil
+
 }
 
 func (b *FireflyBackend) Cleanup() error {
