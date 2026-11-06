@@ -20,12 +20,12 @@ else
 endif
 
 # Define the value of version-related global variables
-GOCFGLAGS := $(GOCFGLAGS) -ldflags "-X main.builtCommit=$(COMMIT) -X main.baseVersion=$(VERSION)"
-GOCFGLAGS := $(GOCFGLAGS) -ldflags "-X github.com/scitags/flowd-go/types.SYSLOG_APP_NAME=flowd-go-$(VERSION)"
+GOCFLAGS := $(GOCFLAGS) -ldflags "-X main.builtCommit=$(COMMIT) -X main.baseVersion=$(VERSION)"
+GOCFLAGS := $(GOCFLAGS) -ldflags "-X github.com/scitags/flowd-go/types.SYSLOG_APP_NAME=flowd-go-$(VERSION)"
 
 # If adding support for eBPF programs pull in the necessary loaders and helpers.
 ifndef NO_EBPF
-    GOCFGLAGS := $(GOCFGLAGS) -tags ebpf
+    GOCFLAGS := $(GOCFLAGS) -tags ebpf
 endif
 
 # Prevent natively-compiled binaries from enabling CGO by default. Otherwise, the
@@ -61,7 +61,7 @@ endif
 build: $(wildcard *.go) ebpf-progs generate
 	@mkdir -p bin
 	@echo "TARGET_ARCH: $(TARGET_ARCH)"
-	$(ENV_FLAGS) $(GOC) build $(GOCFGLAGS) -o $(BIN_DIR)/flowd-go ./cmd
+	$(ENV_FLAGS) $(GOC) build $(GOCFLAGS) -o $(BIN_DIR)/flowd-go ./cmd
 
 # We're leveraging golang.org/x/tools/cmd/stringer
 .PHONY: generate
