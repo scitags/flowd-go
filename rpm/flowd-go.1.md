@@ -252,6 +252,7 @@ payload including flow information.
 
     - `"lean"`: Include a subset of TCP information and the congestion algorithm.
     - `"compatible"`: Generate flowd-compatible fireflies.
+    - `"usage"`: Include sent and received byte counts.
     - `""`: If explicitly empty, all the information will be included. Beware, the amount of information is quite large...
 
 - **stun [object]**: The configuration for private-public address mapping. Bear in mind that, despite it's name, the logic controlled
