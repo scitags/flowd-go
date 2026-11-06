@@ -55,7 +55,7 @@ SciTags initiative as seen on https://www.scitags.org
 # populated by rpmbuild(1) through its --target option which is set
 # by mock(1) when building the package. For the moment, it'll either
 # be x86_64 or aarch64.
-make build TARGET_ARCH=%{_target}
+make build TARGET_ARCH=%{_target} RPM_PACKAGE_NAME=%{name} RPM_PACKAGE_VERSION=%{version}
 
 # Time to copy the binary file!
 %install
