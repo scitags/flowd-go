@@ -13,19 +13,19 @@ ifdef RPM_PACKAGE_NAME
     COMMIT = $(shell cat commit)
 
     # Disable VCS stamping when building the RPMs: the .git directory won't be there!
-    CFLAGS := $(CFLAGS) -buildvcs=false
+    GOCFLAGS := -buildvcs=false
 else
     VERSION = $(shell git describe --tags --abbrev=0)
     COMMIT = $(shell git rev-parse --short HEAD)
 endif
 
 # Define the value of version-related global variables
-CFLAGS := $(CFLAGS) -ldflags "-X main.builtCommit=$(COMMIT) -X main.baseVersion=$(VERSION)"
-CFLAGS := $(CFLAGS) -ldflags "-X github.com/scitags/flowd-go/types.SYSLOG_APP_NAME=flowd-go-$(VERSION)"
+GOCFGLAGS := $(GOCFGLAGS) -ldflags "-X main.builtCommit=$(COMMIT) -X main.baseVersion=$(VERSION)"
+GOCFGLAGS := $(GOCFGLAGS) -ldflags "-X github.com/scitags/flowd-go/types.SYSLOG_APP_NAME=flowd-go-$(VERSION)"
 
 # If adding support for eBPF programs pull in the necessary loaders and helpers.
 ifndef NO_EBPF
-    CFLAGS := $(CFLAGS) -tags ebpf
+    GOCFGLAGS := $(GOCFGLAGS) -tags ebpf
 endif
 
 # Prevent natively-compiled binaries from enabling CGO by default. Otherwise, the
@@ -61,7 +61,7 @@ endif
 build: $(wildcard *.go) ebpf-progs generate
 	@mkdir -p bin
 	@echo "TARGET_ARCH: $(TARGET_ARCH)"
-	$(ENV_FLAGS) $(GOC) build $(CFLAGS) -o $(BIN_DIR)/flowd-go ./cmd
+	$(ENV_FLAGS) $(GOC) build $(GOCFGLAGS) -o $(BIN_DIR)/flowd-go ./cmd
 
 # We're leveraging golang.org/x/tools/cmd/stringer
 .PHONY: generate
