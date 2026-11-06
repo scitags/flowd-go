@@ -17,6 +17,9 @@ type Config struct {
 	EnrichmentMode string `yaml:"enrichmentMode"`
 
 	Stun *stun.Config `yaml:"stun"`
+
+	// Whether to skip periodic fireflies
+	OnlyEnd bool `yaml:"-"`
 }
 
 func (c *Config) UnmarshalYAML(b []byte) error {
@@ -33,11 +36,16 @@ func (c *Config) UnmarshalYAML(b []byte) error {
 
 		Enrich:         false,
 		EnrichmentMode: "lean",
+
+		OnlyEnd: false,
 	}
 
 	if err := yaml.Unmarshal(b, def); err != nil {
 		return err
 	}
+
+	// We'll skip periodic fireflies when running in compat mode
+	def.OnlyEnd = def.EnrichmentMode == "compat"
 
 	*c = Config(*def)
 
