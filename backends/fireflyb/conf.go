@@ -44,8 +44,8 @@ func (c *Config) UnmarshalYAML(b []byte) error {
 		return err
 	}
 
-	// We'll skip periodic fireflies when running in compat mode
-	def.OnlyEnd = def.EnrichmentMode == "compat"
+	// We'll skip periodic fireflies when running in usage mode
+	def.OnlyEnd = def.EnrichmentMode == "usage"
 
 	*c = Config(*def)
 
