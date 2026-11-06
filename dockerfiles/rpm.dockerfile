@@ -24,7 +24,7 @@ RUN dnf --refresh --enablerepo=crb -y install \
         git              \
         tar              \
         make             \
-        golang>=1.24     \
+        golang>=1.26     \
     && dnf clean all
 
 # Specify a sane working directory

@@ -1,6 +1,6 @@
 # Simply define the image version in case we're running standalone. Otherwise this
 # variable will be overridden by the one exported from the top-level Makefile.
-DOCKER_IMG_VERSION ?= v2.2
+DOCKER_IMG_VERSION ?= v2.3
 
 GO_VERSION = $(shell awk '/^go[[:space:]]/ {print $$2}' ../go.mod)
 
