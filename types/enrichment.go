@@ -56,8 +56,8 @@ type FlowInfo struct {
 // support for behaviour introduced by XRootD where these byte counts are
 // embedded in a hard-coded field.
 type FlowUsage struct {
-	Sent     uint32 `json:"sent"`
-	Received uint32 `json:"received"`
+	Sent     uint64 `json:"sent"`
+	Received uint64 `json:"received"`
 }
 
 // MarshalJSON implements the json.Marshaler interface. We'll simply leverage
