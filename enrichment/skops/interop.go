@@ -242,6 +242,7 @@ func (i *TcpInfo) UnmarshalBinary(data []byte) error {
 
 func tcpInfoToFlowInfo(ti TcpInfo) types.FlowInfo {
 	return types.FlowInfo{
+		NewState: ti.NewState,
 		Socket: &types.Socket{
 			ID: types.SockID{
 				SPort: ti.SrcPort,

@@ -39,6 +39,7 @@ const (
 // control over what fields are marshalled.
 type FlowInfo struct {
 	Mode      string      `structs:"-" lean:"-"`
+	NewState  uint32      `structs:"-" lean:"-"`
 	TCPInfo   *TCPInfo    `structs:"tcpInfo" lean:"tcpInfo"`
 	Cong      *Cong       `structs:"cong,omitempty" lean:"cong,omitempty"`
 	Socket    *Socket     `structs:"skBuff,omitempty" lean:"-"`
