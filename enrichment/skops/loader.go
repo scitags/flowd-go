@@ -35,9 +35,12 @@ func loadProg(rawProg []byte, pollingInterval uint64) (*ebpf.Collection, error) 
 		return nil, fmt.Errorf("error parsing the eBPF program: %w", err)
 	}
 
-	if err := setGlobalVariable(progSpec, "POLLING_INTERVAL_NS", pollingInterval); err != nil {
-		return nil, err
+	if pollingInterval > 0 {
+		if err := setGlobalVariable(progSpec, "POLLING_INTERVAL_NS", pollingInterval); err != nil {
+			return nil, err
+		}
 	}
+
 	if err := setGlobalVariable(progSpec, "CONFIG_HZ", getConfigHz()); err != nil {
 		return nil, err
 	}

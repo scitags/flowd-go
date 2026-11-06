@@ -86,6 +86,11 @@ func NewEnricher(conf *Config) (*EbpfEnricher, error) {
 		}
 	}
 
+	// Short-circuit polling configuration for transition-based acquisition
+	if conf.Strategy == Transition {
+		conf.PollingInterval = 0
+	}
+
 	coll, err := loadProg(prog, conf.PollingInterval)
 	if err != nil {
 		return nil, fmt.Errorf("error loading the eBPF program: %w", err)
