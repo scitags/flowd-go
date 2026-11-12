@@ -1,5 +1,5 @@
 Name:		flowd-go
-Version:	2.6.0
+Version:	2.6.1
 Release:	1
 Summary:	SciTags flowd-go Daemon
 
@@ -93,6 +93,9 @@ install -m 0664 rpm/%{name}.1.gz    %{buildroot}%{_mandir}/man1/%{name}.1.gz
 
 # Changes introduced with each version
 %changelog
+* Thu Nov 12 2026 Pablo Collado Soto <pablo.colldo.soto@cern.ch>  - 2.6.1-1
+- Fix parsing of RFC 3339 timestamps on incoming fireflies.
+
 * Fri Sep 18 2026 Pablo Collado Soto <pablo.colldo.soto@cern.ch>  - 2.6.0-1
 - Mark UDP traffic too (changes by Tristan Sullivan).
 
