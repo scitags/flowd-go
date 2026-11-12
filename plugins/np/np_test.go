@@ -49,8 +49,10 @@ func TestStartFlow(t *testing.T) {
 	go np.Run(doneChan, flowChan)
 
 	tests := []struct{ in string }{
-		{"start tcp 192.168.0.1 2345 127.0.0.1 5777 1 2"},
-		{"start tcp         ::1 2345       ::1 5777 1 2"},
+		{"start tcp     192.168.0.1 2345       127.0.0.1  5777 1 2"},
+		{"start tcp             ::1 2345             ::1  5777 1 2"},
+		{"start tcp 0:0:0:0:0:0:0:1 8443 0:0:0:0:0:0:0:1 58994 1 1"},
+		{"end   tcp             ::1 8443             ::1 58994 1 1"},
 	}
 
 	// Give the plugin a bit of time to catch up and open the pipe
