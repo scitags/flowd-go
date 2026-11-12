@@ -170,3 +170,19 @@ func TestFireflyValidation(t *testing.T) {
 		}
 	}
 }
+
+func TestTimestampParsing(t *testing.T) {
+	tests := []string{
+		"2024-11-02T16:07:01.769470+00:00",
+		"2026-11-11T20:46:24.412Z",
+	}
+
+	for _, test := range tests {
+		got, err := parseTs(test)
+		if err != nil {
+			t.Errorf("error parsing timestamp %q: %v", test, err)
+			continue
+		}
+		t.Logf("got time: %q", got)
+	}
+}

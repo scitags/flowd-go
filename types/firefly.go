@@ -13,8 +13,17 @@ import (
 const (
 	FIREFLY_VERSION int = 1
 
-	// Let's replicate 2024-11-02T16:07:01.769470+00:00.
-	TIME_FORMAT string = "2006-01-02T15:04:05.999999-07:00"
+	// Previous fireflies found in the wild included a time stamp like
+	//
+	//   2024-11-02T16:07:01.769470+00:00
+	//
+	// However, dCache includes timestamps such as
+	//
+	//   2026-11-11T20:46:24.412Z
+	//
+	// The following time layout as per time.Layout https://pkg.go.dev/time#pkg-constants
+	// Should handle both cases gracefully.
+	TIME_FORMAT string = "2006-01-02T15:04:05.999999Z07:00"
 
 	SYSLOG_FACILITY_LOCAL0        int    = 16
 	SYSLOG_SEVERITY_INFORMATIONAL int    = 6
@@ -156,6 +165,13 @@ func (f *SlimFirefly) Parse(in []byte) error {
 	return json.Unmarshal(in[jsonIndex:], f)
 }
 
+func parseTs(rawTs string) (time.Time, error) {
+	if rawTs == "" {
+		return time.Time{}, nil
+	}
+	return time.Parse(TIME_FORMAT, rawTs)
+}
+
 func (f *SlimFirefly) UnmarshalJSON(in []byte) error {
 	rawFirefly := Firefly{}
 	if err := json.Unmarshal(in, &rawFirefly); err != nil {
@@ -201,13 +217,6 @@ func (f *SlimFirefly) UnmarshalJSON(in []byte) error {
 	dstIP, err := parseIP(rawFirefly.FlowID.DstIP)
 	if err != nil {
 		return fmt.Errorf("error parsing destination IP: %w", err)
-	}
-
-	parseTs := func(rawTs string) (time.Time, error) {
-		if rawTs == "" {
-			return time.Time{}, nil
-		}
-		return time.Parse(TIME_FORMAT, rawTs)
 	}
 
 	startTs, err := parseTs(rawFirefly.FlowLifecycle.StartTime)
