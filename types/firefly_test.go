@@ -35,7 +35,7 @@ func TestFireflyParseIncoming(t *testing.T) {
 			t.Errorf("couldn't parse %q: %v", tfPath, err)
 		}
 
-		// fmt.Printf("parsed firefly %q: %+v\n", tfPath, sFirefly)
+		t.Logf("parsed firefly %q: %+v", tfPath, sFirefly)
 	}
 }
 
