@@ -116,6 +116,7 @@ func (p *FireflyPlugin) Run(done <-chan struct{}, outChan chan<- glowdTypes.Flow
 				if err := auxFirefly.Parse(raw); err != nil {
 					slog.Error("couldn't parse the incoming firefly", "err", err,
 						"hasSyslogHeader", p.HasSyslogHeader)
+					return
 				}
 
 				// TODO: this can probably be done in a single assignment as a, b = b, a...
