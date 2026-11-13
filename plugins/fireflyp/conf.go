@@ -20,9 +20,14 @@ type Config struct {
 	BufferSize      uint32 `yaml:"bufferSize"`
 	Deadline        uint32 `yaml:"deadline"`
 	HasSyslogHeader bool   `yaml:"hasSyslogHeader"`
+
 	// FireflyReceivers is an optional list of UDP destinations to relay
 	// received firefly datagrams to (e.g. an accounting receiver).
 	FireflyReceivers []FireflyReceiver `yaml:"fireflyReceivers"`
+
+	// Whether to swap the source and destination fields in the incoming firefly.
+	// It seems dCache's got it swapped...
+	SwapSrcDst bool `yaml:"swapSrcDst"`
 }
 
 func (c *Config) UnmarshalYAML(b []byte) error {
@@ -36,6 +41,7 @@ func (c *Config) UnmarshalYAML(b []byte) error {
 		Deadline:         0,
 		HasSyslogHeader:  false,
 		FireflyReceivers: []FireflyReceiver{},
+		SwapSrcDst:       false,
 	}
 
 	if err := yaml.Unmarshal(b, def); err != nil {

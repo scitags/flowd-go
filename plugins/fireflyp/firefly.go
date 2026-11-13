@@ -35,6 +35,7 @@ func NewFireflyPlugin(c *Config) (*FireflyPlugin, error) {
 		return nil, fmt.Errorf("invalid IP address %q specified", p.BindAddress)
 	}
 
+	slog.Debug("creating listener", "ip", bindAddr, "port", int(p.BindPort))
 	listener, err := net.ListenUDP("udp", &net.UDPAddr{
 		IP:   bindAddr,
 		Port: int(p.BindPort),
@@ -79,6 +80,7 @@ func (p *FireflyPlugin) Run(done <-chan struct{}, outChan chan<- glowdTypes.Flow
 				p.listener.SetDeadline(time.Now().Add(time.Duration(p.Deadline) * time.Second))
 			}
 
+			slog.Debug("listening for fireflies...")
 			// Look into leveraging SO_REUSEPORT!
 			n, addr, err := p.listener.ReadFromUDP(recvBuffer)
 			if err != nil {
@@ -89,9 +91,11 @@ func (p *FireflyPlugin) Run(done <-chan struct{}, outChan chan<- glowdTypes.Flow
 				slog.Error("error reading from UDP", "err", err)
 				continue
 			}
-			slog.Debug("read raw firefly", "n", n, "from", *addr)
+			slog.Debug("read dat", "n", n, "from", *addr)
 
 			rawFirefly := recvBuffer[:n]
+
+			slog.Debug("raw firefly", "raw", rawFirefly)
 
 			// Forward the raw datagram to all configured firefly receivers.
 			for _, fwd := range p.forwarders {
@@ -112,6 +116,14 @@ func (p *FireflyPlugin) Run(done <-chan struct{}, outChan chan<- glowdTypes.Flow
 				if err := auxFirefly.Parse(raw); err != nil {
 					slog.Error("couldn't parse the incoming firefly", "err", err,
 						"hasSyslogHeader", p.HasSyslogHeader)
+				}
+
+				// TODO: this can probably be done in a single assignment as a, b = b, a...
+				if p.SwapSrcDst {
+					slog.Debug("swapping flow's source and destination")
+					tmp := auxFirefly.FlowID.Src
+					auxFirefly.FlowID.Src = auxFirefly.FlowID.Dst
+					auxFirefly.FlowID.Dst = tmp
 				}
 
 				outChan <- auxFirefly.FlowID
