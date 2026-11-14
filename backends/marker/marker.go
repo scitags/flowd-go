@@ -67,7 +67,7 @@ func NewMarkerBackend(c *Config) (*MarkerBackend, error) {
 			return nil, fmt.Errorf("error reading user provided program: %w", err)
 		}
 	} else {
-		prog, err = chooseProgram(b.MarkingStrategy, b.MatchAll, b.DebugMode)
+		prog, err = chooseProgram(b.MarkingStrategy, b.MatchAll, b.DebugMode, b.MatchOnlySrcPort)
 		if err != nil {
 			return nil, fmt.Errorf("error choosing an embedded eBPF program: %w", err)
 		}
@@ -123,6 +123,11 @@ func (b *MarkerBackend) Run(done <-chan struct{}, inChan <-chan glowdTypes.FlowI
 				IPv6Lo:  rawDstIPLo,
 				DstPort: uint32(flowID.Dst.Port()),
 				SrcPort: uint32(flowID.Src.Port()),
+			}
+
+			if b.MatchOnlySrcPort {
+				slog.Debug("overwriting the destination port")
+				flowHash.DstPort = 0
 			}
 
 			switch flowID.State {

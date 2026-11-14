@@ -37,8 +37,12 @@ static __always_inline int handleL4(struct __sk_buff *ctx, struct ipv6hdr *l3, v
 		// Populate the lookup based on the incoming datagram's data
 		flowHash.ip6Hi = ipv6AddrHi(l3->daddr);
 		flowHash.ip6Lo = ipv6AddrLo(l3->daddr);
-		flowHash.dPort = dest;
 		flowHash.sPort = source;
+
+		// Match on destination port unless explicitly asked not to!
+		#ifndef FLOWD_MATCH_SRC_PORT_DST_ADDR
+			flowHash.dPort = dest;
+		#endif
 	#endif
 
 	#ifdef FLOWD_DEBUG

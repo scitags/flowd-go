@@ -18,7 +18,7 @@ const (
 	MAP_NAME  string = "flowLabels"
 )
 
-func craftProgramPath(strategy Strategy, matchAll bool, debug bool) string {
+func craftProgramPath(strategy Strategy, matchAll bool, debug bool, matchOnlySrcPort bool) string {
 	progPath := "marker-"
 
 	for k, v := range strategyMap {
@@ -29,7 +29,13 @@ func craftProgramPath(strategy Strategy, matchAll bool, debug bool) string {
 	}
 
 	if matchAll {
+		// Give priority to matchAll over matchOnlySrcPort
+		matchOnlySrcPort = false
 		progPath += "-all"
+	}
+
+	if matchOnlySrcPort {
+		progPath += "-srcport"
 	}
 
 	if debug {
@@ -43,8 +49,8 @@ func craftProgramPath(strategy Strategy, matchAll bool, debug bool) string {
 	return progPath
 }
 
-func chooseProgram(strategy Strategy, matchAll bool, debug bool) ([]byte, error) {
-	return progs.GetMarkerProgram(craftProgramPath(strategy, matchAll, debug))
+func chooseProgram(strategy Strategy, matchAll bool, debug bool, matchOnlySrcPort bool) ([]byte, error) {
+	return progs.GetMarkerProgram(craftProgramPath(strategy, matchAll, debug, matchOnlySrcPort))
 }
 
 func loadProg(rawProg []byte) (*ebpf.Collection, error) {

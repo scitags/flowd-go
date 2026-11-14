@@ -22,16 +22,22 @@ INDICES := $(shell seq $(words $(PROG_NAMES)))
 #   https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html
 define targetTemplate
 marker-$(1).bpf.o: $(DEPS)
-	$(CC) $(CFLAGS) -D $(2)                                   marker.bpf.c -o $$@
+	$(CC) $(CFLAGS) -D $(2)                                                 marker.bpf.c -o $$@
 
 marker-$(1)-dbg.bpf.o: $(DEPS)
-	$(CC) $(CFLAGS) -D $(2) -D FLOWD_DEBUG                    marker.bpf.c -o $$@
+	$(CC) $(CFLAGS) -D $(2) -D FLOWD_DEBUG                                  marker.bpf.c -o $$@
 
 marker-$(1)-all.bpf.o: $(DEPS)
-	$(CC) $(CFLAGS) -D $(2) -D FLOWD_MATCH_ALL                marker.bpf.c -o $$@
+	$(CC) $(CFLAGS) -D $(2) -D FLOWD_MATCH_ALL                              marker.bpf.c -o $$@
 
 marker-$(1)-all-dbg.bpf.o: $(DEPS)
-	$(CC) $(CFLAGS) -D $(2) -D FLOWD_MATCH_ALL -D FLOWD_DEBUG marker.bpf.c -o $$@
+	$(CC) $(CFLAGS) -D $(2) -D FLOWD_MATCH_ALL -D FLOWD_DEBUG               marker.bpf.c -o $$@
+
+marker-$(1)-srcport.bpf.o: $(DEPS)
+	$(CC) $(CFLAGS) -D $(2) -D FLOWD_MATCH_SRC_PORT_DST_ADDR                marker.bpf.c -o $$@
+
+marker-$(1)-srcport-dbg.bpf.o: $(DEPS)
+	$(CC) $(CFLAGS) -D $(2) -D FLOWD_MATCH_SRC_PORT_DST_ADDR -D FLOWD_DEBUG marker.bpf.c -o $$@
 endef
 
 # Just check it's working. Simply uncomment the line below to get a glimpse into what
@@ -39,7 +45,7 @@ endef
 # $(foreach i,$(INDICES),$(info $(call targetTemplate,$(word $(i),$(PROG_NAMES)),$(word $(i),$(PROG_DEFS)))))
 
 # Simply make target all depend on all the programs
-all: $(foreach progName,$(PROG_NAMES),marker-$(progName).bpf.o marker-$(progName)-dbg.bpf.o marker-$(progName)-all.bpf.o marker-$(progName)-all-dbg.bpf.o)
+all: $(foreach progName,$(PROG_NAMES),marker-$(progName).bpf.o marker-$(progName)-dbg.bpf.o marker-$(progName)-all.bpf.o marker-$(progName)-all-dbg.bpf.o marker-$(progName)-srcport.bpf.o marker-$(progName)-srcport-dbg.bpf.o)
 
 # Generate the dynamic targets. This must be done AFTER defining the all target as
 # otherwise the default target becomes the first dynamic target. The idea for getting

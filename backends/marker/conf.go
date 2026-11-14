@@ -19,8 +19,9 @@ type Config struct {
 	RawMarkingStrategy string   `yaml:"markingStrategy"`
 	MarkingStrategy    Strategy `yaml:"-"` // Parsed strategy
 
-	DebugMode bool `yaml:"debugMode"`
-	MatchAll  bool `yaml:"matchAll"`
+	DebugMode        bool `yaml:"debugMode"`
+	MatchAll         bool `yaml:"matchAll"`
+	MatchOnlySrcPort bool `yaml:"matchOnlySrcPort"`
 }
 
 func (c *Config) UnmarshalYAML(b []byte) error {
@@ -37,6 +38,7 @@ func (c *Config) UnmarshalYAML(b []byte) error {
 		RawMarkingStrategy: "label",
 		DebugMode:          false,
 		MatchAll:           false,
+		MatchOnlySrcPort:   false,
 	}
 
 	if err := yaml.Unmarshal(b, def); err != nil {
